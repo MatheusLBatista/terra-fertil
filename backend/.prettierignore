@@ -1,0 +1,8 @@
+node_modules/
+dist/
+drizzle/
+logs/
+data/
+openapi.json
+package-lock.json
+src/seeds/data/

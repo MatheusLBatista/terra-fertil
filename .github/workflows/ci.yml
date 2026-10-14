@@ -1,0 +1,162 @@
+# CI do template — roda em todo push nas branches principais e em todo PR.
+#
+# Três jobs independentes:
+#   backend  → typecheck, lint, testes unitários, testes de integração (Postgres
+#              de serviço), build e verificação de drift do openapi.json
+#   frontend → drift dos types gerados (types/api.d.ts vs backend/openapi.json),
+#              tsc, lint e build do Next com as NEXT_PUBLIC_* de localhost
+#   docker   → builda as duas imagens (sem push) depois que os dois passam
+#
+# Sem segredos: o Postgres do CI usa as mesmas credenciais de demonstração do
+# docker-compose.yml de dev, e o BETTER_AUTH_SECRET abaixo só existe aqui.
+# A versão do Node vem do .nvmrc da raiz (única fonte).
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+# Um push novo na mesma branch/PR cancela a rodada anterior
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: API — typecheck, lint, testes, build, OpenAPI
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    # Banco dos testes de integração: mesmo usuário/senha/porta do `db_test`
+    # do backend/docker-compose.yml, para o DATABASE_URL_TEST padrão funcionar.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: user_template
+          POSTGRES_PASSWORD: 102030fs
+          POSTGRES_DB: db_template_test
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U user_template -d db_template_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    # Não há .env no CI: o essencial que src/lib/env.ts exige (fail fast) vai aqui.
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://user_template:102030fs@localhost:5434/db_template_test
+      DATABASE_URL_TEST: postgresql://user_template:102030fs@localhost:5434/db_template_test
+      BETTER_AUTH_URL: http://localhost:3080
+      BETTER_AUTH_SECRET: segredo-somente-para-o-ci-0123456789
+      FRONTEND_URL: http://localhost:3000
+      TRUSTED_ORIGINS: http://localhost:3000
+      API_URL: http://localhost:3080
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Testes unitários (sem banco)
+        run: npm test
+
+      - name: Testes de integração (Postgres de serviço)
+        run: npm run test:integration
+
+      - name: Build
+        run: npm run build
+
+      # O openapi.json versionado é a fonte dos types do front (job frontend,
+      # passo "Types sem drift"). Se o export gerar algo diferente do que está
+      # commitado, alguém mexeu nos schemas e esqueceu de rodar `make types`.
+      - name: OpenAPI sem drift
+        run: |
+          npm run openapi:export
+          git diff --exit-code -- openapi.json \
+            || { echo "::error::backend/openapi.json desatualizado — rode 'npm run openapi:export' e commite."; exit 1; }
+
+  frontend:
+    name: Painel — types, tsc, lint, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    # As NEXT_PUBLIC_* entram no bundle no build; valores de localhost bastam
+    # para provar que o build passa.
+    env:
+      NEXT_PUBLIC_API_URL: http://localhost:3080
+      NEXT_PUBLIC_API_URL_CLIENT: http://localhost:3080
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      NEXT_PUBLIC_GOOGLE_LOGIN: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      # types/api.d.ts é gerado do backend/openapi.json versionado (o job backend
+      # garante que esse json bate com o código). Se a geração mudar o arquivo,
+      # alguém alterou a API e não rodou `make types` (ou `npm run types:file`).
+      - name: Types sem drift
+        run: |
+          npm run types:file
+          git diff --exit-code -- types/api.d.ts \
+            || { echo "::error::frontend/types/api.d.ts desatualizado — rode 'make types' na raiz e commite."; exit 1; }
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+  docker:
+    name: Imagens Docker (build sem push)
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Imagem da API
+        run: docker build ./backend -t template-ia-api:ci
+
+      # Mesmos build args do docker-compose.prod.yml
+      - name: Imagem do painel
+        run: >-
+          docker build ./frontend
+          --build-arg NEXT_PUBLIC_API_URL=http://localhost:3080
+          --build-arg NEXT_PUBLIC_API_URL_CLIENT=http://localhost:3080
+          --build-arg NEXT_PUBLIC_APP_URL=http://localhost:3000
+          --build-arg NEXT_PUBLIC_GOOGLE_LOGIN=false
+          -t template-ia-front:ci

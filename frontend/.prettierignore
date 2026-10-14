@@ -1,0 +1,17 @@
+# gerados / vendor
+node_modules
+.next
+out
+build
+types/api.d.ts
+next-env.d.ts
+tsconfig.tsbuildinfo
+package-lock.json
+public
+e2e/prints
+e2e/.resultados
+playwright-report
+
+# docs e env ficam formatados à mão
+*.md
+.env*

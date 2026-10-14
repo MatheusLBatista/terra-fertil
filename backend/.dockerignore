@@ -1,0 +1,12 @@
+# Contexto de build da imagem da API. O .env NÃO é copiado: em produção o
+# docker-compose.prod.yml injeta as variáveis via env_file.
+node_modules
+dist
+data
+logs
+coverage
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
