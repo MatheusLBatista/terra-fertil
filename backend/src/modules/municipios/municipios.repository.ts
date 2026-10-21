@@ -1,5 +1,5 @@
 import { and, asc, eq, ilike, isNull, sql } from "drizzle-orm";
-import { db, escaparLike } from "../../db/index.ts";
+import { db, escaparLike, type DbOrTx } from "../../db/index.ts";
 import { municipio } from "../../db/municipio.ts";
 
 type Filtros = { estadoId?: number; nome?: string };
@@ -13,8 +13,8 @@ function where(filters: Filtros) {
 }
 
 export default class MunicipiosRepository {
-  async listar(filters: Filtros & { limit: number; offset: number }) {
-    return db
+  async listar(filters: Filtros & { limit: number; offset: number }, tx: DbOrTx = db) {
+    return tx
       .select({ id: municipio.id, nome: municipio.nome, estadoId: municipio.estadoId })
       .from(municipio)
       .where(where(filters))
@@ -23,8 +23,8 @@ export default class MunicipiosRepository {
       .offset(filters.offset);
   }
 
-  async contar(filters: Filtros) {
-    const [row] = await db
+  async contar(filters: Filtros, tx: DbOrTx = db) {
+    const [row] = await tx
       .select({ total: sql<number>`cast(count(*) as int)` })
       .from(municipio)
       .where(where(filters));

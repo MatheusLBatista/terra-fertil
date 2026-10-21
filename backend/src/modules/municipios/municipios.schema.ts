@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
 import { registry } from "../../lib/openapi/registry.ts";
-import { ERROS, okPagina, paginacaoQuery } from "../../lib/openapi/helpers.ts";
+import { ERROS, filtroTexto, okPagina, paginacaoQuery } from "../../lib/openapi/helpers.ts";
 
 extendZodWithOpenApi(z);
 
@@ -18,7 +18,7 @@ export const MunicipioSchema = registry.register(
 
 export const ListMunicipiosQuerySchema = z.object({
   estadoId: z.coerce.number().int().optional(),
-  nome: z.string().optional(),
+  nome: filtroTexto("Filtro por nome (contém)"),
   ...paginacaoQuery,
   // ~5.570 municípios no Brasil; o combobox pagina em lotes de até 500
   limit: z.coerce.number().int().min(1).max(500).default(200),

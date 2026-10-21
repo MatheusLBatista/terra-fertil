@@ -15,6 +15,13 @@
       "when": 1790258024403,
       "tag": "0001_auth_timestamptz",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792070189675,
+      "tag": "0002_auth_fk_indices",
+      "breakpoints": true
     }
   ]
 }

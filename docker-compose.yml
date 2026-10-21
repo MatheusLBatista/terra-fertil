@@ -1,0 +1,53 @@
+# Docker Compose para DESENVOLVIMENTO — sobe o PostgreSQL de dev e o de testes.
+# A API e o painel rodam localmente (bun run dev:api / bun run dev:front na raiz).
+#
+# As variáveis vêm do .env do back-end (o compose não lê backend/.env sozinho):
+#   docker compose --env-file backend/.env up -d --wait     (= bun run db:up)
+# Só o banco de testes (bun run test:integration):
+#   docker compose --env-file backend/.env up -d --wait db_test   (= bun run db:test:up)
+# `name:` fixa o projeto no Docker (sem isso viraria o nome da pasta). Os dados
+# ficam em ./data/postgres-dev e ./data/postgres-test, na raiz (ignorados pelo git).
+
+name: template-ia-dev
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: ${CONTAINER_DB:-db_template_ia}
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: UTC
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - ./data/postgres-dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Banco dos testes de INTEGRAÇÃO (vitest --project integration). Mesmo
+  # usuário/senha do dev, banco e porta próprios; o globalSetup dos testes
+  # aplica o schema, a trigger e os seeds a cada rodada (skill testes-integracao).
+  db_test:
+    image: postgres:17-alpine
+    container_name: ${CONTAINER_DB_TEST:-db_template_ia_test}
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB_TEST:-db_template_test}
+      TZ: UTC
+    ports:
+      - "${POSTGRES_PORT_TEST:-5434}:5432"
+    volumes:
+      - ./data/postgres-test:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB_TEST:-db_template_test}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

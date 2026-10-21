@@ -528,9 +528,11 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Filtro por nome (contém)"
             },
             "required": false,
+            "description": "Filtro por nome (contém)",
             "name": "nome",
             "in": "query"
           },
@@ -619,17 +621,21 @@
         "parameters": [
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Nome da tabela (igualdade)"
             },
             "required": false,
+            "description": "Nome da tabela (igualdade)",
             "name": "tabela",
             "in": "query"
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "PK do registro (igualdade; composta: valores unidos por \":\")"
             },
             "required": false,
+            "description": "PK do registro (igualdade; composta: valores unidos por \":\")",
             "name": "registroId",
             "in": "query"
           },
@@ -648,9 +654,11 @@
           },
           {
             "schema": {
-              "type": "string"
+              "type": "string",
+              "description": "Id do usuário autor (igualdade)"
             },
             "required": false,
+            "description": "Id do usuário autor (igualdade)",
             "name": "alteradoPor",
             "in": "query"
           },

@@ -10,6 +10,7 @@ import {
   okPagina,
   criado,
   semConteudo,
+  filtroTexto,
   paginacaoQuery,
   sortSchema,
 } from "../../lib/openapi/helpers.ts";
@@ -63,7 +64,7 @@ export const PapelListaItemSchema = registry.register(
 export const PapelIdParamSchema = z.object({ id: z.uuid() });
 
 export const ListPapeisQuerySchema = z.object({
-  nome: z.string().optional().openapi({ description: "Filtro por nome (contém)" }),
+  nome: filtroTexto("Filtro por nome (contém)"),
   incluir: z
     .enum(["permissoes"])
     .optional()

@@ -21,9 +21,9 @@
 -- Cobertura AUTOMÁTICA: a trigger é (re)criada em TODA tabela do schema `public`
 -- que tenha a coluna `deleted_at` (marca de soft delete presente em todos os
 -- models de domínio via `auditColumns`). Assim, novos models passam a ser
--- auditados sem precisar editar esta lista — basta rodar `npm run db:triggers`.
+-- auditados sem precisar editar esta lista — basta rodar `bun run db:triggers`.
 --
--- Aplicar com:  npm run db:triggers
+-- Aplicar com:  bun run db:triggers
 -- ============================================================================
 
 -- Chave primária do registro a partir do catálogo (fallback: coluna `id`).

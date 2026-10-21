@@ -16,6 +16,7 @@ export interface paths {
             parameters: {
                 query?: {
                     estadoId?: number | null;
+                    /** @description Filtro por nome (contém) */
                     nome?: string;
                     limit?: number;
                     offset?: number | null;
@@ -69,9 +70,12 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
+                    /** @description Nome da tabela (igualdade) */
                     tabela?: string;
+                    /** @description PK do registro (igualdade; composta: valores unidos por ":") */
                     registroId?: string;
                     operacao?: "INSERT" | "UPDATE" | "DELETE";
+                    /** @description Id do usuário autor (igualdade) */
                     alteradoPor?: string;
                     limit?: number;
                     offset?: number | null;

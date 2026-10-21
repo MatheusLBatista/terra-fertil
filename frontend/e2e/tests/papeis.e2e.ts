@@ -2,6 +2,7 @@ import { expect } from "@playwright/test";
 import { apiFetch, apiLogin, login, nomeUnico, toast, type Envelope, test } from "./helpers";
 
 type Papel = { id: string; nome: string; descricao: string | null };
+type Permissao = { acao: string; subject: string };
 
 /** CRUD de papéis de ponta a ponta: cada passo na tela é conferido na API. */
 test.describe("Papéis — CRUD pela tela", () => {
@@ -77,5 +78,39 @@ test.describe("Papéis — CRUD pela tela", () => {
     const apagado = await apiFetch(`/papeis/${id}`, {}, cookie);
     expect(apagado.status).toBe(404);
     expect(await buscarPorNome()).toBeUndefined();
+  });
+
+  test("edita as permissões de um papel pelo editor", async ({ page }) => {
+    // Papel temporário criado pela API: o foco do teste é o editor, não o cadastro.
+    const r = await apiFetch(
+      "/papeis",
+      { method: "POST", body: JSON.stringify({ nome, descricao: "Permissões pelo e2e" }) },
+      cookie,
+    );
+    expect(r.status, "criar papel temporário").toBe(201);
+    const { data: papel } = (await r.json()) as Envelope<Papel>;
+    await page.reload();
+
+    const linha = page.getByRole("row").filter({ hasText: nome });
+    await expect(linha).toContainText("nenhuma");
+    await linha.getByRole("button", { name: `Permissões de ${nome}`, exact: true }).click();
+
+    const editor = page.getByRole("dialog", { name: `Permissões — ${nome}` });
+    await editor.getByRole("button", { name: "Adicionar permissão" }).click();
+    await editor.getByRole("combobox", { name: "Ação da permissão 1" }).selectOption("read");
+    await editor.getByRole("textbox", { name: "Recurso da permissão 1" }).fill("HistoricoAlteracao");
+    await editor.getByRole("button", { name: "Salvar permissões", exact: true }).click();
+
+    await expect(toast(page, "Permissões atualizadas.")).toBeVisible();
+    await expect(editor).toHaveCount(0);
+    await expect(linha).toContainText("read HistoricoAlteracao");
+
+    // UI → API: o conjunto gravado é exatamente o que foi montado na tela.
+    const detalhe = await apiFetch(`/papeis/${papel.id}`, {}, cookie);
+    expect(detalhe.status).toBe(200);
+    const { data } = (await detalhe.json()) as Envelope<Papel & { permissoes: Permissao[] }>;
+    expect(data.permissoes).toEqual([
+      expect.objectContaining({ acao: "read", subject: "HistoricoAlteracao" }),
+    ]);
   });
 });

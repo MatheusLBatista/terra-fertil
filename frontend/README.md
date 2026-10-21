@@ -8,12 +8,12 @@ as do backend, em [`../CLAUDE.md`](../CLAUDE.md).
 
 ```bash
 cp .env.example .env.local   # ajuste as URLs se necessário
-npm install
-npm run dev                  # http://localhost:3000
+bun install
+bun run dev                  # http://localhost:3000
 ```
 
-Precisa da API no ar (`cd ../backend && npm run dev`, porta 3080) com o banco
-já semeado (`npm run db:reset`). Login demo: `admin@example.com` / `102030fs`
+Precisa da API no ar (`cd ../backend && bun run dev`, porta 3080) com o banco
+já semeado (`bun run db:reset`). Login demo: `fslab.vilhena@ifro.edu.br` / `102030fs`
 (também `gestor@` e `usuario@`, para ver o menu mudar por papel).
 
 O backend precisa listar `http://localhost:3000` em `API_CORS` e
@@ -43,18 +43,18 @@ o `next dev`/`next build` com a mensagem do que falta).
 ## Scripts
 
 ```bash
-npm run dev            # servidor de desenvolvimento
-npm run build          # build de produção (standalone)
-npm run start          # serve o build
-npm run typecheck      # tsc --noEmit
-npm run lint           # ESLint
-npm run format         # Prettier (escreve)
-npm run format:check   # Prettier (só confere)
-npm run check          # typecheck + lint + format:check
-npm run types          # exporta o OpenAPI do backend e regenera types/api.d.ts
-npm run types:file     # regenera só a partir de ../backend/openapi.json
-npm run e2e            # testes ponta a ponta (Playwright) — API e front no ar
-npm run ui:verify      # prints por breakpoint + overflow + axe (Playwright)
+bun run dev            # servidor de desenvolvimento
+bun run build          # build de produção (standalone)
+bun run start          # serve o build
+bun run typecheck      # tsc --noEmit
+bun run lint           # ESLint
+bun run format         # Prettier (escreve)
+bun run format:check   # Prettier (só confere)
+bun run check          # typecheck + lint + format:check
+bun run types          # exporta o OpenAPI do backend e regenera types/api.d.ts
+bun run types:file     # regenera só a partir de ../backend/openapi.json
+bun run e2e            # testes ponta a ponta (Playwright) — API e front no ar
+bun run ui:verify      # prints por breakpoint + overflow + axe (Playwright)
 ```
 
 `e2e` e `ui:verify` usam o Google Chrome instalado (`channel: "chrome"`) e as
@@ -86,5 +86,5 @@ lib/
   papeis.ts         papel do usuário e comparação por nível
 ```
 
-Produção: `Dockerfile` (Next standalone) orquestrado pelo `docker-compose.prod.yml`
-da raiz — as `NEXT_PUBLIC_*` entram como build args.
+Deploy: `Dockerfile` (Next standalone) construído pelo `.gitlab-ci.yml` e orquestrado pelo
+`docker-compose.qa.yml` da raiz — as `NEXT_PUBLIC_*` entram como build args.

@@ -2,7 +2,6 @@
 
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { toast } from "react-toastify";
 import { authClient } from "@/lib/auth-client";
 import { destinoInterno, SIGNUP_HABILITADO } from "@/lib/app";
 import { env } from "@/lib/env";
@@ -38,6 +37,9 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  // Erro do servidor no envio (credenciais, conta banida, limite): fica na tela,
+  // ligado aos campos; some quando o usuário edita e-mail ou senha.
+  const [erroLogin, setErroLogin] = useState<{ mensagem: string; credenciais: boolean } | null>(null);
 
   const codigoErroOAuth = useSyncExternalStore(semAssinatura, lerErroOAuth, nuloNoServidor);
   const erroOAuth = codigoErroOAuth ? (ERRO_OAUTH[codigoErroOAuth] ?? ERRO_OAUTH.social) : null;
@@ -56,6 +58,7 @@ export default function LoginPage() {
 
   const signInWithEmail = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErroLogin(null);
     await authClient.signIn.email(
       { email, password },
       {
@@ -68,7 +71,9 @@ export default function LoginPage() {
           setLoading(false);
           // 401 = credenciais erradas (mensagem genérica de propósito); 403 =
           // conta banida; 429 = limite de tentativas.
-          toast.error(mensagemErroAuth(ctx.error, "Não foi possível entrar. Verifique e-mail e senha."));
+          const mensagem = mensagemErroAuth(ctx.error, "Não foi possível entrar. Verifique e-mail e senha.");
+          // Só 401 marca os campos como inválidos; banimento/limite não são culpa do que foi digitado.
+          setErroLogin({ mensagem, credenciais: ctx.error.status === 401 });
         },
       },
     );
@@ -94,6 +99,12 @@ export default function LoginPage() {
           </p>
         )}
 
+        {erroLogin && (
+          <p id="login-erro" role="alert" className="text-sm text-destructive">
+            {erroLogin.mensagem}
+          </p>
+        )}
+
         <div className="grid gap-4">
           <div className="grid gap-1.5">
             <Label htmlFor="email">E-mail</Label>
@@ -103,7 +114,12 @@ export default function LoginPage() {
               autoComplete="email"
               placeholder="voce@exemplo.com"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setErroLogin(null);
+              }}
+              aria-invalid={erroLogin?.credenciais || undefined}
+              aria-describedby={erroLogin ? "login-erro" : undefined}
               required
             />
           </div>
@@ -120,7 +136,12 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setErroLogin(null);
+              }}
+              aria-invalid={erroLogin?.credenciais || undefined}
+              aria-describedby={erroLogin ? "login-erro" : undefined}
               required
             />
           </div>

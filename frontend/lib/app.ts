@@ -1,6 +1,6 @@
 import { env } from "@/lib/env";
 
-export const APP_NOME = env.APP_NOME ?? "Template IA";
+export const APP_NOME = env.APP_NOME ?? "Terra Fértil";
 
 export const APP_DESCRICAO = `Painel administrativo do ${APP_NOME} — Next.js + Better Auth sobre a API do back-end.`;
 

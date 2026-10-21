@@ -1,10 +1,3 @@
 .DS_Store
-backup/
-
-# Relatórios gerados localmente (não fazem parte do template)
-relatorio.html
-
-# Mantidos NO git de propósito (não adicione aqui):
-# - backend/openapi.json  → fonte dos types do front (npm run types:file) e do
-#   teste de drift do CI ("OpenAPI sem drift" / "Types sem drift").
-# - melhorias.html        → relatório de melhorias do template, versionado.
+node_modules/
+data/

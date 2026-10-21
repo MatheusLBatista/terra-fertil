@@ -22,7 +22,7 @@
     "db:studio": "drizzle-kit studio",
     "db:triggers": "tsx src/scripts/applyTriggers.ts",
     "db:setup": "tsx src/scripts/setupDb.ts",
-    "db:reset": "tsx src/scripts/resetDb.ts && npm run db:setup",
+    "db:reset": "tsx src/scripts/resetDb.ts && bun run db:setup",
     "db:seed": "tsx src/seeds/index.ts",
     "db:seed:estados": "tsx src/seeds/estados.ts",
     "db:seed:municipios": "tsx src/seeds/municipios.ts",

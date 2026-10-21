@@ -1,0 +1,1053 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modelo de Dados Terra Fértil</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground: #f4f5f0;
+    --surface: #ffffff;
+    --ink: #161a14;
+    --muted: #5b6356;
+    --line: #dde1d6;
+    --accent: #2f6f2a;
+    --accent-bg: #e6f1e3;
+    --terra: #8a4b1c; --terra-bg: #f8ebe0;
+    --warn: #a35a00;  --warn-bg: #fff2dc;
+    --chip: #eceee7;
+    --code-bg: #f0f2ec;
+    --display: "Familjen Grotesk", "Segoe UI", system-ui, sans-serif;
+    --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground: #131611; --surface: #1c2019; --ink: #ecefe8; --muted: #9ca594; --line: #2d3329;
+      --accent: #8fd07f; --accent-bg: #1f3319; --terra: #f0a771; --terra-bg: #3a2516;
+      --warn: #ffc46b; --warn-bg: #3a2c12; --chip: #262b22; --code-bg: #181c15;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground: #131611; --surface: #1c2019; --ink: #ecefe8; --muted: #9ca594; --line: #2d3329;
+    --accent: #8fd07f; --accent-bg: #1f3319; --terra: #f0a771; --terra-bg: #3a2516;
+    --warn: #ffc46b; --warn-bg: #3a2c12; --chip: #262b22; --code-bg: #181c15;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.5; padding-inline: 16px; padding-block: 0 64px; }
+  a { color: var(--accent); }
+  .wrap { max-width: 1080px; margin: 0 auto; }
+  header.topo { padding-block: 40px 16px; display: grid; gap: 10px; }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 4vw, 42px); line-height: 1.1; margin: 0; text-wrap: balance; }
+  h2 { font-family: var(--display); font-weight: 600; font-size: 26px; line-height: 1.2; margin: 48px 0 8px; scroll-margin-top: 64px; }
+  h3 { font-family: var(--display); font-weight: 600; font-size: 19px; margin: 28px 0 8px; }
+  p { max-width: 75ch; }
+  .lead { max-width: 72ch; color: var(--muted); margin: 0; }
+  .muted { color: var(--muted); }
+  code, .mono { font-family: var(--mono); font-size: .86em; }
+  :not(pre) > code { background: var(--chip); padding: 1px 5px; border-radius: 3px; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-block: 12px 4px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); padding: 12px 14px; display: grid; gap: 2px; }
+  .tile b { font-family: var(--display); font-size: 28px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+  .tile span { font-size: 13px; color: var(--muted); }
+
+  nav.toc { position: sticky; top: 0; z-index: 5; background: var(--ground); border-bottom: 1px solid var(--line); padding-block: 10px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  nav.toc a { font-size: 13px; text-decoration: none; color: var(--ink); background: var(--surface); border: 1px solid var(--line); padding: 4px 10px; }
+  nav.toc a:hover, nav.toc a:focus-visible { border-color: var(--accent); color: var(--accent); }
+  nav.toc .sp { flex: 1; }
+  nav.toc button { font: inherit; font-size: 13px; padding: 4px 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+
+  .chip { display: inline-block; font-family: var(--mono); font-size: 11px; padding: 1px 6px; border-radius: 3px; background: var(--chip); color: var(--muted); white-space: nowrap; vertical-align: 1px; }
+  .chip.nova { background: var(--accent-bg); color: var(--accent); }
+  .chip.existe { background: var(--chip); color: var(--muted); }
+  .chip.validar { background: var(--warn-bg); color: var(--warn); }
+  .chip.alterada { background: var(--terra-bg); color: var(--terra); }
+
+  /* Fluxo */
+  .fluxo { display: flex; flex-wrap: wrap; align-items: stretch; gap: 6px; margin-block: 14px; }
+  .fluxo .passo { background: var(--surface); border: 1px solid var(--line); padding: 8px 12px; display: grid; gap: 1px; min-width: 0; }
+  .fluxo .passo b { font-family: var(--display); font-weight: 600; font-size: 15px; }
+  .fluxo .passo span { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .fluxo .seta { align-self: center; color: var(--muted); }
+
+  /* Tabelas de dados */
+  .grade { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--surface); }
+  .grade th, .grade td { text-align: left; vertical-align: top; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+  .grade th { font-family: var(--display); font-weight: 600; font-size: 13px; background: var(--chip); }
+  .grade td:first-child { white-space: nowrap; }
+  .rolagem { overflow-x: auto; border: 1px solid var(--line); }
+  .rolagem .grade { min-width: 640px; }
+
+  /* Cartões de tabela */
+  .dominio { margin-top: 8px; }
+  .diagrama { background: var(--surface); border: 1px solid var(--line); padding: 12px; overflow-x: auto; margin-block: 12px 18px; }
+  .diagrama pre.mermaid { margin: 0; display: flex; justify-content: center; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  details.tabela { background: var(--surface); border: 1px solid var(--line); margin-block: 8px; }
+  details.tabela > summary { cursor: pointer; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; list-style: none; }
+  details.tabela > summary::-webkit-details-marker { display: none; }
+  details.tabela > summary::before { content: "▸"; color: var(--muted); width: 1em; }
+  details.tabela[open] > summary::before { content: "▾"; }
+  details.tabela > summary .nome { font-family: var(--mono); font-weight: 500; font-size: 15px; }
+  details.tabela > summary .desc { flex-basis: 100%; padding-left: 1.4em; color: var(--muted); font-size: 14px; }
+  .corpo { padding: 0 14px 14px; display: grid; gap: 10px; }
+  .corpo .grade td:nth-child(1) { font-family: var(--mono); font-size: 13px; }
+  .corpo .grade td:nth-child(2) { font-family: var(--mono); font-size: 12px; color: var(--terra); white-space: nowrap; }
+  .corpo .grade td:nth-child(3) { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
+  .corpo .grade td:nth-child(5) { font-size: 12px; color: var(--muted); }
+  .regras { margin: 0; padding-left: 18px; font-size: 14px; }
+  .regras li { margin-block: 2px; }
+  .regras code { font-size: 12px; }
+
+  pre.codigo { background: var(--code-bg); border: 1px solid var(--line); padding: 14px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.55; margin: 10px 0; }
+  .aviso { background: var(--warn-bg); border-left: 3px solid var(--warn); padding: 10px 14px; margin-block: 12px; font-size: 15px; }
+  .nota { background: var(--accent-bg); border-left: 3px solid var(--accent); padding: 10px 14px; margin-block: 12px; font-size: 15px; }
+  ol.perguntas li, ul.lista li { margin-block: 6px; max-width: 78ch; }
+  .busca { display: flex; gap: 8px; align-items: center; margin-block: 8px 4px; }
+  .busca input { flex: 1 1 auto; min-width: 0; font: inherit; font-size: 14px; padding: 7px 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+  .busca button { font: inherit; font-size: 13px; padding: 6px 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; white-space: nowrap; }
+  .fases { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+  .fase { background: var(--surface); border: 1px solid var(--line); padding: 12px 14px; }
+  .fase b { font-family: var(--display); font-weight: 600; display: block; margin-bottom: 4px; }
+  .fase p { font-size: 14px; margin: 0; color: var(--muted); }
+  .fase code { font-size: 11.5px; }
+  .diagrama svg { height: auto !important; min-width: 560px; }
+  @media (max-width: 600px) {
+    h2 { font-size: 22px; }
+    nav.toc { flex-wrap: nowrap; overflow-x: auto; }
+    nav.toc a, nav.toc button { flex: none; }
+    nav.toc .sp { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="topo">
+  <div class="eyebrow">Gestão Terra Fértil · proposta de modelo de dados · out/2026</div>
+  <h1>Das planilhas para o banco: associações, propriedades, visitas e metas</h1>
+  <p class="lead">Proposta construída a partir de <code>docs/Anotações Gerais das Associações.xlsx</code> e
+  <code>docs/Acompanhamento de Metas.xlsx</code>, seguindo as convenções do template (<code>backend/src/db</code>):
+  PK <code>uuid</code>, <code>...auditColumns</code> em toda tabela, soft delete com unique parcial, dinheiro em centavos,
+  <code>timestamptz</code> e índice em toda FK.</p>
+  <div class="tiles">
+    <div class="tile"><b>29</b><span>tabelas novas</span></div>
+    <div class="tile"><b>6</b><span>já existentes reaproveitadas (<code>user</code> ganha telefone)</span></div>
+    <div class="tile"><b>137</b><span>associações na planilha</span></div>
+    <div class="tile"><b>1.017</b><span>linhas de solo na M3 → necessidades de análise</span></div>
+    <div class="tile"><b>1</b><span>projeto hoje (Terra Fértil) · 10 metas · R$ 55 mi — modelo pronto para N</span></div>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Seções">
+  <a href="#analise">Análise</a>
+  <a href="#visao">Visão geral</a>
+  <a href="#projetos">Projetos</a>
+  <a href="#acesso">Acesso</a>
+  <a href="#pessoas">Pessoas</a>
+  <a href="#visitas">Visitas</a>
+  <a href="#tabelas">Tabelas</a>
+  <a href="#enums">Enums</a>
+  <a href="#metas">Metas</a>
+  <a href="#qualidade">Qualidade dos dados</a>
+  <a href="#perguntas">Perguntas</a>
+  <a href="#fases">Fases</a>
+  <span class="sp"></span>
+  <button type="button" id="tema" aria-label="Alternar tema claro/escuro">◐ tema</button>
+</nav>
+
+<!-- ───────────────────────────── ANÁLISE ───────────────────────────── -->
+<h2 id="analise">1. O que as planilhas contam</h2>
+<p>As duas planilhas descrevem o mesmo projeto por ângulos diferentes: a de <b>Anotações</b> é o cadastro das associações
+mais o questionário respondido na <b>visita inicial</b>; a de <b>Metas</b> é o painel do convênio, com contagens que hoje
+são preenchidas à mão, mas que quase sempre podem ser <b>derivadas</b> dos registros operacionais.</p>
+
+<h3>Anotações Gerais das Associações.xlsx</h3>
+<div class="rolagem"><table class="grade">
+  <thead><tr><th>Aba</th><th>O que é</th><th>Vai para</th></tr></thead>
+  <tbody>
+    <tr><td>Dados</td><td>Cadastro da associação (sigla, nome, CNPJ, município, distrito, presidente, endereço, nº produtores/famílias, área média, localização), contato principal + WhatsApp, visita inicial (realizada? data) e “formulário revisado?”. Um bloco de <b>5 linhas mescladas</b> por associação; linhas extras guardam contatos adicionais.</td><td><code>associacoes</code>, <code>associacao_contatos</code>, <code>visitas</code> (tipo inicial)</td></tr>
+    <tr><td>Documentos</td><td>Pasta do Drive + checklist booleano: comprovante CNPJ, estatuto, regimento, ata de eleição, comprovante de endereço, lista de membros.</td><td><code>tipos_documento</code>, <code>associacao_documentos</code></td></tr>
+    <tr><td>Mídia</td><td>Fotos da visita organizadas? Notícia publicada?</td><td><code>visita_anexos</code>, <code>visitas.noticia_url</code></td></tr>
+    <tr><td>Demandas</td><td>Demanda inicial (texto livre) + valor sugerido; itens da “1ª Entrega de 2026” com tipo, valor estimado, nº do pedido (compartilhado entre associações), situação, datas e valor consolidado.</td><td><code>projeto_associacoes</code> (demanda inicial), <code>itens</code>, <code>pedidos_compra</code>, <code>entregas</code></td></tr>
+    <tr><td>Atividades</td><td>Arranjos produtivos (multisseleção: subsistência, grãos, hortaliças, fruticultura, café, pecuária…) + cultura com potencial não explorado.</td><td rowspan="5"><code>diagnosticos_associacao</code> (respostas únicas) + <code>opcoes_diagnostico</code> / <code>diagnostico_opcoes</code> (multisseleção)</td></tr>
+    <tr><td>Solo</td><td>Análise de solo nos últimos 2 anos (Sim/Não/Não sei), acesso a maquinário (Sim/Não/Parcialmente), problemas do solo (multi), práticas de conservação.</td></tr>
+    <tr><td>Capacitação</td><td>Já participaram de cursos? Interesse? Temas prioritários (multi).</td></tr>
+    <tr><td>Apoio</td><td>Registro formal, local para eventos (e tipo), parceiros institucionais (EMATER, SEAGRI, SENAR, Prefeitura, ONG… multi).</td></tr>
+    <tr><td>Interesse / Comentários</td><td>Interesse no projeto, tipo de apoio necessário (multi), observações livres.</td></tr>
+    <tr><td>Site</td><td>Recorte público: sigla, nº produtores, nº famílias, município (121 linhas).</td><td>Endpoint público de leitura sobre <code>associacoes</code></td></tr>
+  </tbody>
+</table></div>
+
+<h3>Acompanhamento de Metas.xlsx</h3>
+<div class="rolagem"><table class="grade">
+  <thead><tr><th>Aba</th><th>Indicadores (previsto)</th><th>Unidade de registro</th></tr></thead>
+  <tbody>
+    <tr><td>Resumo</td><td>10 metas com valor aprovado, situação, peso e % concluída (projeto em 37,2%).</td><td><code>metas</code></td></tr>
+    <tr><td>M1</td><td>Diagnóstico de 100 associações (etapas: levantamento de campo, informações sistematizadas, demandas identificadas) · 3 relatórios técnico-participativos</td><td>associação · relatório</td></tr>
+    <tr><td>M2</td><td>50 parcerias formalizadas · 50 planos de gestão de equipamentos</td><td>associação</td></tr>
+    <tr><td>M3</td><td>5.000 análises (coleta → análise) · 1.000 laudos com recomendação</td><td><b>propriedade</b> (1.017 linhas, 83 associações)</td></tr>
+    <tr><td>M4</td><td>100 kits (levantamento → compra → termo de uso → entrega)</td><td>associação</td></tr>
+    <tr><td>M5</td><td>500 atendimentos · 200 visitas de retorno documentadas</td><td><b>propriedade</b></td></tr>
+    <tr><td>M6</td><td>50 eventos formativos · 500 agricultores capacitados</td><td>evento · produtor</td></tr>
+    <tr><td>M7</td><td>10 estudantes · 10 relatórios/resumos científicos</td><td>aluno · relatório</td></tr>
+    <tr><td>M8</td><td>2 ferramentas TIC (proposta → modelagem → API → web → mobile → implantação → capacitação) · 6 relatórios de pesquisa</td><td>ferramenta · relatório</td></tr>
+    <tr><td>M9</td><td>Execução financeira: liberado R$ 29,0 mi · utilizado R$ 12,3 mi</td><td>lançamento</td></tr>
+    <tr><td>M10</td><td>6 coordenadores contratados (nome, função, data)</td><td>pessoa da equipe</td></tr>
+  </tbody>
+</table></div>
+<p class="muted">Fórmula usada na planilha: <code>% etapa = executado ÷ previsto × peso da etapa</code>; a meta soma as etapas e
+entra no projeto multiplicada pelo próprio peso. Ela <b>não limita a 100%</b> — a M1 está em 100,8% porque 125 de 100 associações
+foram sistematizadas.</p>
+
+<!-- ───────────────────────────── VISÃO GERAL ───────────────────────────── -->
+<h2 id="visao">2. Visão geral do domínio</h2>
+<p>O eixo é <b>Associação → Propriedade → Visitas</b>. Tudo que acontece em campo é uma visita; o que ela produz (diagnóstico,
+necessidade de análise de solo, recomendação, fotos) pendura nela. As metas leem esses registros em vez de serem digitadas.</p>
+<div class="fluxo" aria-label="Fluxo principal">
+  <div class="passo"><b>Associação</b><span>cadastro + docs</span></div><div class="seta">→</div>
+  <div class="passo"><b>Visita inicial</b><span>diagnóstico da associação</span></div><div class="seta">→</div>
+  <div class="passo"><b>Propriedade</b><span>produtor + área</span></div><div class="seta">→</div>
+  <div class="passo"><b>Visita na propriedade</b><span>diagnóstico · coleta</span></div><div class="seta">→</div>
+  <div class="passo"><b>Necessidade de análise → link do laudo</b><span>Meta 3</span></div><div class="seta">→</div>
+  <div class="passo"><b>Assistência técnica</b><span>recomendações · Meta 5</span></div><div class="seta">→</div>
+  <div class="passo"><b>Acompanhamento</b><span>verifica recomendações</span></div>
+</div>
+<p>Em paralelo: <b>entregas de equipamentos</b> à associação (Meta 4), <b>eventos de capacitação</b> com produtores (Meta 6),
+<b>equipe e produção técnica</b> (Metas 1, 7, 8 e 10) e <b>lançamentos financeiros</b> (Meta 9).</p>
+
+<h3 id="projetos">Vários projetos: o que é compartilhado e o que é do projeto</h3>
+<p>O Terra Fértil é o primeiro de possíveis vários projetos. A regra: <b>quem</b> e <b>onde</b> é cadastro compartilhado;
+<b>o que foi feito</b> pertence a um projeto, porque é isso que conta para as metas dele. Uma associação atendida por dois
+projetos tem um só cadastro, duas adesões (<code>projeto_associacoes</code>) e as visitas de cada um separadas.</p>
+<div class="rolagem"><table class="grade">
+  <thead><tr><th>Compartilhado (sem <code>projeto_id</code>)</th><th>Do projeto (<code>projeto_id</code> NOT NULL)</th><th>Herda o projeto do pai</th></tr></thead>
+  <tbody><tr>
+    <td><code>associacoes</code>, <code>associacao_contatos</code>, <code>diagnosticos_associacao</code> (+ suas opções), <code>produtores</code>, <code>propriedades</code>, <code>user</code>,
+      catálogos (<code>tipos_documento</code>, <code>opcoes_diagnostico</code>, <code>itens</code>), <code>municipios</code></td>
+    <td><code>projeto_associacoes</code>, <code>projeto_equipe</code>, <code>metas</code>, <code>visitas</code>, <code>analises_solo</code>,
+      <code>pedidos_compra</code>, <code>entregas</code>, <code>eventos</code>, <code>producoes</code>,
+      <code>lancamentos_financeiros</code>; <code>associacao_documentos</code> só nos tipos <code>por_projeto</code></td>
+    <td><code>diagnosticos_propriedade</code>, <code>visita_anexos</code>, <code>visita_equipe</code>, <code>diagnostico_opcoes</code>, <code>recomendacoes</code>
+      (visita), <code>evento_participantes</code>, <code>indicadores</code>/<code>etapas_indicador</code> (meta)</td>
+  </tr></tbody>
+</table></div>
+<ul class="lista">
+  <li><b>Coluna redundante de propósito</b> só onde a meta conta direto (visitas, análises de solo, entregas, eventos…): a consulta
+    de apuração filtra <code>where projeto_id = $1</code> sem join. Nas filhas, repetir a coluna criaria o risco de divergir do pai.</li>
+  <li><b>Coerência entre tabelas</b> (ex.: visita que identificou a necessidade de análise no mesmo projeto e propriedade; meta do lançamento no mesmo projeto) é
+    validada no service — 422 quando não bate.</li>
+  <li><b>API:</b> recursos do projeto em rotas aninhadas (<code>/projetos/:projetoId/metas</code>, <code>…/painel</code>); listagens
+    operacionais com filtro <code>?projetoId=</code>. <b>Painel:</b> seletor de “projeto atual” no topo, guardado na URL (nuqs) e
+    aplicado em todas as listas e formulários; com um projeto só, o seletor fica oculto.</li>
+  <li><b>Projeto encerrado</b> vira somente leitura (409 em escrita) — o histórico de metas daquele convênio fica congelado.</li>
+</ul>
+
+<h3 id="acesso">Acesso restrito ao projeto <span class="chip nova">decidido</span></h3>
+<p>Quem atua no projeto A <b>não</b> vê nada do projeto B. O CASL continua respondendo “o papel pode ler <code>Visita</code>?”; o
+<b>escopo</b> (“de quais projetos?”) vem de <code>projeto_equipe</code> e é aplicado nos services — o <code>ability.ts</code> não muda.</p>
+<ul class="lista">
+  <li><b>Exceção configurável:</b> <code>papeis</code> ganha <code>acesso_todos_projetos boolean</code> (seed: <code>admin</code> e <code>gestor</code> = true;
+    <code>tecnico</code>, <code>produtor</code>, <code>usuario</code> = false). Nenhum nome de papel fica fixo no código.</li>
+  <li><b>Helper único</b> <code>projetosDoUsuario(user)</code> em <code>src/lib/escopo.ts</code>: <code>'todos'</code> ou a lista de
+    <code>projeto_id</code> em que a pessoa tem <code>projeto_equipe</code> ativo. Cache de 30 s por usuário, invalidado ao alterar a equipe
+    (mesmo esquema do cache de permissões).</li>
+  <li><b>Rotas aninhadas</b> <code>/projetos/:projetoId/*</code>: middleware <code>requireProjeto()</code> depois do
+    <code>requirePermission</code> — fora do escopo → <b>404</b> (não revela que o projeto existe).</li>
+  <li><b>Listagens</b>: <code>?projetoId=</code> fora do escopo → 404; sem o filtro → <code>where projeto_id in (…escopo)</code>.
+    <b>GET /:id</b> de registro de outro projeto → 404. <b>Criar/alterar</b>: <code>projeto_id</code> do corpo precisa estar no escopo
+    (404), e <code>tecnico_id</code>/equipe da visita precisam ser membros do projeto (422).</li>
+  <li><b>Cadastro compartilhado</b> também é filtrado: a associação aparece para quem tem algum projeto em que ela tem adesão
+    (<code>projeto_associacoes</code>); propriedades, produtores e o diagnóstico da associação seguem a associação. Associação sem adesão
+    nenhuma só aparece para <code>acesso_todos_projetos</code> — é quem faz a prospecção e a adesão.</li>
+  <li><b>Papel <code>produtor</code></b> não usa <code>projeto_equipe</code>: vê os próprios registros de qualquer projeto (escopo = dono).</li>
+  <li><b>Teste de integração obrigatório</b> por módulo: técnico do projeto A recebe 404 em registro do projeto B (listagem, detalhe e escrita).</li>
+</ul>
+
+<h3>Reaproveitado de <code>backend/src/db</code></h3>
+<ul class="lista">
+  <li><code>municipios</code> / <code>estados</code> (IBGE) — município da associação, da propriedade e do evento. Elimina as variações de grafia da planilha (“Porto Velho ”, “Guajará - Mirim”).</li>
+  <li><code>user</code> (better-auth) — <b>toda pessoa do domínio é um usuário</b>: produtor, contato/presidente de associação, técnico, membro da equipe. Ver abaixo.</li>
+  <li><code>papeis</code> / <code>permissoes</code> — novos subjects no seed (ex.: <code>Associacao</code>, <code>Propriedade</code>, <code>Visita</code>, <code>AnaliseSolo</code>, <code>Entrega</code>, <code>Evento</code>, <code>Meta</code>). Provável papel novo: <code>tecnico</code> (cria visitas e necessidades de análise, informa o link do laudo; não mexe em metas nem financeiro).</li>
+  <li><code>historico_alteracoes</code> — todas as tabelas novas têm <code>deleted_at</code>, logo entram na trigger automaticamente.</li>
+  <li><code>src/lib/storage</code> (Garage/S3) — documentos, fotos e termos de uso viram <code>*_key</code> privados, servidos por proxy autenticado. Substitui as pastas do Google Drive. (Laudo de solo é só link externo.)</li>
+</ul>
+
+<h3 id="pessoas">Produtores e contatos são usuários do better-auth</h3>
+<p>Nome, e-mail e telefone moram <b>só</b> em <code>user</code>. <code>produtores</code> vira o <b>perfil 1:1</b> do usuário (CPF e
+dados agrícolas) e <code>associacao_contatos</code> vira o <b>vínculo N:N</b> entre usuário e associação (função, principal).
+Uma mesma pessoa pode ser produtora <i>e</i> presidente da associação — é um único <code>user</code> com as duas linhas.</p>
+<pre class="codigo">// src/db/produtor.ts
+export const produtor = pgTable("produtores", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  // perfil 1:1 — unique TOTAL (como papeis.nome): perfil excluído é reativado, não recriado
+  userId: text("user_id").notNull().unique().references(() =&gt; user.id, { onDelete: "restrict" }),
+  cpf: varchar("cpf", { length: 11 }),
+  observacao: text("observacao"),
+  ativo: boolean("ativo").notNull().default(true),
+  ...auditColumns,
+}, (t) =&gt; [
+  uniqueIndex("produtores_cpf_idx").on(t.cpf).where(sql`${t.deletedAt} is null and ${t.cpf} is not null`),
+]);</pre>
+<p>O que isso exige do lado do auth:</p>
+<ul class="lista">
+  <li><b>Telefone no <code>user</code>:</b> plugin <code>phoneNumber</code> do better-auth — adiciona <code>phone_number</code> (unique) e
+    <code>phone_number_verified</code> (colunas entram à mão em <code>src/db/user.ts</code>) e permite login por OTP, que é o meio
+    realista para produtor rural. Telefone em E.164 sem “+” (<code>5569993453103</code>); o link <code>wa.me</code> é derivado.</li>
+  <li><b><code>user.email</code> é NOT NULL e unique</b>, e a maioria dos produtores não tem e-mail. Quem não tiver recebe um e-mail
+    técnico <code>&lt;telefone&gt;@sem-email.invalid</code> (<code>getTempEmail</code> do plugin; domínio <code>.invalid</code> da RFC 2606),
+    e o <code>sendEmail()</code> passa a ignorar esse domínio.</li>
+  <li><b>Conta sem senha:</b> a importação e o cadastro pelo painel criam o <code>user</code> sem linha em <code>account</code> —
+    a pessoa existe para o domínio mas só entra no sistema depois de verificar o telefone (OTP) ou receber senha do admin.
+    <code>AUTH_SIGNUP_ENABLED</code> continua <code>false</code>.</li>
+  <li><b>Papel novo <code>produtor</code></b> no seed de papéis (FK em <code>user.role</code>). Contato de associação usa o mesmo papel;
+    o que dá a ele acesso à associação é a linha em <code>associacao_contatos</code>, não o papel. Técnicos: papel <code>tecnico</code>.</li>
+  <li><b>“Só os meus registros”:</b> o <code>ability.ts</code> atual só lê pares (ação, subject), sem condições. Para o produtor ver
+    apenas as próprias propriedades, análises de solo e visitas, há duas saídas: (a) os services filtram por
+    <code>produtores.user_id = usuário logado</code> quando o papel é <code>produtor</code>; ou (b) <code>permissoes</code> ganha
+    <code>condicoes jsonb</code> (ex.: <code>{"produtorUserId": "${user.id}"}</code>) e o <code>ability.ts</code> passa a aplicá-las — mudança única
+    no template, não por módulo. As listagens precisam do filtro (a) de qualquer jeito; (b) cobre as checagens por instância.
+    <b>Adotado: (a)</b> — é o mesmo mecanismo do escopo por projeto (<a href="#acesso">ver “Acesso restrito ao projeto”</a>).</li>
+</ul>
+
+<!-- ───────────────────────────── VISITAS ───────────────────────────── -->
+<h2 id="visitas">3. Visitas: uma tabela, quatro tipos</h2>
+<p>Os tipos citados (visita inicial na associação, visita na propriedade, assistência técnica, acompanhamento) compartilham
+quase tudo: data, técnico, equipe, relato, fotos, GPS e situação (agendada/realizada/cancelada). Por isso ficam em
+<b>uma tabela <code>visitas</code> com <code>tipo</code></b>; o que é específico de cada tipo mora em tabela 1:1 ou filha.</p>
+<div class="rolagem"><table class="grade">
+  <thead><tr><th>tipo</th><th>Alvo</th><th>Produz</th><th>Meta</th></tr></thead>
+  <tbody>
+    <tr><td><code>inicial_associacao</code></td><td>associação</td><td>cria ou <b>atualiza</b> o <code>diagnosticos_associacao</code> único da associação (reaproveitado por todos os projetos) + adesão em <code>projeto_associacoes</code></td><td>M1</td></tr>
+    <tr><td><code>diagnostico_propriedade</code></td><td>propriedade</td><td><code>diagnosticos_propriedade</code> (1:1) + respostas de multisseleção</td><td>—</td></tr>
+    <tr><td><code>assistencia_tecnica</code></td><td>propriedade</td><td><code>recomendacoes</code> (1:N)</td><td>M5 · atendimentos</td></tr>
+    <tr><td><code>acompanhamento</code></td><td>propriedade</td><td>aponta <code>visita_anterior_id</code>; marca recomendações como verificadas</td><td>M5 · retornos</td></tr>
+  </tbody>
+</table></div>
+<p>Solo não é um tipo de visita: a <b>necessidade de análise</b> é registrada em qualquer visita na propriedade
+(<code>analises_solo.visita_id</code>) ou avulsa, e o link do laudo é preenchido depois, sem visita. A regra que importa está no banco:</p>
+<pre class="codigo">// src/db/visita.ts — trecho
+export const visita = pgTable(
+  "visitas",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    projetoId: uuid("projeto_id").notNull().references(() =&gt; projeto.id, { onDelete: "restrict" }),
+    tipo: visitaTipoEnum("tipo").notNull(),
+    situacao: visitaSituacaoEnum("situacao").notNull().default("agendada"),
+    associacaoId: uuid("associacao_id").references(() =&gt; associacao.id, { onDelete: "restrict" }),
+    propriedadeId: uuid("propriedade_id").references(() =&gt; propriedade.id, { onDelete: "restrict" }),
+    visitaAnteriorId: uuid("visita_anterior_id").references((): AnyPgColumn =&gt; visita.id),
+    data: date("data").notNull(),
+    realizadaEm: timestamp("realizada_em", { withTimezone: true }),
+    tecnicoId: text("tecnico_id").notNull().references(() =&gt; user.id, { onDelete: "restrict" }),
+    latitude: numeric("latitude", { precision: 9, scale: 6 }),
+    longitude: numeric("longitude", { precision: 9, scale: 6 }),
+    relato: text("relato"),
+    noticiaUrl: text("noticia_url"),
+    ...auditColumns,
+  },
+  (t) =&gt; [
+    // exatamente um alvo; a inicial é na associação, as demais na propriedade
+    check("visitas_alvo_ck", sql`num_nonnulls(${t.associacaoId}, ${t.propriedadeId}) = 1`),
+    check("visitas_tipo_alvo_ck",
+      sql`(${t.tipo} = 'inicial_associacao') = (${t.associacaoId} is not null)`),
+    check("visitas_realizada_ck",
+      sql`(${t.situacao} = 'realizada') = (${t.realizadaEm} is not null)`),
+    index("visitas_associacao_idx").on(t.associacaoId),
+    index("visitas_propriedade_idx").on(t.propriedadeId),
+    index("visitas_anterior_idx").on(t.visitaAnteriorId),
+    index("visitas_tecnico_idx").on(t.tecnicoId),
+    // apuração de meta: where projeto_id = $1 and tipo = … (cobre também o FK de projeto)
+    index("visitas_projeto_tipo_data_idx").on(t.projetoId, t.tipo, t.data),
+  ],
+);</pre>
+<div class="nota">PK em <code>uuid</code> permite que o app mobile (Meta 8 — “App Da Nossa Terra Rondônia”) gere o id offline e
+sincronize depois sem colisão. Vale para <code>visitas</code>, <code>visita_anexos</code>, <code>analises_solo</code> e <code>recomendacoes</code>.</div>
+
+<!-- ───────────────────────────── TABELAS ───────────────────────────── -->
+<h2 id="tabelas">4. Tabelas por domínio</h2>
+<p>Toda tabela nova termina com <code>...auditColumns</code> (<code>created_at</code>, <code>updated_at</code>, <code>created_by</code>,
+<code>updated_by</code>, <code>deleted_at</code>) — omitidas abaixo. <code>U*</code> = unique parcial <code>where deleted_at is null</code>.
+<code>FK</code> sempre com índice. Coluna “origem” aponta a aba/coluna da planilha que alimenta o campo.</p>
+<div class="busca">
+  <input type="search" id="filtro" placeholder="Filtrar tabelas ou colunas (ex.: cnpj, laudo, centavos)" aria-label="Filtrar tabelas ou colunas">
+  <button type="button" id="abrir">Abrir todas</button>
+  <button type="button" id="fechar">Fechar todas</button>
+</div>
+<div id="dominios"></div>
+
+<!-- ───────────────────────────── ENUMS ───────────────────────────── -->
+<h2 id="enums">5. Enums novos (<code>src/db/enums.ts</code>)</h2>
+<div class="rolagem"><table class="grade" id="tabela-enums">
+  <thead><tr><th>pgEnum</th><th>Valores</th><th>Usado em</th></tr></thead>
+  <tbody></tbody>
+</table></div>
+<p class="muted">Listas que a equipe vai querer editar pelo painel (atividades produtivas, temas de capacitação, tipos de documento,
+itens de equipamento) <b>não</b> são enum — são catálogos (<code>opcoes_diagnostico</code>, <code>tipos_documento</code>, <code>itens</code>).</p>
+
+<!-- ───────────────────────────── METAS ───────────────────────────── -->
+<h2 id="metas">6. Metas: de onde sai cada número</h2>
+<p><code>projetos</code> → <code>metas</code> → <code>indicadores</code> → <code>etapas_indicador</code> espelham exatamente a estrutura das abas M1–M10
+(previsto e peso por etapa). Um projeto novo cadastra as próprias metas e reaproveita as mesmas <code>chave</code>s — toda consulta
+da allowlist recebe o <code>projeto_id</code> da meta e conta só os registros daquele projeto. Cada etapa tem <code>apuracao</code>: <b>automatica</b> (o service resolve a <code>chave</code> numa
+consulta de uma allowlist — nunca SQL vindo do banco) ou <b>manual</b> (<code>quantidade_manual</code> digitada, para o que não tem
+registro operacional, como as etapas de desenvolvimento da M8).</p>
+<div class="rolagem"><table class="grade">
+  <thead><tr><th>Meta · etapa</th><th>Prev.</th><th>Peso</th><th>chave → consulta</th></tr></thead>
+  <tbody id="tabela-metas"></tbody>
+</table></div>
+
+<!-- ───────────────────────────── QUALIDADE ───────────────────────────── -->
+<h2 id="qualidade">7. Qualidade dos dados (para a importação)</h2>
+<ul class="lista">
+  <li><b>Contagens divergentes de associações:</b> 137 na aba Dados, 125 na M1/Página3, 121 na aba Site. Reconciliar antes de importar — a sigla sozinha não basta (“CISAN” e “CISAN ASPROPALMAS”).</li>
+  <li><b>Municípios com grafia solta:</b> “Porto Velho ” (com espaço), “Candeias do Jamari ”, “Ariquemes ”, “Guajará - Mirim”. A importação casa por nome normalizado (sem acento/espaço) contra <code>municipios</code> de RO e para no primeiro não encontrado.</li>
+  <li><b>Sim/Não em texto:</b> “Sim”, “Sim ”, “SIm”, “Sim  ”, vazio. Normalizar para boolean/enum; vazio = não informado (NULL), não “Não”.</li>
+  <li><b>CNPJ em formatos inválidos:</b> <code>25.256.043.0001/63</code>, <code>91.34307/0001-50</code>, <code>63.762.686.0001-78</code>. Guardar só dígitos e validar DV; os inválidos entram como NULL com observação.</li>
+  <li><b>Telefones</b> com zero à esquerda (<code>069993453103</code>) ou DDI (<code>55069993607005</code>). Normalizar para <code>5569993453103</code> — vira <code>user.phone_number</code> (unique), então é também a <b>chave de deduplicação de pessoas</b>: o presidente que aparece como contato e como produtor na M3 vira um só <code>user</code>. Telefone repetido entre pessoas diferentes (telefone da família) precisa de revisão manual.</li>
+  <li><b>Localização</b> às vezes é “Solicitado” em vez de link; latitude/longitude como texto com espaços (<code>" -64.507941"</code>).</li>
+  <li><b>Contatos extras</b> em 20 linhas sem sigla dentro do bloco mesclado → viram linhas de <code>associacao_contatos</code>.</li>
+  <li><b>Produtores identificados só pelo nome</b> na M3: 1.017 linhas, ~967 nomes distintos, com variações de espaço/caixa (“José Antonio da Silva ”). Repetição é legítima (várias análises por propriedade), mas o nome não é chave — pedir CPF ou telefone daqui pra frente. Cada linha vira uma <code>analises_solo</code> sem link; a planilha não tem data, então <code>identificada_em</code> recebe a data da importação (com observação).</li>
+  <li><b>Pedido de compra compartilhado:</b> nº 785275 aparece em várias associações (e também na enxada rotativa) — por isso <code>pedidos_compra</code> é entidade própria e <code>entregas</code> aponta para ele.</li>
+  <li><b>Placeholders:</b> M2, M4, M5, M6 e M7 têm linhas “ASSOCIAÇÃO 01”, “PROPRIEDADE 01”… sem dado real; a coluna “Levantamento de demanda” da M4 tem datas sequenciais artificiais (01/04, 02/04, 03/04/2025…). Não importar.</li>
+  <li><b>Inconsistências de meta:</b> M2 diz “50 planos de gestão” mas o previsto é 500; M6 e M7 estão marcadas como “Divergência entre projeto e plano de trabalho”.</li>
+  <li><b>Documentos</b> hoje são só checkboxes + pasta do Drive. Na migração entram como <code>associacao_documentos</code> com situação <code>recebido</code> e sem arquivo, até o upload para o Garage.</li>
+</ul>
+
+<!-- ───────────────────────────── PERGUNTAS ───────────────────────────── -->
+<h2 id="perguntas">8. Decisões e perguntas em aberto</h2>
+<h3>Já decidido</h3>
+<ul class="lista">
+  <li><b>Pessoas são usuários do better-auth:</b> produtores e contatos de associação (e a equipe) têm <code>user</code>; os perfis/vínculos apontam para ele.</li>
+  <li><b>Vários projetos:</b> metas e registros operacionais pertencem a um projeto; cadastro é compartilhado.</li>
+  <li><b>Acesso restrito ao projeto:</b> técnico do projeto A não vê o projeto B; escopo por <code>projeto_equipe</code>, filtro nos services, exceção via <code>papeis.acesso_todos_projetos</code>.</li>
+  <li><b>Admin e gestor veem todos os projetos</b> (<code>acesso_todos_projetos = true</code> no seed); técnico, produtor e usuário ficam no escopo.</li>
+  <li><b>Diagnóstico da associação é único e reaproveitado</b> entre projetos; interesse e demanda inicial são da adesão ao projeto.</li>
+  <li><b>Solo:</b> só a necessidade de análise e, depois, o link do laudo (<code>analises_solo</code>). Sem amostras, resultados de laboratório ou arquivo de laudo no sistema.</li>
+</ul>
+<h3>Em aberto</h3>
+<ol class="perguntas">
+  <li><b>Produtor vai logar?</b> Se sim, por OTP no telefone (SMS ou WhatsApp — custo por envio) ou por senha definida pelo técnico? Isso decide se o plugin <code>phoneNumber</code> entra já na fase 1 ou só o campo de telefone.</li>
+  <li><b>Produtor em mais de uma associação?</b> Hoje o vínculo vem da propriedade (<code>propriedades.associacao_id</code>). Se um produtor sem propriedade cadastrada precisar constar como associado (ex.: lista de membros), entra uma tabela <code>associacao_produtores</code>.</li>
+  <li><b>Dados pessoais do produtor:</b> o convênio exige relatório por gênero, faixa etária ou CPF? Se sim, <code>produtores</code> ganha <code>genero</code> e <code>data_nascimento</code> (LGPD: só o necessário).</li>
+  <li><b>Formulário da visita na propriedade:</b> não há planilha dele. Os campos de <code>diagnosticos_propriedade</code> abaixo são uma proposta — precisam do roteiro de campo real.</li>
+  <li><b>Meta 3 automática?</b> Sem amostras no sistema, “coletas” e “análises” (5.000 cada) passam a ser digitadas (<code>quantidade_manual</code>); só “laudos” é contado. Se quiserem as três automáticas, basta <code>analises_solo.qtd_amostras</code> (smallint) + data da coleta — sem voltar ao modelo de amostras.</li>
+  <li><b>Etapa pode passar de 100%?</b> A planilha deixa (M1 = 125/100). Proposta: guardar o executado real e limitar a 100% só no cálculo do percentual.</li>
+  <li><b>Distrito:</b> texto livre basta (11 distritos hoje) ou vira tabela por município para filtro/relatório?</li>
+  <li><b>Diagnóstico da propriedade</b> segue a mesma regra da associação (único, reaproveitado) ou é por visita? Hoje está por visita
+    (<code>diagnosticos_propriedade</code> 1:1 com a visita); se for único, muda para PK <code>propriedade_id</code> do mesmo jeito.</li>
+</ol>
+
+<!-- ───────────────────────────── FASES ───────────────────────────── -->
+<h2 id="fases">9. Ordem sugerida de implementação</h2>
+<p>Cada fase segue o checklist do <code>CLAUDE.md</code>: model + barrel → <code>db:generate</code> → <code>db:triggers</code> →
+módulo em <code>MODULOS</code> → permissões no seed → <code>TABELAS_DOMINIO</code> → <code>make types</code> → <code>NAV_GROUPS</code>.</p>
+<div class="fases">
+  <div class="fase"><b>1 · Cadastro + visita inicial</b><p>Substitui a planilha de Anotações inteira. Antes de tudo: telefone no <code>user</code> (plugin <code>phoneNumber</code>), papéis <code>produtor</code>/<code>tecnico</code>, guarda do <code>@sem-email.invalid</code> no <code>sendEmail</code>, <code>projetos</code> (seed do Terra Fértil), <code>projeto_equipe</code>, <code>papeis.acesso_todos_projetos</code>, helper de escopo + <code>requireProjeto()</code> e seletor de projeto no painel — o escopo entra antes do primeiro módulo, não depois. Depois <code>associacoes</code>, <code>projeto_associacoes</code>, <code>associacao_contatos</code>, <code>tipos_documento</code>, <code>associacao_documentos</code>, <code>visitas</code>, <code>visita_anexos</code>, <code>visita_equipe</code>, <code>diagnosticos_associacao</code>, <code>opcoes_diagnostico</code>, <code>diagnostico_opcoes</code> + script de importação.</p></div>
+  <div class="fase"><b>2 · Propriedades + solo</b><p>Meta 3, a de maior volume. <code>produtores</code>, <code>propriedades</code>, <code>analises_solo</code>. Importa as 1.017 linhas da M3 como necessidades.</p></div>
+  <div class="fase"><b>3 · Equipamentos</b><p>Meta 4 e aba Demandas. <code>itens</code>, <code>pedidos_compra</code>, <code>entregas</code> (com upload do termo de uso).</p></div>
+  <div class="fase"><b>4 · Assistência + capacitação</b><p>Metas 5 e 6. Tipos de visita <code>assistencia_tecnica</code>/<code>acompanhamento</code>, <code>recomendacoes</code>, <code>diagnosticos_propriedade</code>, <code>eventos</code>, <code>evento_participantes</code>.</p></div>
+  <div class="fase"><b>5 · Metas e painel</b><p>Metas 1–10 calculadas. <code>metas</code>, <code>indicadores</code>, <code>etapas_indicador</code>, <code>producoes</code>, <code>producao_autores</code>, <code>lancamentos_financeiros</code>. Aí o <code>/dashboard</code> deixa de ser vazio.</p></div>
+</div>
+
+</div>
+
+<script>
+// ─── Dados do modelo ────────────────────────────────────────────────────────
+// Coluna: [nome, tipo, regras, observação, origem na planilha]
+const DOMINIOS = [
+{
+  id: "d-cadastro", nome: "Cadastro: associações, produtores e propriedades",
+  diagrama: `erDiagram
+  estados ||--o{ municipios : "UF"
+  municipios ||--o{ associacoes : "sede"
+  municipios ||--o{ propriedades : "local"
+  associacoes ||--o{ associacao_contatos : "contatos"
+  user ||--o{ associacao_contatos : "e contato"
+  user ||--o| produtores : "perfil"
+  associacoes ||--o{ associacao_documentos : "documentos"
+  tipos_documento ||--o{ associacao_documentos : "tipo"
+  associacoes ||--o{ propriedades : "atende"
+  produtores ||--o{ propriedades : "titular"`,
+  tabelas: [
+    { nome: "user", model: "user", alterada: true, desc: "Tabela do better-auth. Passa a representar toda pessoa do domínio; ganha telefone pelo plugin phoneNumber.", cols: [
+      ["id","text","PK","Gerado pelo better-auth",""],
+      ["name","text","NN","Nome do produtor/contato","Dados › Presidente / Contato › Nome · M3 › Propriedade"],
+      ["email","text","NN · unique","Sem e-mail → <code>&lt;telefone&gt;@sem-email.invalid</code>",""],
+      ["phone_number","text","unique · <b>nova</b>","E.164 sem “+”; plugin phoneNumber","Dados › Telefone"],
+      ["phone_number_verified","boolean","<b>nova</b>","true após OTP",""],
+      ["role","text","FK papeis.nome","+ papéis <code>produtor</code> e <code>tecnico</code> no seed",""],
+      ["banned, …","","","Demais colunas do plugin admin, sem mudança",""],
+    ], regras: [
+      "Sem <code>...auditColumns</code> (tabela do better-auth) — continua fora da trigger de histórico; o histórico da pessoa no domínio fica em <code>produtores</code>/<code>associacao_contatos</code>",
+      "Importação deduplica pessoas pelo telefone normalizado antes de criar o <code>user</code>",
+    ]},
+    { nome: "associacoes", model: "associacao", desc: "Associação/cooperativa atendida. Um bloco de 5 linhas da aba Dados vira uma linha aqui.", cols: [
+      ["id","uuid","PK","defaultRandom()",""],
+      ["sigla","text","NN","ASPROMEP, ACLOLICAM, CAFÉ D'ARC…","Dados › Sigla"],
+      ["nome","text","","Razão social (vazia em boa parte da planilha)","Dados › Nome"],
+      ["cnpj","varchar(14)","U*","Só dígitos; DV validado no zod","Dados › CNPJ"],
+      ["municipio_id","integer","NN · FK municipios","Casado com o IBGE pelo nome","Dados › Município"],
+      ["distrito","text","","Extrema, Jaci-Paraná, Triunfo, União Bandeirantes…","Dados › Distrito"],
+      ["endereco","text","","","Dados › Endereço"],
+      ["num_produtores","integer","check ≥ 0","Produtores associados","Dados › Nº Produtores"],
+      ["num_familias","integer","check ≥ 0","Famílias na área","Dados › Nº Famílias"],
+      ["area_media_ha","numeric(10,2)","check ≥ 0","Tamanho médio das propriedades","Dados › Tamanho médio"],
+      ["latitude, longitude","numeric(9,6)","ambos ou nenhum","","Dados › Localização"],
+      ["mapa_url","text","","Link do Google Maps","Dados › Link"],
+      ["grupo_whatsapp_url","text","","","Dados › Grupo WhatsApp"],
+      ["dados_revisados","boolean","NN · default false","","Dados › Formulário revisado?"],
+      ["ativo","boolean","NN · default true","Status de negócio (PATCH), não exclusão",""],
+    ], regras: [
+      "<code>unique (municipio_id, lower(sigla)) where deleted_at is null</code>",
+      "<code>unique (cnpj) where deleted_at is null and cnpj is not null</code>",
+      "<code>check (num_nonnulls(latitude, longitude) in (0, 2))</code>",
+      "Presidente sai daqui e vira contato com <code>funcao = 'presidente'</code>",
+      "Cadastro <b>compartilhado</b> entre projetos; a participação em cada projeto (e a parceria da Meta 2) fica em <code>projeto_associacoes</code>",
+      "Sort allowlist: <code>sigla</code>, <code>nome</code>, <code>municipio</code>, <code>num_produtores</code>, <code>created_at</code>",
+    ]},
+    { nome: "associacao_contatos", model: "associacaoContato", desc: "Vínculo usuário ↔ associação: presidente, contato principal e contatos extras (as linhas sem sigla dentro do bloco). Nome e telefone vêm do user.", cols: [
+      ["id","uuid","PK","",""],
+      ["associacao_id","uuid","NN · FK associacoes","onDelete cascade",""],
+      ["user_id","text","NN · FK user","onDelete restrict","Dados › Presidente / Contato principal"],
+      ["funcao","contato_funcao","NN · default 'contato'","presidente | contato | outro",""],
+      ["principal","boolean","NN · default false","",""],
+      ["desde, ate","date","","Mandato/período do vínculo",""],
+    ], regras: [
+      "<code>unique (associacao_id, user_id) where deleted_at is null</code>",
+      "<code>unique (associacao_id) where principal and deleted_at is null</code> — um contato principal por associação",
+      "<code>index (user_id)</code> — “de quais associações sou contato?” (escopo de acesso do papel produtor)",
+    ]},
+    { nome: "tipos_documento", model: "tipoDocumento", desc: "Catálogo dos documentos exigidos da associação (editável no painel).", cols: [
+      ["id","uuid","PK","",""],
+      ["nome","text","NN · U*","Comprovante CNPJ, Estatuto social, Regimento interno, Ata de eleição e posse, Comprovante de endereço, Lista de membros, Termo de parceria (M2), Plano de gestão de equipamentos (M2)","Documentos › cabeçalhos"],
+      ["obrigatorio","boolean","NN · default true","",""],
+      ["por_projeto","boolean","NN · default false","true = um por projeto (Termo de parceria, Plano de gestão); false = da associação (Estatuto…)",""],
+      ["ordem","smallint","NN · default 0","Ordem no checklist",""],
+      ["ativo","boolean","NN · default true","",""],
+    ], regras: ["Seed em <code>src/seeds/tiposDocumento.ts</code>"]},
+    { nome: "associacao_documentos", model: "associacaoDocumento", desc: "Documento entregue pela associação, com arquivo privado no Garage.", cols: [
+      ["id","uuid","PK","",""],
+      ["associacao_id","uuid","NN · FK associacoes","",""],
+      ["tipo_documento_id","uuid","NN · FK tipos_documento","",""],
+      ["projeto_id","uuid","FK projetos","Preenchido sse o tipo é <code>por_projeto</code> (service)",""],
+      ["situacao","documento_situacao","NN · default 'pendente'","pendente | recebido | validado | rejeitado","Documentos › checkbox"],
+      ["arquivo_key","text","","Chave S3 (proxy autenticado)",""],
+      ["nome_arquivo","text","","",""],
+      ["mime_type","text","","",""],
+      ["tamanho_bytes","integer","check ≥ 0","",""],
+      ["validade","date","","Ex.: mandato da diretoria",""],
+      ["observacao","text","","Motivo da rejeição etc.",""],
+    ], regras: [
+      "<code>unique nulls not distinct (associacao_id, tipo_documento_id, projeto_id) where deleted_at is null</code> (PG 17) — nova versão = soft delete da anterior (o histórico guarda tudo)",
+      "<code>index (associacao_id)</code>, <code>index (tipo_documento_id)</code>, <code>index (projeto_id)</code>",
+    ]},
+    { nome: "produtores", model: "produtor", desc: "Perfil 1:1 do usuário que é agricultor (titular de propriedade, participante de capacitações). Nome, e-mail e telefone ficam no user.", cols: [
+      ["id","uuid","PK","Alvo das FKs do domínio (propriedades, participantes)",""],
+      ["user_id","text","NN · unique · FK user","1:1; onDelete restrict","M3 › Propriedade (nome → user.name)"],
+      ["cpf","varchar(11)","U*","Só dígitos; opcional, mas recomendado para deduplicar",""],
+      ["observacao","text","","",""],
+      ["ativo","boolean","NN · default true","Status no projeto (login é <code>user.banned</code>)",""],
+    ], regras: [
+      "<code>unique (user_id)</code> TOTAL — perfil excluído é reativado (<code>POST /:id/reativar</code>), não recriado",
+      "<code>unique (cpf) where deleted_at is null and cpf is not null</code>",
+      "Listagem faz join com <code>user</code> para nome/telefone; busca por nome: índice <code>gin (name gin_trgm_ops)</code> em <code>user</code> quando passar de alguns milhares",
+      "Criar produtor = transação: cria <code>user</code> (sem <code>account</code>, papel <code>produtor</code>) + <code>produtores</code>",
+    ]},
+    { nome: "propriedades", model: "propriedade", desc: "Unidade produtiva visitada. A associação aqui é a que a atende no projeto.", cols: [
+      ["id","uuid","PK","",""],
+      ["produtor_id","uuid","NN · FK produtores","",""],
+      ["associacao_id","uuid","NN · FK associacoes","","M3 › Associação"],
+      ["nome","text","","Sítio/Chácara…",""],
+      ["municipio_id","integer","NN · FK municipios","",""],
+      ["distrito","text","","",""],
+      ["endereco","text","","Linha, km, lote",""],
+      ["area_total_ha","numeric(10,2)","check ≥ 0","",""],
+      ["area_produtiva_ha","numeric(10,2)","check ≥ 0","",""],
+      ["latitude, longitude","numeric(9,6)","ambos ou nenhum","",""],
+      ["car","varchar(60)","","Cadastro Ambiental Rural",""],
+      ["ativo","boolean","NN · default true","",""],
+    ], regras: [
+      "<code>index (produtor_id)</code>, <code>index (associacao_id)</code>, <code>index (municipio_id)</code>",
+      "<code>check (area_produtiva_ha &lt;= area_total_ha)</code> quando ambos preenchidos",
+    ]},
+  ],
+},
+{
+  id: "d-visitas", nome: "Visitas, diagnósticos e assistência técnica",
+  diagrama: `erDiagram
+  associacoes |o--o{ visitas : "inicial"
+  propriedades |o--o{ visitas : "em campo"
+  user ||--o{ visitas : "tecnico"
+  visitas |o--o{ visitas : "retorno de"
+  visitas ||--o{ visita_equipe : "equipe"
+  visitas ||--o{ visita_anexos : "fotos"
+  associacoes ||--o| diagnosticos_associacao : "1:1 unico"
+  visitas |o--o{ diagnosticos_associacao : "coletado em"
+  visitas ||--o| diagnosticos_propriedade : "1:1"
+  diagnosticos_associacao ||--o{ diagnostico_opcoes : "marcou"
+  visitas ||--o{ diagnostico_opcoes : "marcou (prop.)"
+  opcoes_diagnostico ||--o{ diagnostico_opcoes : "opcao"
+  propriedades ||--o{ recomendacoes : "para"
+  visitas |o--o{ recomendacoes : "gera / verifica"`,
+  tabelas: [
+    { nome: "visitas", model: "visita", desc: "Toda ida a campo. Ver a seção 3 para as regras de alvo por tipo.", cols: [
+      ["id","uuid","PK","Pode ser gerado no app (offline)",""],
+      ["projeto_id","uuid","NN · FK projetos","Projeto para o qual a visita conta",""],
+      ["tipo","visita_tipo","NN","inicial_associacao | diagnostico_propriedade | assistencia_tecnica | acompanhamento",""],
+      ["situacao","visita_situacao","NN · default 'agendada'","agendada | realizada | cancelada","Dados › Visita inicial › Realizada?"],
+      ["associacao_id","uuid","FK associacoes","Só na visita inicial",""],
+      ["propriedade_id","uuid","FK propriedades","Demais tipos",""],
+      ["visita_anterior_id","uuid","FK visitas","Acompanhamento → visita de origem",""],
+      ["data","date","NN","Prevista ou realizada","Dados › Visita inicial › Data"],
+      ["realizada_em","timestamptz","","Preenchido ao concluir",""],
+      ["tecnico_id","text","NN · FK user","Responsável",""],
+      ["latitude, longitude","numeric(9,6)","","Check-in em campo",""],
+      ["relato","text","","Registro da visita",""],
+      ["noticia_url","text","","Notícia publicada","Mídia › Notícia publicada?"],
+    ], regras: [
+      "<code>check (num_nonnulls(associacao_id, propriedade_id) = 1)</code>",
+      "<code>check ((tipo = 'inicial_associacao') = (associacao_id is not null))</code>",
+      "<code>check ((situacao = 'realizada') = (realizada_em is not null))</code>",
+      "Índices: cada FK + <code>(projeto_id, tipo, data)</code>",
+      "Filhas (diagnósticos, anexos, respostas, recomendações) herdam o projeto da visita — sem coluna própria",
+      "Sort allowlist: <code>data</code>, <code>tipo</code>, <code>situacao</code>, <code>created_at</code>",
+    ]},
+    { nome: "visita_equipe", model: "visitaEquipe", desc: "Outros técnicos/estudantes que foram à visita (além do responsável).", cols: [
+      ["id","uuid","PK","",""],
+      ["visita_id","uuid","NN · FK visitas","onDelete cascade",""],
+      ["user_id","text","NN · FK user","",""],
+    ], regras: ["<code>unique (visita_id, user_id) where deleted_at is null</code>", "<code>index (user_id)</code>"]},
+    { nome: "visita_anexos", model: "visitaAnexo", desc: "Fotos e documentos da visita (substitui “Foto visita organizada?”).", cols: [
+      ["id","uuid","PK","",""],
+      ["visita_id","uuid","NN · FK visitas","",""],
+      ["tipo","anexo_tipo","NN","foto | documento | audio","Mídia › Foto organizada?"],
+      ["arquivo_key","text","NN","Chave S3 privada",""],
+      ["nome_arquivo","text","NN","",""],
+      ["mime_type","text","NN","",""],
+      ["tamanho_bytes","integer","NN · check ≥ 0","",""],
+      ["legenda","text","","",""],
+    ], regras: ["<code>index (visita_id)</code>", "Upload via <code>lerArquivo</code> + <code>bodyLimit</code> na rota"]},
+    { nome: "diagnosticos_associacao", model: "diagnosticoAssociacao", desc: "Diagnóstico ÚNICO da associação, reaproveitado por todos os projetos (abas Atividades, Solo, Capacitação, Apoio, Comentários). Coletado/atualizado em visitas iniciais; multisseleções em diagnostico_opcoes. O que é específico do projeto (interesse, demanda) fica em projeto_associacoes.", cols: [
+      ["associacao_id","uuid","PK · FK associacoes","1:1 com a associação — compartilhado entre projetos",""],
+      ["visita_id","uuid","FK visitas","Última visita inicial que coletou/atualizou",""],
+      ["coletado_em","date","NN","Data da coleta mais recente","Dados › Visita inicial › Data"],
+      ["analise_solo_recente","resposta_diagnostico","","sim | nao | nao_sei","Solo › análise nos últimos 2 anos"],
+      ["acesso_maquinario","resposta_diagnostico","","sim | nao | parcialmente","Solo › acesso a maquinário"],
+      ["praticas_conservacao","text","","","Solo › práticas de conservação"],
+      ["participou_cursos","resposta_diagnostico","","","Capacitação › já participaram?"],
+      ["interesse_capacitacao","boolean","","","Capacitação › interesse?"],
+      ["possui_registro_formal","boolean","","","Apoio › associação registrada?"],
+      ["possui_local_eventos","boolean","","","Apoio › local para eventos?"],
+      ["tipo_local_eventos","text","","Barracão, igreja…","Apoio › Qual tipo de espaço?"],
+      ["potencial_nao_explorado","text","","","Atividades › cultura com potencial"],
+      ["comentarios","text","","","Comentários"],
+      ["revisado","boolean","NN · default false","M1 › “Informações sistematizadas?”","Dados › Formulário revisado?"],
+    ], regras: [
+      "PK = <code>associacao_id</code>: diagnóstico excluído é reativado, não recriado (mesmo padrão do unique total)",
+      "Reaplicar o questionário <b>atualiza</b> a linha; as versões anteriores ficam em <code>historico_alteracoes</code> (trigger)",
+      "<code>visita_id</code>, quando preenchido, aponta visita <code>inicial_associacao</code> da mesma associação (422 caso contrário) — pode ser de qualquer projeto",
+      "Leitura liberada a quem acessa algum projeto em que a associação tem adesão",
+    ]},
+    { nome: "diagnosticos_propriedade", model: "diagnosticoPropriedade", validar: true, desc: "Questionário da visita na propriedade. Sem planilha de origem — campos propostos, validar com o roteiro de campo.", cols: [
+      ["visita_id","uuid","PK · FK visitas","1:1",""],
+      ["area_produtiva_ha","numeric(10,2)","check ≥ 0","",""],
+      ["area_pastagem_ha","numeric(10,2)","check ≥ 0","",""],
+      ["area_preservada_ha","numeric(10,2)","check ≥ 0","",""],
+      ["principais_culturas","text","","",""],
+      ["rebanho_bovino","integer","check ≥ 0","",""],
+      ["fonte_agua","text","","Poço, igarapé, rede…",""],
+      ["possui_energia","boolean","","",""],
+      ["possui_irrigacao","boolean","","",""],
+      ["pessoas_trabalham","smallint","check ≥ 0","Mão de obra familiar",""],
+      ["analise_solo_recente","resposta_diagnostico","","",""],
+      ["acesso_maquinario","resposta_diagnostico","","",""],
+      ["comentarios","text","","",""],
+    ], regras: ["Reaproveita <code>diagnostico_opcoes</code> para atividades produtivas e problemas de solo"]},
+    { nome: "opcoes_diagnostico", model: "opcaoDiagnostico", desc: "Catálogo das respostas de multisseleção, agrupadas.", cols: [
+      ["id","uuid","PK","",""],
+      ["grupo","grupo_opcao","NN","atividade_produtiva | problema_solo | tema_capacitacao | parceiro_institucional | apoio_necessario","Cabeçalhos de 2º nível das abas"],
+      ["nome","text","NN","Café, Pecuária leiteira, Solo muito ácido, EMATER…",""],
+      ["permite_detalhe","boolean","NN · default false","true no “Outro” — pede texto",""],
+      ["ordem","smallint","NN · default 0","",""],
+      ["ativo","boolean","NN · default true","",""],
+    ], regras: ["<code>unique (grupo, lower(nome)) where deleted_at is null</code>", "Seed com as opções das planilhas"]},
+    { nome: "diagnostico_opcoes", model: "diagnosticoOpcao", desc: "Opções marcadas num diagnóstico (os True/False das abas Atividades, Solo, Capacitação e Apoio): da associação ou da visita na propriedade.", cols: [
+      ["id","uuid","PK","",""],
+      ["associacao_id","uuid","FK diagnosticos_associacao","Diagnóstico da associação; onDelete cascade",""],
+      ["visita_id","uuid","FK visitas","Diagnóstico da propriedade; onDelete cascade",""],
+      ["opcao_id","uuid","NN · FK opcoes_diagnostico","",""],
+      ["detalhe","text","","Texto do “Outro”","… › Outro"],
+    ], regras: [
+      "<code>check (num_nonnulls(associacao_id, visita_id) = 1)</code>",
+      "<code>unique nulls not distinct (associacao_id, visita_id, opcao_id) where deleted_at is null</code>",
+      "<code>index (associacao_id)</code>, <code>index (visita_id)</code>, <code>index (opcao_id)</code> — relatório “quantas associações têm café”",
+      "Grupo <code>apoio_necessario</code> (aba Interesse) é necessidade da associação → fica no diagnóstico compartilhado; só o interesse <i>no projeto</i> vai para <code>projeto_associacoes</code>",
+    ]},
+    { nome: "recomendacoes", model: "recomendacao", desc: "Orientação técnica dada numa visita de assistência; o acompanhamento verifica a adoção. (As recomendações do laudo de solo ficam no próprio laudo, pelo link.)", cols: [
+      ["id","uuid","PK","",""],
+      ["propriedade_id","uuid","NN · FK propriedades","",""],
+      ["visita_id","uuid","NN · FK visitas","Visita de assistência técnica que gerou",""],
+      ["categoria","recomendacao_categoria","NN","calagem | adubacao | manejo_solo | manejo_cultura | sanidade | gestao | outro",""],
+      ["cultura","text","","",""],
+      ["descricao","text","NN","",""],
+      ["prazo","date","","",""],
+      ["situacao","recomendacao_situacao","NN · default 'pendente'","pendente | em_andamento | adotada | nao_adotada",""],
+      ["verificada_em_visita_id","uuid","FK visitas","Visita de acompanhamento que conferiu",""],
+    ], regras: ["Service exige visita do tipo <code>assistencia_tecnica</code> na mesma propriedade (422)", "Índice em cada FK"]},
+  ],
+},
+{
+  id: "d-solo", nome: "Solo: necessidade de análise e laudo (Meta 3)",
+  diagrama: `erDiagram
+  projetos ||--o{ analises_solo : "conta para"
+  propriedades ||--o{ analises_solo : "precisa de"
+  visitas |o--o{ analises_solo : "identificada em"`,
+  tabelas: [
+    { nome: "analises_solo", model: "analiseSolo", desc: "Uma linha = uma necessidade de análise de solo da propriedade. Nasce quando a necessidade é identificada; depois recebe o link do laudo. Amostras, resultados de laboratório e o arquivo do laudo ficam fora do sistema.", cols: [
+      ["id","uuid","PK","Pode ser gerado no app (offline)",""],
+      ["projeto_id","uuid","NN · FK projetos","",""],
+      ["propriedade_id","uuid","NN · FK propriedades","","M3 › Propriedade"],
+      ["visita_id","uuid","FK visitas","Visita em que a necessidade foi identificada (qualquer tipo, na mesma propriedade)",""],
+      ["identificada_em","date","NN","Data do registro da necessidade","M3 › Coleta realizada?"],
+      ["observacao","text","","Área/talhão, cultura, motivo",""],
+      ["laudo_url","text","","Link do laudo (Drive, sistema do laboratório…) — zod <code>z.url()</code> http(s)","M3 › Recomendações emitidas?"],
+      ["laudo_registrado_em","date","","Quando o link foi informado",""],
+    ], regras: [
+      "<code>check ((laudo_url is null) = (laudo_registrado_em is null))</code>",
+      "Situação é <b>derivada</b>: sem <code>laudo_url</code> = pendente; com = laudo disponível. Filtro de listagem <code>?situacao=pendente|com_laudo</code>",
+      "Índices: <code>(projeto_id, identificada_em)</code>, <code>(propriedade_id)</code>, <code>(visita_id)</code>",
+      "Link externo: o painel abre em nova aba (<code>rel=\"noopener\"</code>); quem controla o acesso ao arquivo é o serviço onde ele está — não passa pelo Garage",
+      "Mais de uma necessidade por propriedade é permitida (áreas/culturas diferentes, ou anos diferentes)",
+    ]},
+  ],
+},
+{
+  id: "d-equip", nome: "Equipamentos e entregas (Meta 4)",
+  diagrama: `erDiagram
+  associacoes ||--o{ entregas : "recebe"
+  itens ||--o{ entregas : "item"
+  pedidos_compra |o--o{ entregas : "comprado em"`,
+  tabelas: [
+    { nome: "itens", model: "item", desc: "Catálogo de máquinas, implementos e insumos.", cols: [
+      ["id","uuid","PK","",""],
+      ["descricao","text","NN · U*","Trator de pneu 4x4 60 cv plataformado, Grade aradora 12 discos…","Demandas › Descrição Básica"],
+      ["tipo","item_tipo","NN","investimento | custeio","Demandas › Tipo"],
+      ["unidade","text","NN · default 'un'","un, t, kg…",""],
+      ["valor_referencia_centavos","bigint","check ≥ 0","","Demandas › Valor Estimado"],
+      ["ativo","boolean","NN · default true","",""],
+    ], regras: ["<code>unique (lower(descricao)) where deleted_at is null</code>"]},
+    { nome: "pedidos_compra", model: "pedidoCompra", desc: "Processo de compra — um pedido atende várias associações.", cols: [
+      ["id","uuid","PK","",""],
+      ["projeto_id","uuid","NN · FK projetos","Compra com recurso do projeto",""],
+      ["numero","text","NN · U*","785275, 785276, 786066…","Demandas › Núm. Pedido"],
+      ["descricao","text","","",""],
+      ["fornecedor","text","","",""],
+      ["situacao","pedido_situacao","NN · default 'aberto'","aberto | em_compra | concluido | cancelado","Demandas › Situação do Pedido"],
+      ["data_pedido","date","","",""],
+    ], regras: ["<code>unique (numero) where deleted_at is null</code>"]},
+    { nome: "entregas", model: "entrega", desc: "Destinação de um item a uma associação: nasce como demanda e termina entregue com termo de uso.", cols: [
+      ["id","uuid","PK","",""],
+      ["projeto_id","uuid","NN · FK projetos","Igual ao do pedido, quando houver",""],
+      ["associacao_id","uuid","NN · FK associacoes","",""],
+      ["item_id","uuid","NN · FK itens","",""],
+      ["pedido_id","uuid","FK pedidos_compra","",""],
+      ["lote","text","","“1ª Entrega de 2026”","Demandas › cabeçalho do grupo"],
+      ["quantidade","integer","NN · default 1 · check &gt; 0","",""],
+      ["valor_estimado_centavos","bigint","check ≥ 0","","Demandas › Valor Estimado"],
+      ["valor_consolidado_centavos","bigint","check ≥ 0","Valor efetivo da compra","Demandas › Valor consolidado"],
+      ["situacao","entrega_situacao","NN · default 'demandado'","demandado | aprovado | em_compra | comprado | entregue | cancelado","M4 › etapas"],
+      ["data_prevista","date","","","Demandas › Data prevista"],
+      ["data_entrega","date","","","Demandas › Data da entrega"],
+      ["termo_uso_key","text","","PDF do termo de uso","M4 › Termo de uso elaborado?"],
+      ["numero_serie","text","","Chassi/série/patrimônio",""],
+      ["observacao","text","","",""],
+    ], regras: [
+      "<code>check ((situacao = 'entregue') = (data_entrega is not null))</code>",
+      "Índice em cada FK + <code>(projeto_id, situacao)</code>",
+      "<code>itens</code> é catálogo global, reaproveitado entre projetos",
+    ]},
+  ],
+},
+{
+  id: "d-cap", nome: "Capacitação, equipe e produção técnica (Metas 1, 6, 7, 8, 10)",
+  diagrama: `erDiagram
+  municipios ||--o{ eventos : "local"
+  associacoes |o--o{ eventos : "anfitria"
+  eventos ||--o{ evento_participantes : "turma"
+  produtores ||--o{ evento_participantes : "participa"
+  projetos ||--o{ eventos : "realiza"
+  projetos ||--o{ projeto_equipe : "equipe"
+  user ||--o{ projeto_equipe : "atua em"
+  projeto_equipe ||--o{ producao_autores : "autor"
+  producoes ||--o{ producao_autores : "autoria"
+  projetos ||--o{ producoes : "produz"
+  metas |o--o{ producoes : "conta para"`,
+  tabelas: [
+    { nome: "eventos", model: "evento", desc: "Evento formativo: curso, oficina, dia de campo.", cols: [
+      ["id","uuid","PK","",""],
+      ["projeto_id","uuid","NN · FK projetos","",""],
+      ["titulo","text","NN","","M6 › Evento"],
+      ["tipo","evento_tipo","NN","curso | oficina | dia_de_campo | palestra | intercambio",""],
+      ["tema_id","uuid","FK opcoes_diagnostico","Grupo tema_capacitacao",""],
+      ["associacao_id","uuid","FK associacoes","Comunidade anfitriã","M6 › Associação"],
+      ["municipio_id","integer","NN · FK municipios","",""],
+      ["local","text","","",""],
+      ["inicio, fim","timestamptz","NN","check fim ≥ inicio",""],
+      ["carga_horaria","numeric(5,1)","check &gt; 0","Horas",""],
+      ["instrutor","text","","",""],
+      ["situacao","evento_situacao","NN · default 'planejado'","planejado | realizado | cancelado","M6 › Evento realizado?"],
+      ["relato","text","","",""],
+    ], regras: ["Índice em cada FK + <code>(inicio)</code>"]},
+    { nome: "evento_participantes", model: "eventoParticipante", desc: "Lista de presença.", cols: [
+      ["id","uuid","PK","",""],
+      ["evento_id","uuid","NN · FK eventos","onDelete cascade",""],
+      ["produtor_id","uuid","NN · FK produtores","","M6 › Nome"],
+      ["presente","boolean","NN · default false","","M6 › Capacitação realizada?"],
+      ["certificado_key","text","","",""],
+    ], regras: ["<code>unique (evento_id, produtor_id) where deleted_at is null</code>", "<code>index (produtor_id)</code>"]},
+    { nome: "projeto_equipe", model: "projetoEquipe", desc: "Atuação de uma pessoa (user) num projeto: coordenador, técnico, estudante, administrativo. A mesma pessoa pode estar em vários projetos com funções diferentes.", cols: [
+      ["id","uuid","PK","",""],
+      ["projeto_id","uuid","NN · FK projetos","",""],
+      ["user_id","text","NN · FK user","Nome vem do user","M10 › Nome · M7 › Aluno"],
+      ["tipo","equipe_tipo","NN","coordenador | tecnico | estudante | administrativo",""],
+      ["funcao","text","","Coordenador do eixo Agricultura Familiar…","M10 › Função · M7 › Atividade"],
+      ["instituicao","text","","",""],
+      ["curso","text","","Estudantes (M7)",""],
+      ["contratado_em","date","","","M10 / M7 › Contratação realizada?"],
+      ["desligado_em","date","","check ≥ contratado_em",""],
+    ], regras: [
+      "<code>unique (projeto_id, user_id) where deleted_at is null</code>",
+      "<code>index (user_id)</code> — “em quais projetos atuo?” (base para escopo de acesso por projeto)",
+    ]},
+    { nome: "producoes", model: "producao", desc: "Relatórios e publicações que contam para as metas.", cols: [
+      ["id","uuid","PK","",""],
+      ["projeto_id","uuid","NN · FK projetos","",""],
+      ["titulo","text","NN","","M1/M7/M8 › Relatório"],
+      ["tipo","producao_tipo","NN","relatorio_tecnico_participativo | relatorio_tecnico | resumo_cientifico | relatorio_pesquisa",""],
+      ["meta_id","uuid","FK metas","",""],
+      ["concluida_em","date","","","… › Relatório elaborado/produzido?"],
+      ["arquivo_key","text","","",""],
+      ["url","text","","Publicação externa",""],
+      ["resumo","text","","",""],
+    ], regras: ["<code>index (projeto_id, tipo)</code>, <code>index (meta_id)</code>"]},
+    { nome: "producao_autores", model: "producaoAutor", desc: "Autoria (N:N com a equipe do projeto).", cols: [
+      ["id","uuid","PK","",""],
+      ["producao_id","uuid","NN · FK producoes","onDelete cascade",""],
+      ["projeto_equipe_id","uuid","NN · FK projeto_equipe","Do mesmo projeto da produção",""],
+    ], regras: ["<code>unique (producao_id, projeto_equipe_id) where deleted_at is null</code>"]},
+  ],
+},
+{
+  id: "d-metas", nome: "Projetos, metas e execução financeira",
+  diagrama: `erDiagram
+  projetos ||--o{ projeto_associacoes : "adesao"
+  associacoes ||--o{ projeto_associacoes : "participa"
+  projetos ||--o{ metas : "metas"
+  metas ||--o{ indicadores : "entregaveis"
+  indicadores ||--o{ etapas_indicador : "etapas"
+  projetos ||--o{ lancamentos_financeiros : "financeiro"
+  metas |o--o{ lancamentos_financeiros : "rubrica"`,
+  tabelas: [
+    { nome: "papeis", model: "papel", alterada: true, desc: "Tabela existente do RBAC. Ganha a flag que libera todos os projetos (sem nome de papel fixo no código).", cols: [
+      ["id, nome, descricao","","","Sem mudança",""],
+      ["acesso_todos_projetos","boolean","NN · default false · <b>nova</b>","Seed: admin, gestor = true; tecnico, produtor, usuario = false",""],
+    ], regras: ["Lida pelo helper <code>projetosDoUsuario()</code> junto com <code>projeto_equipe</code>"]},
+    { nome: "projetos", model: "projeto", desc: "Projeto/convênio. Hoje só o Terra Fértil; as metas e os registros operacionais pertencem a um projeto.", cols: [
+      ["id","uuid","PK","",""],
+      ["sigla","text","NN · U*","TERRA-FERTIL",""],
+      ["nome","text","NN","Projeto Terra Fértil",""],
+      ["numero_instrumento","text","","Nº do convênio/termo de fomento",""],
+      ["concedente","text","","Órgão financiador",""],
+      ["executor","text","","Ex.: IFRO",""],
+      ["inicio, fim","date","NN","check fim ≥ inicio",""],
+      ["valor_total_centavos","bigint","NN · check ≥ 0","R$ 55 mi = Σ metas.valor_aprovado","Resumo › total"],
+      ["situacao","projeto_situacao","NN · default 'planejado'","planejado | em_execucao | encerrado",""],
+    ], regras: [
+      "<code>unique (lower(sigla)) where deleted_at is null</code>",
+      "Seed com o Terra Fértil — todos os dados importados das planilhas apontam para ele",
+      "Encerrado = somente leitura: services recusam escrita em registros de projeto <code>encerrado</code> (409)",
+    ]},
+    { nome: "projeto_associacoes", model: "projetoAssociacao", desc: "Adesão da associação a um projeto. A parceria formal (Meta 2) é por projeto, não da associação.", cols: [
+      ["id","uuid","PK","",""],
+      ["projeto_id","uuid","NN · FK projetos","",""],
+      ["associacao_id","uuid","NN · FK associacoes","",""],
+      ["aderiu_em","date","","Entrada no projeto","Página3 / M1 › lista de associações"],
+      ["interesse_declarado","boolean","","Interesse em participar <i>deste</i> projeto","Interesse › participar do projeto Terra Fértil?"],
+      ["demanda_inicial","text","","TRATOR/ GRADE/ CARRETA… — o que pedem a este projeto","Demandas › Demanda Inicial"],
+      ["valor_sugerido_centavos","bigint","check ≥ 0","Dinheiro em centavos","Demandas › Valor Sugerido"],
+      ["parceria_formalizada_em","date","","Meta 2 — parceria operacional","M2 › Parceria formalizada?"],
+      ["ativo","boolean","NN · default true","Saiu do projeto = false",""],
+    ], regras: [
+      "<code>unique (projeto_id, associacao_id) where deleted_at is null</code>",
+      "<code>index (associacao_id)</code>",
+      "Service de visita/entrega/evento exige que a associação (ou a da propriedade) tenha adesão ativa ao projeto",
+    ]},
+    { nome: "metas", model: "meta", desc: "Metas de um projeto (as 10 do Terra Fértil).", cols: [
+      ["id","uuid","PK","",""],
+      ["projeto_id","uuid","NN · FK projetos","",""],
+      ["numero","smallint","NN","1 a 10 — único dentro do projeto","Resumo › Meta"],
+      ["descricao","text","NN","","Resumo › Descrição"],
+      ["valor_aprovado_centavos","bigint","NN · check ≥ 0","","Resumo › Valor aprovado"],
+      ["peso","numeric(5,2)","NN · check 0–100","Soma 100 no projeto","Resumo › Peso"],
+      ["situacao","meta_situacao","NN · default 'nao_iniciado'","nao_iniciado | em_execucao | concluido","Resumo › Situação"],
+    ], regras: [
+      "<code>unique (projeto_id, numero) where deleted_at is null</code>",
+      "Σ peso das metas do projeto = 100 (validado no service ao salvar)",
+      "% concluída e % do projeto são <b>calculados</b> (não armazenados)",
+    ]},
+    { nome: "indicadores", model: "indicador", desc: "Entregável de uma meta (ex.: “Diagnóstico de pelo menos 100 associações”).", cols: [
+      ["id","uuid","PK","",""],
+      ["meta_id","uuid","NN · FK metas","",""],
+      ["descricao","text","NN","","M* › linha 4"],
+      ["ordem","smallint","NN · default 0","",""],
+    ], regras: ["<code>index (meta_id)</code>"]},
+    { nome: "etapas_indicador", model: "etapaIndicador", desc: "Etapa com previsto e peso (as colunas de cada aba M*).", cols: [
+      ["id","uuid","PK","",""],
+      ["indicador_id","uuid","NN · FK indicadores","",""],
+      ["descricao","text","NN","Levantamento de campo realizado?…","M* › linha 9"],
+      ["quantidade_prevista","integer","NN · check &gt; 0","","M* › Quantidade prevista"],
+      ["peso","numeric(5,2)","NN · check 0–100","","M* › Peso"],
+      ["apuracao","apuracao_tipo","NN","automatica | manual",""],
+      ["chave","text","","Ver seção 6 — allowlist no service",""],
+      ["quantidade_manual","integer","check ≥ 0","Só quando manual","M* › Quantidade executada"],
+      ["ordem","smallint","NN · default 0","",""],
+    ], regras: ["<code>check ((apuracao = 'automatica') = (chave is not null))</code>", "<code>index (indicador_id)</code>"]},
+    { nome: "lancamentos_financeiros", model: "lancamentoFinanceiro", desc: "Liberações e despesas do projeto (Meta 9).", cols: [
+      ["id","uuid","PK","",""],
+      ["projeto_id","uuid","NN · FK projetos","",""],
+      ["meta_id","uuid","FK metas","Rubrica; null = geral do projeto (meta precisa ser do mesmo projeto)",""],
+      ["tipo","lancamento_tipo","NN","liberacao | despesa","M9 › Descrição"],
+      ["descricao","text","NN","",""],
+      ["valor_centavos","bigint","NN · check &gt; 0","","M9 › Valor"],
+      ["data","date","NN","",""],
+      ["documento_ref","text","","NF, empenho, OB…",""],
+    ], regras: ["<code>index (projeto_id, data)</code>, <code>index (meta_id)</code>", "Meta 9 = Σ despesa ÷ Σ liberação do projeto"]},
+  ],
+},
+];
+
+const ENUMS = [
+  ["visita_tipo","inicial_associacao, diagnostico_propriedade, assistencia_tecnica, acompanhamento","visitas"],
+  ["visita_situacao","agendada, realizada, cancelada","visitas"],
+  ["resposta_diagnostico","sim, nao, parcialmente, nao_sei","diagnosticos_*"],
+  ["grupo_opcao","atividade_produtiva, problema_solo, tema_capacitacao, parceiro_institucional, apoio_necessario","opcoes_diagnostico"],
+  ["contato_funcao","presidente, contato, outro","associacao_contatos"],
+  ["documento_situacao","pendente, recebido, validado, rejeitado","associacao_documentos"],
+  ["anexo_tipo","foto, documento, audio","visita_anexos"],
+  ["recomendacao_categoria","calagem, adubacao, manejo_solo, manejo_cultura, sanidade, gestao, outro","recomendacoes"],
+  ["recomendacao_situacao","pendente, em_andamento, adotada, nao_adotada","recomendacoes"],
+  ["item_tipo","investimento, custeio","itens"],
+  ["pedido_situacao","aberto, em_compra, concluido, cancelado","pedidos_compra"],
+  ["entrega_situacao","demandado, aprovado, em_compra, comprado, entregue, cancelado","entregas"],
+  ["evento_tipo","curso, oficina, dia_de_campo, palestra, intercambio","eventos"],
+  ["evento_situacao","planejado, realizado, cancelado","eventos"],
+  ["projeto_situacao","planejado, em_execucao, encerrado","projetos"],
+  ["equipe_tipo","coordenador, tecnico, estudante, administrativo","projeto_equipe"],
+  ["producao_tipo","relatorio_tecnico_participativo, relatorio_tecnico, resumo_cientifico, relatorio_pesquisa","producoes"],
+  ["meta_situacao","nao_iniciado, em_execucao, concluido","metas"],
+  ["apuracao_tipo","automatica, manual","etapas_indicador"],
+  ["lancamento_tipo","liberacao, despesa","lancamentos_financeiros"],
+];
+
+// [meta · etapa, previsto, peso, chave → consulta]
+const METAS = [
+  ["M1 · Levantamento de campo","100","50","<code>assoc.visita_inicial</code> → associações distintas com visita <code>inicial_associacao</code> realizada"],
+  ["M1 · Informações sistematizadas","100","15","<code>assoc.diagnostico_revisado</code> → associações com adesão ao projeto cujo <code>diagnosticos_associacao.revisado</code> = true (diagnóstico reaproveitado conta para todo projeto)"],
+  ["M1 · Demandas prioritárias","100","15","<code>assoc.demanda_identificada</code> → <code>projeto_associacoes.demanda_inicial</code> preenchida ou ≥ 1 entrega no projeto"],
+  ["M1 · Relatórios técnico-participativos","3","20","<code>producao.rtp</code> → <code>producoes</code> tipo <code>relatorio_tecnico_participativo</code> concluídas"],
+  ["M2 · Parcerias formalizadas","50","50","<code>assoc.parceria</code> → <code>projeto_associacoes.parceria_formalizada_em</code> preenchida"],
+  ["M2 · Planos de gestão de equipamentos","50 (planilha: 500)","50","<code>doc.plano_gestao</code> → documento “Plano de gestão” <code>validado</code>"],
+  ["M3 · Coletas","5.000","50","<b>manual</b> — amostras não são registradas no sistema (ver perguntas)"],
+  ["M3 · Análises","5.000","25","<b>manual</b> — idem"],
+  ["M3 · Laudos com recomendação","1.000","25","<code>solo.laudos</code> → <code>analises_solo</code> do projeto com <code>laudo_url</code> preenchido"],
+  ["M4 · Levantamento de demanda","100","20","<code>entrega.demandadas</code> → <code>entregas</code> não canceladas"],
+  ["M4 · Compra","100","50","<code>entrega.compradas</code> → situação <code>comprado</code> ou <code>entregue</code>"],
+  ["M4 · Termo de uso","100","15","<code>entrega.termo</code> → <code>termo_uso_key</code> preenchida"],
+  ["M4 · Entrega","100","15","<code>entrega.entregues</code> → situação <code>entregue</code>"],
+  ["M5 · Atendimentos","500","50","<code>visita.at</code> → visitas <code>assistencia_tecnica</code> realizadas"],
+  ["M5 · Visitas de retorno documentadas","200","50","<code>visita.retorno</code> → visitas <code>acompanhamento</code> realizadas com relato ou anexo"],
+  ["M6 · Eventos formativos","50","50","<code>evento.realizados</code> → <code>eventos</code> realizados"],
+  ["M6 · Agricultores capacitados","500","50","<code>evento.capacitados</code> → produtores distintos com <code>presente = true</code>"],
+  ["M7 · Estudantes envolvidos","10","50","<code>equipe.estudantes</code> → <code>projeto_equipe</code> tipo estudante com <code>contratado_em</code>"],
+  ["M7 · Relatórios/resumos","10","50","<code>producao.m7</code> → tipos <code>relatorio_tecnico</code> + <code>resumo_cientifico</code>"],
+  ["M8 · Ferramentas TIC (7 etapas)","2","10–30 cada","<b>manual</b> — proposta, modelagem, API, web, mobile, implantação, capacitação"],
+  ["M8 · Relatórios de pesquisa","6","10","<code>producao.pesquisa</code> → tipo <code>relatorio_pesquisa</code>"],
+  ["M9 · Execução financeira","100%","—","<code>fin.execucao</code> → Σ despesa ÷ Σ liberação"],
+  ["M10 · Coordenadores contratados","6","100","<code>equipe.coordenadores</code> → <code>projeto_equipe</code> tipo coordenador com <code>contratado_em</code>"],
+];
+
+// ─── Render ─────────────────────────────────────────────────────────────────
+const esc = (s) => String(s);  // conteúdo é nosso e já vem com o HTML desejado
+const raiz = document.getElementById("dominios");
+raiz.innerHTML = DOMINIOS.map((d) => `
+  <section class="dominio" id="${d.id}">
+    <h3>${d.nome} <span class="chip">${d.tabelas.length} tabelas</span></h3>
+    <div class="diagrama"><pre class="mermaid" data-src="${encodeURIComponent(d.diagrama)}">${d.diagrama.replace(/</g, "&lt;")}</pre></div>
+    ${d.tabelas.map((t) => `
+      <details class="tabela" data-busca="${(t.nome + " " + t.desc + " " + t.cols.map((c) => c.join(" ")).join(" ")).toLowerCase()}">
+        <summary>
+          <span class="nome">${t.nome}</span>
+          ${t.alterada ? '<span class="chip alterada">existe · alterada</span>' : '<span class="chip nova">nova</span>'}
+          ${t.validar ? '<span class="chip validar">validar campos</span>' : ""}
+          <span class="chip">src/db/${t.model}.ts</span>
+          <span class="desc">${t.desc}</span>
+        </summary>
+        <div class="corpo">
+          <div class="rolagem"><table class="grade">
+            <thead><tr><th>Coluna</th><th>Tipo</th><th>Regras</th><th>Observação</th><th>Origem</th></tr></thead>
+            <tbody>${t.cols.map((c) => `<tr>${c.map((v) => `<td>${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody>
+          </table></div>
+          ${t.regras?.length ? `<ul class="regras">${t.regras.map((r) => `<li>${r}</li>`).join("")}</ul>` : ""}
+        </div>
+      </details>`).join("")}
+  </section>`).join("");
+
+document.querySelector("#tabela-enums tbody").innerHTML = ENUMS.map(([n, v, u]) =>
+  `<tr><td><code>${n}</code></td><td class="mono" style="font-size:12.5px">${v}</td><td><code>${u}</code></td></tr>`).join("");
+document.getElementById("tabela-metas").innerHTML = METAS.map(([m, p, w, c]) =>
+  `<tr><td>${m}</td><td class="mono">${p}</td><td class="mono">${w}</td><td>${c}</td></tr>`).join("");
+
+// Filtro
+const filtro = document.getElementById("filtro");
+filtro.addEventListener("input", () => {
+  const q = filtro.value.trim().toLowerCase();
+  document.querySelectorAll("details.tabela").forEach((el) => {
+    const ok = !q || el.dataset.busca.includes(q);
+    el.hidden = !ok;
+    if (q && ok) el.open = true;
+  });
+});
+document.getElementById("abrir").onclick = () => document.querySelectorAll("details.tabela").forEach((el) => (el.open = true));
+document.getElementById("fechar").onclick = () => document.querySelectorAll("details.tabela").forEach((el) => (el.open = false));
+
+// Tema
+const temaEscuro = () => {
+  const t = document.documentElement.dataset.theme;
+  return t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+};
+try { const t = localStorage.getItem("modelo-dados-tema"); if (t) document.documentElement.dataset.theme = t; } catch {}
+document.getElementById("tema").onclick = () => {
+  const novo = temaEscuro() ? "light" : "dark";
+  document.documentElement.dataset.theme = novo;
+  try { localStorage.setItem("modelo-dados-tema", novo); } catch {}
+  desenhar();
+};
+
+// Diagramas (Mermaid via CDN; sem rede, o texto do diagrama fica visível)
+async function desenhar() {
+  if (!window.mermaid) return;
+  mermaid.initialize({ startOnLoad: false, theme: temaEscuro() ? "dark" : "neutral", securityLevel: "strict",
+    er: { useMaxWidth: false, layoutDirection: "LR" }, fontFamily: "JetBrains Mono, monospace" });
+  const nos = [...document.querySelectorAll("pre.mermaid")];
+  nos.forEach((n) => { n.removeAttribute("data-processed"); n.textContent = decodeURIComponent(n.dataset.src); });
+  try { await mermaid.run({ nodes: nos }); } catch (e) { console.warn(e); }
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js" onload="desenhar()"></script>
+</body>
+</html>

@@ -32,6 +32,7 @@ export default function NotFound() {
     <main className="flex min-h-svh flex-col items-center justify-center p-8">
       <EmptyState
         icon={FileQuestion}
+        titleAs="h1"
         title="Página não encontrada"
         description="O endereço não existe ou foi movido."
         action={

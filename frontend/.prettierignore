@@ -6,7 +6,7 @@ build
 types/api.d.ts
 next-env.d.ts
 tsconfig.tsbuildinfo
-package-lock.json
+bun.lock
 public
 e2e/prints
 e2e/.resultados

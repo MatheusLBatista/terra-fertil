@@ -139,6 +139,19 @@ export const paginacaoQuery = {
   offset: z.coerce.number().int().min(0).default(0),
 };
 
+/**
+ * Filtro de texto da querystring (`?nome=...`): apara espaços e trata vazio como
+ * ausente — `?nome=` ou `?nome=%20%20` não filtram nada (nem viram 400). O
+ * repository só aplica o filtro quando o valor é truthy.
+ */
+export const filtroTexto = (description?: string) =>
+  z
+    .string()
+    .trim()
+    .transform((v) => v || undefined)
+    .optional()
+    .openapi(description ? { description } : {});
+
 export type SortDir = "asc" | "desc";
 export type Sort<C extends string> = { campo: C; direcao: SortDir };
 

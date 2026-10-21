@@ -1,0 +1,217 @@
+# CI/CD do template-ia — verificação em todo push/MR e, no branch do QA, imagens no Harbor
+# (registry.fslab.dev) + troca delas na VM do QA.
+#
+# Estágios:
+#   check   backend  → typecheck, lint, format, unitários, integração (Postgres de serviço),
+#                      build e drift do openapi.json
+#           frontend → drift do types/api.d.ts, typecheck, lint, format e build do Next
+#   build   (só no $QA_BRANCH) duas imagens, cada uma com as tags do commit curto e `latest`:
+#             $NOME_APP-api-qa     backend/Dockerfile (API; também roda o `migrate`)
+#             $NOME_APP-webapp-qa  frontend/Dockerfile (painel)
+#           O banco usa a imagem oficial postgres:17-alpine (sem imagem própria).
+#   deploy  (só no $QA_BRANCH) copia o docker-compose.qa.yml para ~/$NOME_APP na VM e roda
+#           ci/deploy-qa.sh lá — backup do banco, pull das imagens do commit, `up -d` (o
+#           `migrate` roda antes da API) e espera a API ficar saudável. O backend/.env do QA
+#           fica só na VM.
+#
+# Projeto novo: troque NOME_APP, REGISTRY_PROJECT e as URLs QA_* abaixo (e os mesmos nomes
+# no docker-compose.qa.yml).
+#
+# Variáveis em Settings › CI/CD › Variables — nunca no repositório:
+#   HARBOR_USER   nome do robot (robot$<projeto>+<nome>). Desmarque "Expand variable
+#                 reference": sem isso o GitLab lê o `$<projeto>` do nome como variável.
+#   HARBOR_TOKEN  token do robot. Marque "Masked". Marcando "Protected", proteja também o
+#                 branch do QA (Settings › Repository), senão o job não a recebe.
+#   SSH_PRIVATE_KEY  chave privada do deploy (tipo Variable ou File); a pública está no
+#                 ~/.ssh/authorized_keys do ubuntu na VM.
+#   SSH_HOST      IP da VM do QA, alcançável pelo runner. SSH_PORT (padrão 22) e
+#                 SSH_KNOWN_HOSTS (linha do known_hosts; sem ela, o job usa ssh-keyscan) são
+#                 opcionais.
+#
+# O painel embute as NEXT_PUBLIC_* no build: os padrões abaixo são as URLs públicas do QA.
+# Uma variável de mesmo nome no GitLab substitui o padrão.
+#
+# Runner: executor docker com `privileged = true` (o build usa docker-in-docker).
+
+stages:
+  - check
+  - build
+  - deploy
+
+# Pipeline de MR quando há MR aberto; senão, de branch (sem pipelines duplicados)
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+variables:
+  NOME_APP: template-ia
+  QA_BRANCH: development
+  REGISTRY: registry.fslab.dev
+  REGISTRY_PROJECT: template-ia-qa
+  QA_API_URL: https://api.template-ia.qa.fslab.dev
+  QA_PAINEL_URL: https://template-ia.qa.fslab.dev
+  QA_APP_NOME: Template IA
+  # Em branco não mostra a pílula de ambiente; "staging" mostraria.
+  QA_AMBIENTE: ""
+  QA_GOOGLE_LOGIN: "false"
+  QA_SIGNUP_ENABLED: "false"
+  BUN_VERSION: 1.4.3
+
+# ─── check ────────────────────────────────────────────────────────────────────
+# Runtime Node 24 (como nas imagens) + Bun para instalar e rodar os scripts.
+.bun:
+  stage: check
+  image: node:24-bookworm
+  interruptible: true
+  variables:
+    BUN_INSTALL_CACHE_DIR: $CI_PROJECT_DIR/.bun-cache
+  cache:
+    key: bun-$CI_JOB_NAME
+    paths:
+      - .bun-cache/
+  before_script:
+    - npm install -g "bun@$BUN_VERSION" >/dev/null 2>&1
+    - bun --version
+
+backend:
+  extends: .bun
+  # Banco dos testes de integração; o nome PRECISA conter "test" (src/test/env.ts)
+  services:
+    - name: postgres:17-alpine
+      alias: postgres
+  variables:
+    POSTGRES_USER: user_template
+    POSTGRES_PASSWORD: 102030fs
+    POSTGRES_DB: db_template_test
+    # Sem .env no CI: o essencial que src/lib/env.ts exige (fail fast) vai aqui
+    NODE_ENV: test
+    DATABASE_URL: postgresql://user_template:102030fs@postgres:5432/db_template_test
+    DATABASE_URL_TEST: postgresql://user_template:102030fs@postgres:5432/db_template_test
+    API_URL: http://localhost:3080
+    BETTER_AUTH_URL: http://localhost:3080
+    BETTER_AUTH_SECRET: segredo-somente-para-o-ci-0123456789
+    FRONTEND_URL: http://localhost:3000
+    TRUSTED_ORIGINS: http://localhost:3000
+  script:
+    - cd backend
+    - bun install --frozen-lockfile
+    - bun run typecheck
+    - bun run lint
+    - bun run format:check
+    - bun run test
+    - bun run test:integration
+    - bun run build
+    # O openapi.json versionado é a fonte dos types do front: export diferente do
+    # commitado = alguém mexeu nos schemas e não rodou `bun run types`
+    - bun run openapi:export
+    - git diff --exit-code -- openapi.json || { echo "backend/openapi.json desatualizado — rode 'bun run types' na raiz e commite."; exit 1; }
+
+frontend:
+  extends: .bun
+  # As NEXT_PUBLIC_* entram no bundle no build; localhost basta para provar que passa
+  variables:
+    NEXT_PUBLIC_API_URL: http://localhost:3080
+    NEXT_PUBLIC_APP_URL: http://localhost:3000
+    NEXT_PUBLIC_GOOGLE_LOGIN: "false"
+    NEXT_TELEMETRY_DISABLED: "1"
+  script:
+    - cd frontend
+    - bun install --frozen-lockfile
+    - bun run types:file
+    - git diff --exit-code -- types/api.d.ts || { echo "frontend/types/api.d.ts desatualizado — rode 'bun run types' na raiz e commite."; exit 1; }
+    - bun run typecheck
+    - bun run lint
+    - bun run format:check
+    - bun run build
+
+# ─── build (QA) ───────────────────────────────────────────────────────────────
+.imagem:
+  stage: build
+  image: docker:28
+  services:
+    - docker:28-dind
+  interruptible: true
+  needs: [backend, frontend]
+  rules:
+    - if: $CI_COMMIT_BRANCH == $QA_BRANCH
+  variables:
+    # docker-in-docker sem TLS: o runner não compartilha /certs/client entre o job e o
+    # serviço, então o cliente fala com o daemon em 2375 (rede interna do job).
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    # O serviço dind pode levar alguns segundos para aceitar conexões
+    - for i in $(seq 1 30); do docker info >/dev/null 2>&1 && break; sleep 1; done
+    - docker info >/dev/null || { echo "O daemon docker (dind) não respondeu — o runner está com privileged = true?"; exit 1; }
+    - test -n "$HARBOR_USER" && test -n "$HARBOR_TOKEN" || { echo "Faltam HARBOR_USER/HARBOR_TOKEN nas variáveis de CI/CD"; exit 1; }
+    - echo "$HARBOR_TOKEN" | docker login "$REGISTRY" -u "$HARBOR_USER" --password-stdin
+    - IMAGEM="$REGISTRY/$REGISTRY_PROJECT/$NOME_APP-$SUFIXO"
+    # A última imagem publicada serve de cache das camadas (`bun install` não roda de novo
+    # se o bun.lock não mudou). Na primeira vez ela não existe: segue sem cache.
+    - docker pull "$IMAGEM:latest" || true
+  after_script:
+    - docker logout "$REGISTRY" || true
+
+api:
+  extends: .imagem
+  variables:
+    SUFIXO: api-qa
+  script:
+    - >
+      docker build --platform linux/amd64 --build-arg BUILDKIT_INLINE_CACHE=1
+      --cache-from "$IMAGEM:latest"
+      -t "$IMAGEM:$CI_COMMIT_SHORT_SHA" -t "$IMAGEM:latest" backend
+    - docker push --all-tags "$IMAGEM"
+
+webapp:
+  extends: .imagem
+  variables:
+    SUFIXO: webapp-qa
+  script:
+    - >
+      docker build --platform linux/amd64 --build-arg BUILDKIT_INLINE_CACHE=1
+      --cache-from "$IMAGEM:latest"
+      --build-arg NEXT_PUBLIC_API_URL="$QA_API_URL"
+      --build-arg NEXT_PUBLIC_APP_URL="$QA_PAINEL_URL"
+      --build-arg NEXT_PUBLIC_AMBIENTE="$QA_AMBIENTE"
+      --build-arg NEXT_PUBLIC_APP_NOME="$QA_APP_NOME"
+      --build-arg NEXT_PUBLIC_GOOGLE_LOGIN="$QA_GOOGLE_LOGIN"
+      --build-arg NEXT_PUBLIC_SIGNUP_ENABLED="$QA_SIGNUP_ENABLED"
+      -t "$IMAGEM:$CI_COMMIT_SHORT_SHA" -t "$IMAGEM:latest" frontend
+    - docker push --all-tags "$IMAGEM"
+
+# ─── deploy (QA) ──────────────────────────────────────────────────────────────
+deploy-qa:
+  stage: deploy
+  image: alpine:3.22
+  needs: [api, webapp]
+  # Um deploy por vez: um push novo espera o anterior terminar em vez de trocar no meio
+  resource_group: qa
+  rules:
+    - if: $CI_COMMIT_BRANCH == $QA_BRANCH
+  environment:
+    name: qa
+    url: $QA_PAINEL_URL
+  variables:
+    SSH_USER: ubuntu
+  before_script:
+    - apk add --no-cache openssh-client curl >/dev/null
+    - test -n "$SSH_PRIVATE_KEY" && test -n "$SSH_HOST" || { echo "Faltam SSH_PRIVATE_KEY/SSH_HOST nas variáveis de CI/CD"; exit 1; }
+    - SSH_PORT="${SSH_PORT:-22}"
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    # Variável do tipo File traz o caminho; do tipo Variable, o conteúdo da chave
+    - if [ -f "$SSH_PRIVATE_KEY" ]; then tr -d '\r' < "$SSH_PRIVATE_KEY" > ~/.ssh/id_deploy; else printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_deploy; fi
+    - chmod 600 ~/.ssh/id_deploy
+    - if [ -n "$SSH_KNOWN_HOSTS" ]; then printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts; else ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" > ~/.ssh/known_hosts 2>/dev/null; fi
+    - SSH_OPTS="-i $HOME/.ssh/id_deploy -o BatchMode=yes -o ServerAliveInterval=30"
+  script:
+    - ssh $SSH_OPTS -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "mkdir -p ~/$NOME_APP"
+    - scp $SSH_OPTS -P "$SSH_PORT" docker-compose.qa.yml "$SSH_USER@$SSH_HOST:$NOME_APP/"
+    # O nome do robot tem `$`: vai entre aspas simples para o shell da VM não expandi-lo
+    - printf '%s' "$HARBOR_TOKEN" | ssh $SSH_OPTS -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "docker login $REGISTRY -u '$HARBOR_USER' --password-stdin >/dev/null"
+    - ssh $SSH_OPTS -p "$SSH_PORT" "$SSH_USER@$SSH_HOST" "IMAGE_TAG=$CI_COMMIT_SHORT_SHA DEPLOY_DIR=$NOME_APP REGISTRY=$REGISTRY IMAGENS=$REGISTRY/$REGISTRY_PROJECT bash -s" < ci/deploy-qa.sh
+    # As URLs públicas (pelo proxy) — aviso, não falha: a saúde da API já foi conferida na VM
+    - for url in "$QA_API_URL/health" "$QA_PAINEL_URL/login"; do printf '  %-50s %s\n' "$url" "$(curl -s -o /dev/null -m 20 -w '%{http_code}' "$url" || echo erro)"; done

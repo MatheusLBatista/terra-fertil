@@ -1,5 +1,5 @@
 import { and, desc, eq, sql } from "drizzle-orm";
-import { db } from "../../db/index.ts";
+import { db, type DbOrTx } from "../../db/index.ts";
 import { historicoAlteracao, type HistoricoAlteracao } from "../../db/historicoAlteracao.ts";
 
 type Filtros = {
@@ -19,8 +19,8 @@ function where(filters: Filtros) {
 }
 
 export default class HistoricoRepository {
-  async listar(filters: Filtros & { limit: number; offset: number }) {
-    return db
+  async listar(filters: Filtros & { limit: number; offset: number }, tx: DbOrTx = db) {
+    return tx
       .select()
       .from(historicoAlteracao)
       .where(where(filters))
@@ -29,16 +29,16 @@ export default class HistoricoRepository {
       .offset(filters.offset);
   }
 
-  async contar(filters: Filtros) {
-    const [row] = await db
+  async contar(filters: Filtros, tx: DbOrTx = db) {
+    const [row] = await tx
       .select({ total: sql<number>`cast(count(*) as int)` })
       .from(historicoAlteracao)
       .where(where(filters));
     return row?.total ?? 0;
   }
 
-  async listarTabelas() {
-    const rows = await db
+  async listarTabelas(tx: DbOrTx = db): Promise<string[]> {
+    const rows = await tx
       .selectDistinct({ tabela: historicoAlteracao.tabela })
       .from(historicoAlteracao)
       .orderBy(historicoAlteracao.tabela);

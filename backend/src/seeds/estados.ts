@@ -7,7 +7,7 @@ import { estado, type NewEstado } from "../db/estado.ts";
 
 /**
  * Insere os 27 estados a partir de `data/estados.json` (baixado do IBGE com
- * `npm run ibge:download`). Idempotente: `onConflictDoNothing`.
+ * `bun run ibge:download`). Idempotente: `onConflictDoNothing`.
  */
 export async function seedEstados() {
   console.log("Seeding estados...");

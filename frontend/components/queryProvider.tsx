@@ -1,11 +1,8 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { ReactNode, useState } from "react";
 import { logger } from "@/lib/logger";
-
-const DEV = process.env.NODE_ENV === "development";
 
 export function QueryProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(
@@ -43,10 +40,5 @@ export function QueryProvider({ children }: { children: ReactNode }) {
       }),
   );
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      {DEV && <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />}
-    </QueryClientProvider>
-  );
+  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
 }

@@ -24,7 +24,7 @@ import { aplicarEnvDeTeste, garantirBancoDeTeste, DATABASE_URL_TEST } from "./en
 const RAIZ = fileURLToPath(new URL("../../", import.meta.url));
 
 function rodar(descricao: string, args: string[]) {
-  const r = spawnSync("npx", args, {
+  const r = spawnSync("bunx", args, {
     cwd: RAIZ,
     env: { ...process.env, DATABASE_URL: DATABASE_URL_TEST },
     encoding: "utf8",

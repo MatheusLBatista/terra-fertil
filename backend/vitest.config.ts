@@ -6,12 +6,12 @@ import { ENV_INTEGRACAO } from "./src/test/env.ts";
  * Dois projetos:
  *
  * - `unit` (skill testes-unitarios): `*.test.ts` de service com o repository
- *   mockado — sem banco, sem HTTP, sem `.env`. `npm test`.
+ *   mockado — sem banco, sem HTTP, sem `.env`. `bun run test`.
  * - `integration` (skill testes-integracao): `*.integration.test.ts` contra o
  *   Postgres de teste (`db_test` do docker-compose.yml) via `app.request()`.
  *   O globalSetup aplica schema + trigger + seeds; o setup limpa os dados entre
  *   arquivos; os arquivos rodam em série (compartilham o banco).
- *   `npm run test:integration`. Os dois juntos: `npm run test:all`.
+ *   `bun run test:integration`. Os dois juntos: `bun run test:all`.
  */
 export default defineConfig({
   test: {

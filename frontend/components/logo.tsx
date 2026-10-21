@@ -1,19 +1,45 @@
 import { cn } from "@/lib/utils";
-import { MARCA_BLOCOS, MARCA_FAISCA, MARCA_RAIO_FUNDO, MARCA_VIEWBOX } from "@/lib/marca";
 
 /**
- * Marca da aplicação — o desenho vem de `lib/marca.ts` (o mesmo do
- * `app/apple-icon.tsx` e do `app/icon.svg`). As cores seguem o tema:
- * fundo `--sidebar` (escuro nos dois temas) e blocos `--primary`.
+ * Marca do Projeto Terra Fértil. Os PNGs (brancos, com transparência) saem do
+ * `ID-Projeto-Terra-Fertil-Branco-952x1536.png` da raiz e entram como
+ * `mask-image`, então a cor vem do tema (`bg-*` de quem usa):
+ * - `public/marca-terra-fertil.png` — só o símbolo (broto + campo);
+ * - `public/logo-terra-fertil.png` — a assinatura vertical completa.
+ * `app/icon.png` e `app/apple-icon.png` são o símbolo sobre o verde `#589E3A`.
  */
-export function Logo({ className, ...props }: React.SVGProps<SVGSVGElement>) {
+function mascara(src: string): React.CSSProperties {
+  return {
+    maskImage: `url(${src})`,
+    maskSize: "contain",
+    maskRepeat: "no-repeat",
+    maskPosition: "center",
+  };
+}
+
+/** Símbolo em ladrilho verde — menu lateral e cabeçalhos (mesmo desenho do favicon). */
+export function Logo({ className }: { className?: string }) {
   return (
-    <svg viewBox={MARCA_VIEWBOX} aria-hidden="true" className={cn("size-7 shrink-0", className)} {...props}>
-      <rect width="64" height="64" rx={MARCA_RAIO_FUNDO} fill="var(--sidebar)" />
-      {MARCA_BLOCOS.map((b) => (
-        <rect key={`${b.x}-${b.y}`} x={b.x} y={b.y} width={b.w} height={b.h} rx={b.r} fill="var(--primary)" />
-      ))}
-      <path d={MARCA_FAISCA} fill="var(--sidebar-foreground)" />
-    </svg>
+    <span
+      aria-hidden="true"
+      className={cn(
+        "inline-flex size-7 shrink-0 items-center justify-center rounded-md bg-primary",
+        className,
+      )}
+    >
+      <span className="size-[72%] bg-white" style={mascara("/marca-terra-fertil.png")} />
+    </span>
+  );
+}
+
+/** Assinatura vertical completa ("Projeto Terra Fértil"), na cor primária. */
+export function LogoCompleto({ className, titulo }: { className?: string; titulo: string }) {
+  return (
+    <span
+      role="img"
+      aria-label={titulo}
+      className={cn("block aspect-[952/1536] h-36 bg-primary", className)}
+      style={mascara("/logo-terra-fertil.png")}
+    />
   );
 }

@@ -16,7 +16,7 @@ import { getCurrentUserId } from "../lib/requestContext.ts";
  *
  * A presença de `deleted_at` também é o critério de auto-descoberta da trigger
  * de histórico (src/db/triggers/historico.sql) — todo model com `...auditColumns`
- * é auditado após `npm run db:triggers`.
+ * é auditado após `bun run db:triggers`.
  */
 // A coluna é nullable; quando não há usuário no contexto (ex.: seeds) o valor
 // resolve para null. O cast mantém a assinatura de `$defaultFn`/`$onUpdate`,

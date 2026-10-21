@@ -16,8 +16,8 @@ Fora do escopo desta skill: repository (é SQL — só o banco prova), controlle
 ## Onde e como rodar
 
 - Arquivo: `<entidade>.service.test.ts` ao lado do service (`vitest.config.ts` inclui `src/**/*.test.ts`; `tsconfig.build.json` os exclui do `dist`).
-- `cd backend && npm test` (uma vez) · `npm run test:watch` (contínuo). Sem `.env`, sem Postgres, sem API no ar.
-- `make check` (raiz) roda typecheck + lint + estes unitários do back e typecheck + lint do front — é o gate antes do commit; o CI roda o mesmo.
+- `cd backend && bun run test` (uma vez) · `bun run test:watch` (contínuo). Sem `.env`, sem Postgres, sem API no ar.
+- `bun run check` (raiz) roda typecheck + lint + estes unitários do back e typecheck + lint do front — é o gate antes do commit; o CI (GitLab) roda essas mesmas etapas.
 
 ## Padrão de mock (3 blocos, no topo do arquivo)
 
@@ -53,6 +53,7 @@ beforeEach(() => {
 ```
 
 - Service que não abre transação: omita o bloco 2 **mas mantenha um `vi.mock("../../db/index.ts", () => ({ db: {} }))`** se o service importa `db` — o módulo real cria um `Pool` e lê `.env`.
+- **Contexto da requisição**: se o service lê `getContext()` (`src/lib/requestContext.ts` — usuário/papel logado, vindo do AsyncLocalStorage do `requireAuth`), mocke o módulo — fora de uma requisição ele devolve `undefined` e a regra que depende do usuário nunca dispara. A referência faz `vi.mock("../../lib/requestContext.ts", () => ({ getContext: vi.fn() }))` e, no teste, `vi.mocked(getContext).mockReturnValue({ role: "admin" })` (regra anti-bloqueio).
 - Mocke só o que o service importa. E-mail: `vi.mock("../../lib/mail/fsmail.ts", () => ({ sendEmail: vi.fn() }))`. Storage: `vi.mock("../../lib/storage/upload.ts", () => ({ uploadToS3: vi.fn(), downloadFromS3: vi.fn() }))`.
 - Método do repository que pode devolver nada precisa declarar `Promise<X | undefined>`, senão `mockResolvedValue(undefined)` não compila — corrija a assinatura no repository, nunca com cast no teste.
 
@@ -78,7 +79,7 @@ expect(invalidar).toHaveBeenCalledWith();            // sem argumento = limpou t
 
 ## Estrutura e nomes
 
-- Um `describe` por método público do service; um `it` por regra.
+- Um `describe` por método público do service que decide algo; um `it` por regra. Ramo condicional também é regra: `listar` de `papeis` ganhou `describe` porque o `?incluir=permissoes` muda a consulta (prova que sem o flag não busca permissões e que com ele busca numa chamada só).
 - Nome do `it` em pt-BR, no formato "lança 404 quando ...", "não consulta ... quando ...", "faz soft delete e invalida ... quando ...".
 - Fixtures no topo (`ID`, `papel`, `permissoes`), dados mínimos para a regra — sem factories genéricas.
 - Determinístico: sem `Date.now()` solto em asserção (use `expect.any(Date)`), sem `Math.random`, sem rede.
@@ -86,8 +87,8 @@ expect(invalidar).toHaveBeenCalledWith();            // sem argumento = limpou t
 
 ## Checklist
 
-- [ ] Cada `throw new AppError` do service tem um `it` com `statusCode` e mensagem
+- [ ] Cada `throw new AppError` do service tem um `it` com `statusCode`, mensagem e `codigo` (quando houver)
 - [ ] Cada caminho feliz prova a escrita (`toHaveBeenCalledWith`) e o efeito colateral
 - [ ] Cada regra que bloqueia prova o `not.toHaveBeenCalled()` da escrita
 - [ ] Nada importa `src/db/index.ts` real (mock presente)
-- [ ] `npm test` e `npm run typecheck` verdes (ou `make check` na raiz)
+- [ ] `bun run test` e `bun run typecheck` verdes (ou `bun run check` na raiz)

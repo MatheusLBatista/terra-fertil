@@ -1,7 +1,14 @@
 import { z } from "zod";
 import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
 import { registry } from "../../lib/openapi/registry.ts";
-import { ERROS, SEGURANCA, okLista, okPagina, paginacaoQuery } from "../../lib/openapi/helpers.ts";
+import {
+  ERROS,
+  SEGURANCA,
+  filtroTexto,
+  okLista,
+  okPagina,
+  paginacaoQuery,
+} from "../../lib/openapi/helpers.ts";
 
 extendZodWithOpenApi(z);
 
@@ -11,13 +18,10 @@ export const HistoricoAlteracaoSchema = registry.register(
     .object({
       id: z.number().int(),
       tabela: z.string(),
-      registroId: z
-        .string()
-        .nullable()
-        .openapi({
-          description:
-            'PK do registro (composta: valores unidos por ":"); null se a tabela não tem PK nem `id`',
-        }),
+      registroId: z.string().nullable().openapi({
+        description:
+          'PK do registro (composta: valores unidos por ":"); null se a tabela não tem PK nem `id`',
+      }),
       operacao: z.enum(["INSERT", "UPDATE", "DELETE"]),
       dadosAnteriores: z.record(z.string(), z.unknown()).nullable(),
       dadosNovos: z.record(z.string(), z.unknown()).nullable(),
@@ -28,10 +32,10 @@ export const HistoricoAlteracaoSchema = registry.register(
 );
 
 export const ListHistoricoQuerySchema = z.object({
-  tabela: z.string().optional(),
-  registroId: z.string().optional(),
+  tabela: filtroTexto("Nome da tabela (igualdade)"),
+  registroId: filtroTexto('PK do registro (igualdade; composta: valores unidos por ":")'),
   operacao: z.enum(["INSERT", "UPDATE", "DELETE"]).optional(),
-  alteradoPor: z.string().optional(),
+  alteradoPor: filtroTexto("Id do usuário autor (igualdade)"),
   ...paginacaoQuery,
   limit: z.coerce.number().int().min(1).max(200).default(20),
 });

@@ -7,7 +7,7 @@ import { EnvSchema, chavesObrigatorias } from "../lib/envSchema.ts";
  * Compara as chaves do `.env` com as do `.env.example` e valida o `.env` com o
  * MESMO schema da API (src/lib/envSchema.ts) — sem subir nada.
  *
- *   npm run env:check            # exit 1 se faltar obrigatória ou valor inválido
+ *   bun run env:check            # exit 1 se faltar obrigatória ou valor inválido
  *
  * Não lê `process.env`: os dois arquivos são parseados em separado, então o
  * resultado não depende do ambiente do shell.

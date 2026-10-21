@@ -12,8 +12,18 @@ export type ErroApi = Error & {
   status: number;
   erros?: string[];
   data?: unknown;
-  meta?: unknown;
+  meta?: MetaErro;
   requestId?: string;
+};
+
+/**
+ * `meta` de uma resposta de erro. No 400 de validação (`respostaValidacao` do
+ * backend) traz `campos`: `{ "nome": "mensagem" }`, a primeira mensagem de cada
+ * campo — caminho aninhado com ponto (`permissoes.0.subject`), erro sem campo em `"_"`.
+ */
+export type MetaErro = {
+  campos?: Record<string, string>;
+  [chave: string]: unknown;
 };
 
 export type ValorQuery = string | number | boolean | null | undefined;

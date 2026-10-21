@@ -84,9 +84,11 @@ export default class PapeisService {
     }
 
     const alterado = await this.repository.alterar(id, data);
+    // Excluído entre a leitura e o UPDATE (corrida) — o UPDATE não pegou linha
+    if (!alterado) throw new AppError("Papel não encontrado", 404);
     // Renomear muda a chave do cache (e user.role via FK cascade) — limpa tudo
     invalidarCachePermissoes();
-    return { ...alterado!, permissoes: await this.repository.listarPermissoes(id) };
+    return { ...alterado, permissoes: await this.repository.listarPermissoes(id) };
   }
 
   async substituirPermissoes(id: string, permissoes: PermissaoDoPapel[]) {
@@ -149,7 +151,8 @@ export default class PapeisService {
       );
     }
 
-    await this.repository.excluir(id);
+    const excluido = await this.repository.excluir(id);
+    if (!excluido) throw new AppError("Papel não encontrado", 404);
     invalidarCachePermissoes(atual.nome);
   }
 
@@ -161,8 +164,9 @@ export default class PapeisService {
       throw new AppError(`Papel "${atual.nome}" não está excluído`, 409, undefined, "PAPEL_ATIVO");
 
     const reativado = await this.repository.reativar(id);
+    if (!reativado) throw new AppError("Papel não encontrado", 404);
     invalidarCachePermissoes(atual.nome);
-    return { ...reativado!, permissoes: await this.repository.listarPermissoes(id) };
+    return { ...reativado, permissoes: await this.repository.listarPermissoes(id) };
   }
 
   /** `nome` tem unique TOTAL (FK de user.role) — soft-deletado também conflita. */

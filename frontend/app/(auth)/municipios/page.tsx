@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { parseAsString, useQueryState } from "nuqs";
 import {
@@ -66,27 +67,30 @@ export default function MunicipiosPage() {
   // mas `total` diz que há dados — a linha vazia oferece a última página.
   const foraDoIntervalo = linhas.length === 0 && (total ?? 0) > 0 && page > 1;
 
-  const siglaDe = (id: number) => estados.data?.data.find((e) => e.id === id)?.sigla ?? "—";
-
-  const colunas: ColumnDef<typeof features, Municipio>[] = [
-    {
-      accessorKey: "id",
-      header: "Código IBGE",
-      meta: { className: "w-32" },
-      cell: ({ row }) => <span className="font-mono text-sm text-muted-foreground">{row.original.id}</span>,
-    },
-    {
-      accessorKey: "nome",
-      header: "Nome",
-      cell: ({ row }) => <span className="font-medium">{row.original.nome}</span>,
-    },
-    {
-      accessorKey: "estadoId",
-      header: "UF",
-      meta: { className: "w-24" },
-      cell: ({ row }) => siglaDe(row.original.estadoId),
-    },
-  ];
+  // Memoizado: o `flexRender` monta cada `cell` como componente — um array novo a
+  // cada render trocaria o tipo e remontaria as células (o botão focado some).
+  const colunas = useMemo<ColumnDef<typeof features, Municipio>[]>(
+    () => [
+      {
+        accessorKey: "id",
+        header: "Código IBGE",
+        meta: { className: "w-32" },
+        cell: ({ row }) => <span className="font-mono text-sm text-muted-foreground">{row.original.id}</span>,
+      },
+      {
+        accessorKey: "nome",
+        header: "Nome",
+        cell: ({ row }) => <span className="font-medium">{row.original.nome}</span>,
+      },
+      {
+        accessorKey: "estadoId",
+        header: "UF",
+        meta: { className: "w-24" },
+        cell: ({ row }) => estados.data?.data.find((e) => e.id === row.original.estadoId)?.sigla ?? "—",
+      },
+    ],
+    [estados.data],
+  );
 
   const table = useTable({
     features,

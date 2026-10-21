@@ -28,7 +28,7 @@ if (isProd && !(env.ADMIN_EMAIL && env.ADMIN_PASSWORD && env.ADMIN_NAME)) {
 export const USUARIOS_DEMO = [
   {
     name: env.ADMIN_NAME ?? "Admin Sistema",
-    email: env.ADMIN_EMAIL ?? "admin@example.com",
+    email: env.ADMIN_EMAIL ?? "fslab.vilhena@ifro.edu.br",
     role: "admin",
     password: env.ADMIN_PASSWORD ?? SENHA_PADRAO,
   },

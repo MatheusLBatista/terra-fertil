@@ -4,7 +4,7 @@ import tseslint from "typescript-eslint";
 
 /**
  * ESLint (flat config): só correção — regras de estilo são do Prettier.
- * `npm run lint` / `npm run lint:fix`.
+ * `bun run lint` / `bun run lint:fix`.
  */
 export default tseslint.config(
   { ignores: ["dist/", "node_modules/", "drizzle/", "logs/", "data/", "openapi.json"] },

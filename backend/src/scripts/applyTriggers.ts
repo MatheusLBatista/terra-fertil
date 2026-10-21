@@ -9,7 +9,7 @@ import { pool } from "../db/index.ts";
  * Executa o SQL em `src/db/triggers/historico.sql` — a trigger se auto-aplica
  * em toda tabela com a coluna `deleted_at`.
  *
- * Uso: npm run db:triggers
+ * Uso: bun run db:triggers
  */
 async function main() {
   const __dirname = dirname(fileURLToPath(import.meta.url));

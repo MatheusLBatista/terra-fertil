@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { parseAsString, useQueryState } from "nuqs";
 import {
@@ -43,13 +43,8 @@ const features = tableFeatures({
   columnMeta: {} as { className?: string },
 });
 
-/**
- * Auditoria: `historico_alteracoes` é populada pela trigger `trg_historico` do
- * PostgreSQL, não pelo código da API. Exige `read HistoricoAlteracao` — no seed
- * de papéis, admin e gestor.
- */
 export default function HistoricoPage() {
-  const { papel, podeGerenciar } = usePapel();
+  const { papel, podeGerenciar, carregando } = usePapel();
   const autorizado = podeGerenciar("gestor");
 
   const { page, setPage, limit, setLimit, offset } = usePagination();
@@ -78,66 +73,71 @@ export default function HistoricoPage() {
   const totalPages = typeof total === "number" ? Math.max(1, Math.ceil(total / limit)) : page;
   const foraDoIntervalo = linhas.length === 0 && (total ?? 0) > 0 && page > 1;
 
-  const colunas: ColumnDef<typeof features, HistoricoAlteracao>[] = [
-    {
-      accessorKey: "operacao",
-      header: "Operação",
-      meta: { className: "w-28" },
-      cell: ({ row }) => (
-        <Badge variant={varianteOperacao(row.original.operacao)}>
-          {ROTULO_OPERACAO[row.original.operacao]}
-        </Badge>
-      ),
-    },
-    {
-      accessorKey: "tabela",
-      header: "Tabela",
-      cell: ({ row }) => <span className="font-medium">{nomeTabela(row.original.tabela)}</span>,
-    },
-    {
-      accessorKey: "registroId",
-      header: "Registro",
-      cell: ({ row }) => (
-        <span className="font-mono text-xs text-muted-foreground">{row.original.registroId}</span>
-      ),
-    },
-    {
-      accessorKey: "alteradoPor",
-      header: "Alterado por",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{row.original.alteradoPor ?? "sistema"}</span>
-      ),
-    },
-    {
-      accessorKey: "alteradoEm",
-      header: "Quando",
-      meta: { className: "w-44" },
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{dataHora(row.original.alteradoEm)}</span>
-      ),
-    },
-    {
-      id: "acoes",
-      header: "Ações",
-      meta: { className: "w-20 text-right" },
-      cell: ({ row }) => (
-        <div className="flex justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            title="Ver detalhes"
-            aria-label={`Ver detalhes da alteração ${row.original.registroId}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              setDetalhe(row.original);
-            }}
-          >
-            <Eye className="size-4" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  // Memoizado: o `flexRender` monta cada `cell` como componente — um array novo a
+  // cada render trocaria o tipo e remontaria as células (o botão focado some).
+  const colunas = useMemo<ColumnDef<typeof features, HistoricoAlteracao>[]>(
+    () => [
+      {
+        accessorKey: "operacao",
+        header: "Operação",
+        meta: { className: "w-28" },
+        cell: ({ row }) => (
+          <Badge variant={varianteOperacao(row.original.operacao)}>
+            {ROTULO_OPERACAO[row.original.operacao]}
+          </Badge>
+        ),
+      },
+      {
+        accessorKey: "tabela",
+        header: "Tabela",
+        cell: ({ row }) => <span className="font-medium">{nomeTabela(row.original.tabela)}</span>,
+      },
+      {
+        accessorKey: "registroId",
+        header: "Registro",
+        cell: ({ row }) => (
+          <span className="font-mono text-xs text-muted-foreground">{row.original.registroId}</span>
+        ),
+      },
+      {
+        accessorKey: "alteradoPor",
+        header: "Alterado por",
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">{row.original.alteradoPor ?? "sistema"}</span>
+        ),
+      },
+      {
+        accessorKey: "alteradoEm",
+        header: "Quando",
+        meta: { className: "w-44" },
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">{dataHora(row.original.alteradoEm)}</span>
+        ),
+      },
+      {
+        id: "acoes",
+        header: "Ações",
+        meta: { className: "w-20 text-right" },
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              title="Ver detalhes"
+              aria-label={`Ver detalhes da alteração ${row.original.registroId}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                setDetalhe(row.original);
+              }}
+            >
+              <Eye className="size-4" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
 
   const table = useTable({
     features,
@@ -146,9 +146,9 @@ export default function HistoricoPage() {
     manualPagination: true,
   });
 
-  if (!autorizado) {
+  if (!carregando && !autorizado) {
     return (
-      <PageLayout title="Histórico">
+      <PageLayout title="Histórico de alterações" breadcrumb="Histórico">
         <EmptyState
           icon={ShieldCheck}
           title="Acesso restrito"
@@ -170,11 +170,11 @@ export default function HistoricoPage() {
             void setPage(1);
           }}
         >
-          <option value="">Todas as tabelas</option>
+          <NativeSelectOption value="">Todas as tabelas</NativeSelectOption>
           {tabelas.data?.data.map((nome) => (
-            <option key={nome} value={nome}>
+            <NativeSelectOption key={nome} value={nome}>
               {nomeTabela(nome)}
-            </option>
+            </NativeSelectOption>
           ))}
         </NativeSelect>
 
@@ -187,11 +187,11 @@ export default function HistoricoPage() {
             void setPage(1);
           }}
         >
-          <option value="">Todas as operações</option>
+          <NativeSelectOption value="">Todas as operações</NativeSelectOption>
           {OPERACOES.map((op) => (
-            <option key={op} value={op}>
+            <NativeSelectOption key={op} value={op}>
               {ROTULO_OPERACAO[op]}
-            </option>
+            </NativeSelectOption>
           ))}
         </NativeSelect>
 
@@ -211,7 +211,7 @@ export default function HistoricoPage() {
       </div>
 
       <div className="border" aria-busy={historico.isPending}>
-        <Table aria-label="Histórico de alterações">
+        <Table aria-label="Lista de alterações">
           <TableHeader>
             {table.getHeaderGroups().map((grupo) => (
               <TableRow key={grupo.id}>
@@ -335,8 +335,8 @@ function DetalheAlteracao({
 }) {
   return (
     <Sheet open={linha !== null} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col sm:max-w-lg">
-        <SheetHeader>
+      <SheetContent className="flex w-full flex-col p-0 sm:max-w-lg">
+        <SheetHeader className="border-b">
           <SheetTitle>
             {linha ? `${ROTULO_OPERACAO[linha.operacao]} em ${nomeTabela(linha.tabela)}` : ""}
           </SheetTitle>
@@ -371,7 +371,12 @@ function Campos({
     <div>
       <h3 className="mb-1.5 text-sm font-semibold">{titulo}</h3>
       {dados ? (
-        <pre className="max-h-72 overflow-auto border bg-muted/40 p-3 font-mono text-xs">
+        <pre
+          role="region"
+          tabIndex={0}
+          aria-label={`Dados ${titulo.toLowerCase()} da alteração`}
+          className="max-h-72 overflow-auto border bg-muted/40 p-3 font-mono text-xs focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+        >
           {JSON.stringify(dados, null, 2)}
         </pre>
       ) : (

@@ -1,5 +1,5 @@
 # Contexto de build da imagem do front. As NEXT_PUBLIC_* chegam como build
-# args (docker-compose.prod.yml), não pelo .env.local.
+# args (.gitlab-ci.yml), não pelo .env.local.
 node_modules
 .next
 out

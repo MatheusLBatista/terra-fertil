@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -54,7 +54,7 @@ import { useBuscaDebounce } from "@/hooks/use-busca-debounce";
 import { authClient } from "@/lib/auth-client";
 import { dataHora, numero } from "@/lib/formato";
 import { papelParaApi, usePapel } from "@/lib/papeis";
-import { ehSemPermissao, mensagemDeErro, type ErroApi } from "@/lib/fetchData";
+import { ehSemPermissao } from "@/lib/fetchData";
 import { mensagemErroAuth } from "@/lib/erros-auth";
 import { SENHA_DICA, senhaOpcionalSchema, senhaSchema } from "@/lib/senha";
 import { usePapeisDinamicos } from "@/hooks/use-papeis";
@@ -89,7 +89,7 @@ type FormEditarUsuario = z.infer<typeof schemaEditarUsuario>;
 export default function UsuariosPage() {
   const queryClient = useQueryClient();
   const { data: session } = authClient.useSession();
-  const { ehAdmin: souAdmin } = usePapel();
+  const { ehAdmin: souAdmin, carregando } = usePapel();
   const papeis = usePapeisDinamicos(undefined, { enabled: souAdmin });
   const meuId = session?.user?.id;
 
@@ -99,6 +99,7 @@ export default function UsuariosPage() {
   const [trocaPapel, setTrocaPapel] = useState<{ usuario: Usuario; papel: string } | null>(null);
   const [novoAberto, setNovoAberto] = useState(false);
   const [editar, setEditar] = useState<Usuario | null>(null);
+  const tabelaRef = useRef<HTMLTableElement>(null);
 
   const { page, setPage, limit, setLimit, offset } = usePagination();
   const [termo, setTermo] = useQueryState("email", parseAsString.withDefault(""));
@@ -115,7 +116,7 @@ export default function UsuariosPage() {
   const usuarios = useQuery({
     queryKey: chaveLista,
     enabled: souAdmin,
-    queryFn: async (): Promise<ListaUsuarios> => {
+    queryFn: async ({ signal }): Promise<ListaUsuarios> => {
       const resposta = await authClient.admin.listUsers({
         query: {
           limit,
@@ -124,6 +125,7 @@ export default function UsuariosPage() {
           sortDirection: direcaoOrdenacao === "desc" ? "desc" : "asc",
           ...(termo ? { searchValue: termo, searchField: "email", searchOperator: "contains" } : {}),
         },
+        fetchOptions: { signal },
       });
       if (resposta.error) throw resposta.error;
       return resposta.data;
@@ -157,7 +159,7 @@ export default function UsuariosPage() {
     onSuccess: () => toast.success("Papel atualizado. As novas permissões valem em até 30 segundos."),
     onError: (erro, _variaveis, contexto) => {
       if (contexto?.anterior) queryClient.setQueryData(chaveLista, contexto.anterior);
-      toast.error(mensagemErroAuth(erro, mensagemDeErro(erro, "Não foi possível alterar o papel.")));
+      toast.error(mensagemErroAuth(erro, "Não foi possível alterar o papel."));
     },
     onSettled: () => invalidar(),
   });
@@ -176,7 +178,7 @@ export default function UsuariosPage() {
       setMotivoBan("");
       invalidar();
     },
-    onError: (erro) => toast.error(mensagemErroAuth(erro, mensagemDeErro(erro, "Não foi possível banir."))),
+    onError: (erro) => toast.error(mensagemErroAuth(erro, "Não foi possível banir.")),
   });
 
   const desbanir = useMutation({
@@ -188,8 +190,7 @@ export default function UsuariosPage() {
       toast.success("Usuário desbanido.");
       invalidar();
     },
-    onError: (erro) =>
-      toast.error(mensagemErroAuth(erro, mensagemDeErro(erro, "Não foi possível desbanir."))),
+    onError: (erro) => toast.error(mensagemErroAuth(erro, "Não foi possível desbanir.")),
   });
 
   const removerMutation = useMutation({
@@ -202,142 +203,152 @@ export default function UsuariosPage() {
       setRemover(null);
       invalidar();
     },
-    onError: (erro) =>
-      toast.error(mensagemErroAuth(erro, mensagemDeErro(erro, "Não foi possível remover o usuário."))),
+    onError: (erro) => toast.error(mensagemErroAuth(erro, "Não foi possível remover o usuário.")),
   });
 
-  const colunas: ColumnDef<typeof features, Usuario>[] = [
-    {
-      accessorKey: "name",
-      header: "Nome",
-      cell: ({ row }) => (
-        <span className="font-medium">
-          {row.original.name}
-          {row.original.id === meuId && <span className="ml-1.5 text-xs text-muted-foreground">(você)</span>}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "email",
-      header: "E-mail",
-      cell: ({ row }) => (
-        <span className="text-sm">
-          {row.original.email}
-          {!row.original.emailVerified && (
-            <span className="ml-1.5 text-xs text-muted-foreground">(não confirmado)</span>
-          )}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "role",
-      header: "Papel",
-      enableSorting: false,
-      cell: ({ row }) => {
-        const u = row.original;
-        const souEu = u.id === meuId;
-        const atual = u.role ?? "usuario";
-        return (
-          <NativeSelect
-            aria-label={`Papel de ${u.email}`}
-            className="h-8 w-32 text-sm"
-            title={papeis.descricaoDe(atual)}
-            value={atual}
-            disabled={souEu || alterarRole.isPending}
-            onChange={(e) => {
-              const papel = e.target.value;
-              if (papel === atual) return;
-              // Entrar ou sair de admin pede confirmação; o resto aplica na hora.
-              if (papel === "admin" || atual === "admin") setTrocaPapel({ usuario: u, papel });
-              else alterarRole.mutate({ userId: u.id, papel });
-            }}
-          >
-            {papeis.nomes.map((p) => (
-              <option key={p} value={p}>
-                {p}
-              </option>
-            ))}
-          </NativeSelect>
-        );
-      },
-    },
-    {
-      accessorKey: "banned",
-      header: "Situação",
-      enableSorting: false,
-      cell: ({ row }) =>
-        row.original.banned ? (
-          <Badge variant="destructive">
-            {row.original.banReason ? `Banido — ${row.original.banReason}` : "Banido"}
-          </Badge>
-        ) : (
-          <Badge variant="outline">Ativo</Badge>
-        ),
-    },
-    {
-      accessorKey: "createdAt",
-      header: "Criado em",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {dataHora(new Date(row.original.createdAt).toISOString())}
-        </span>
-      ),
-    },
-    {
-      id: "acoes",
-      header: "Ações",
-      meta: { className: "w-36 text-right" },
-      cell: ({ row }) => {
-        const u = row.original;
-        const souEu = u.id === meuId;
-        return (
-          <div className="flex justify-end gap-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Editar ${u.email}`}
-              title="Editar"
-              onClick={() => setEditar(u)}
-            >
-              <Pencil className="size-4" />
-            </Button>
-            {u.banned ? (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`Desbanir ${u.email}`}
-                title="Desbanir"
-                onClick={() => desbanir.mutate(u.id)}
-              >
-                <UserCheck className="size-4 text-green-600" />
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`Banir ${u.email}`}
-                title="Banir (encerra as sessões)"
-                disabled={souEu}
-                onClick={() => setBanir(u)}
-              >
-                <Ban className="size-4 text-destructive" />
-              </Button>
+  const { nomes: nomesPapeis, descricaoDe: descricaoPapel } = papeis;
+  const alterarPapel = alterarRole.mutate;
+  const desbanirUsuario = desbanir.mutate;
+
+  // Memoizado: o `flexRender` monta cada `cell` como componente — um array novo a
+  // cada render trocaria o tipo e remontaria as células (o botão focado some).
+  const colunas = useMemo<ColumnDef<typeof features, Usuario>[]>(
+    () => [
+      {
+        accessorKey: "name",
+        header: "Nome",
+        cell: ({ row }) => (
+          <span className="font-medium">
+            {row.original.name}
+            {row.original.id === meuId && (
+              <span className="ml-1.5 text-xs text-muted-foreground">(você)</span>
             )}
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Remover ${u.email}`}
-              title="Remover usuário"
-              disabled={souEu}
-              onClick={() => setRemover(u)}
-            >
-              <Trash2 className="size-4 text-destructive" />
-            </Button>
-          </div>
-        );
+          </span>
+        ),
       },
-    },
-  ];
+      {
+        accessorKey: "email",
+        header: "E-mail",
+        cell: ({ row }) => (
+          <span className="text-sm">
+            {row.original.email}
+            {!row.original.emailVerified && (
+              <span className="ml-1.5 text-xs text-muted-foreground">(não confirmado)</span>
+            )}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "role",
+        header: "Papel",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const u = row.original;
+          const souEu = u.id === meuId;
+          const atual = u.role ?? "usuario";
+          return (
+            <NativeSelect
+              aria-label={`Papel de ${u.email}`}
+              className="h-8 w-32 text-sm"
+              title={descricaoPapel(atual)}
+              value={atual}
+              disabled={souEu}
+              onChange={(e) => {
+                const papel = e.target.value;
+                if (papel === atual) return;
+                // Entrar ou sair de admin pede confirmação; o resto aplica na hora.
+                if (papel === "admin" || atual === "admin") setTrocaPapel({ usuario: u, papel });
+                else alterarPapel({ userId: u.id, papel });
+              }}
+            >
+              {nomesPapeis.map((p) => (
+                <NativeSelectOption key={p} value={p}>
+                  {p}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+          );
+        },
+      },
+      {
+        accessorKey: "banned",
+        header: "Situação",
+        enableSorting: false,
+        cell: ({ row }) =>
+          row.original.banned ? (
+            <Badge variant="destructive">
+              {row.original.banReason ? `Banido — ${row.original.banReason}` : "Banido"}
+            </Badge>
+          ) : (
+            <Badge variant="outline">Ativo</Badge>
+          ),
+      },
+      {
+        accessorKey: "createdAt",
+        header: "Criado em",
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">
+            {dataHora(new Date(row.original.createdAt).toISOString())}
+          </span>
+        ),
+      },
+      {
+        id: "acoes",
+        header: "Ações",
+        meta: { className: "w-36 text-right" },
+        cell: ({ row }) => {
+          const u = row.original;
+          const souEu = u.id === meuId;
+          return (
+            <div className="flex justify-end gap-1">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Editar ${u.email}`}
+                title="Editar"
+                onClick={() => setEditar(u)}
+              >
+                <Pencil className="size-4" />
+              </Button>
+              {u.banned ? (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Desbanir ${u.email}`}
+                  title="Desbanir"
+                  onClick={() => desbanirUsuario(u.id)}
+                >
+                  <UserCheck className="size-4 text-green-600" />
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Banir ${u.email}`}
+                  title="Banir (encerra as sessões)"
+                  disabled={souEu}
+                  onClick={() => setBanir(u)}
+                >
+                  <Ban className="size-4 text-destructive" />
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Remover ${u.email}`}
+                title="Remover usuário"
+                disabled={souEu}
+                onClick={() => setRemover(u)}
+              >
+                <Trash2 className="size-4 text-destructive" />
+              </Button>
+            </div>
+          );
+        },
+      },
+    ],
+    [meuId, nomesPapeis, descricaoPapel, alterarPapel, desbanirUsuario],
+  );
 
   const table = useTable({
     features,
@@ -368,6 +379,7 @@ export default function UsuariosPage() {
         destrutivo: true,
         pendente: banirMutation.isPending,
         onConfirmar: () => banirMutation.mutate(),
+        focoAposConfirmar: tabelaRef,
         children: (
           <div className="grid gap-1.5 px-1">
             <Label htmlFor="ban-motivo">Motivo (opcional)</Label>
@@ -394,6 +406,7 @@ export default function UsuariosPage() {
           destrutivo: true,
           pendente: removerMutation.isPending,
           onConfirmar: () => removerMutation.mutate(),
+          focoAposConfirmar: tabelaRef,
         }
       : trocaPapel
         ? {
@@ -421,7 +434,7 @@ export default function UsuariosPage() {
           }
         : null;
 
-  if (!souAdmin) {
+  if (!carregando && !souAdmin) {
     return (
       <PageLayout title="Usuários">
         <EmptyState
@@ -442,7 +455,7 @@ export default function UsuariosPage() {
         </Button>
       }
     >
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <Input
           className="h-9 w-full sm:w-64"
           placeholder="Buscar por e-mail…"
@@ -450,10 +463,23 @@ export default function UsuariosPage() {
           value={busca}
           onChange={(e) => setBusca(e.target.value)}
         />
+        {termo && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setBusca("");
+              void setTermo(null);
+              void setPage(1);
+            }}
+          >
+            Limpar filtros
+          </Button>
+        )}
       </div>
 
       <div className="border" aria-busy={usuarios.isPending}>
-        <Table aria-label="Lista de usuários">
+        <Table aria-label="Lista de usuários" ref={tabelaRef} tabIndex={-1}>
           <TableHeader>
             {table.getHeaderGroups().map((grupo) => (
               <TableRow key={grupo.id}>
@@ -624,14 +650,13 @@ function EditarUsuario({
 }) {
   return (
     <Sheet open={usuario !== null} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col sm:max-w-md">
-        <SheetHeader>
+      <SheetContent className="flex w-full flex-col p-0 sm:max-w-md">
+        <SheetHeader className="border-b">
           <SheetTitle>Editar usuário</SheetTitle>
           <SheetDescription>
             O papel é alterado direto na tabela; aqui ficam os dados da conta.
           </SheetDescription>
         </SheetHeader>
-        {/* Remonta por usuário: os campos nascem preenchidos, sem efeito de reset. */}
         {usuario && (
           <FormularioEditarUsuario
             key={usuario.id}
@@ -654,7 +679,7 @@ function FormularioEditarUsuario({
   onOpenChange: (v: boolean) => void;
   onSalvo: () => void;
 }) {
-  const [errosApi, setErrosApi] = useState<string[]>([]);
+  const [erroApi, setErroApi] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -689,9 +714,9 @@ function FormularioEditarUsuario({
       onSalvo();
     },
     onError: (erro) => {
-      const api = erro as ErroApi;
-      if (api.status === 400 && api.erros?.length) setErrosApi(api.erros);
-      else toast.error(mensagemErroAuth(erro, mensagemDeErro(erro, "Não foi possível salvar.")));
+      const mensagem = mensagemErroAuth(erro, "Não foi possível salvar.");
+      setErroApi(mensagem);
+      toast.error(mensagem);
     },
   });
 
@@ -700,17 +725,15 @@ function FormularioEditarUsuario({
       className="flex flex-1 flex-col overflow-hidden"
       noValidate
       onSubmit={handleSubmit((dados) => {
-        setErrosApi([]);
+        setErroApi(null);
         salvar.mutate(dados);
       })}
     >
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-        {errosApi.length > 0 && (
-          <ul role="alert" className="list-disc pl-4 text-xs text-destructive">
-            {errosApi.map((e) => (
-              <li key={e}>{e}</li>
-            ))}
-          </ul>
+        {erroApi && (
+          <p role="alert" className="text-xs text-destructive">
+            {erroApi}
+          </p>
         )}
 
         <div className="grid gap-1.5">
@@ -797,8 +820,8 @@ function NovoUsuario({
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="flex w-full flex-col sm:max-w-md">
-        <SheetHeader>
+      <SheetContent className="flex w-full flex-col p-0 sm:max-w-md">
+        <SheetHeader className="border-b">
           <SheetTitle>Novo usuário</SheetTitle>
           <SheetDescription>A conta nasce ativa e já entra com a senha definida aqui.</SheetDescription>
         </SheetHeader>
@@ -816,7 +839,7 @@ function FormularioNovoUsuario({
   onCriado: () => void;
 }) {
   const papeis = usePapeisDinamicos();
-  const [errosApi, setErrosApi] = useState<string[]>([]);
+  const [erroApi, setErroApi] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -842,9 +865,9 @@ function FormularioNovoUsuario({
       onCriado();
     },
     onError: (erro) => {
-      const api = erro as ErroApi;
-      if (api.status === 400 && api.erros?.length) setErrosApi(api.erros);
-      else toast.error(mensagemErroAuth(erro, mensagemDeErro(erro, "Não foi possível criar o usuário.")));
+      const mensagem = mensagemErroAuth(erro, "Não foi possível criar o usuário.");
+      setErroApi(mensagem);
+      toast.error(mensagem);
     },
   });
 
@@ -853,17 +876,15 @@ function FormularioNovoUsuario({
       className="flex flex-1 flex-col overflow-hidden"
       noValidate
       onSubmit={handleSubmit((dados) => {
-        setErrosApi([]);
+        setErroApi(null);
         criar.mutate(dados);
       })}
     >
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
-        {errosApi.length > 0 && (
-          <ul role="alert" className="list-disc pl-4 text-xs text-destructive">
-            {errosApi.map((e) => (
-              <li key={e}>{e}</li>
-            ))}
-          </ul>
+        {erroApi && (
+          <p role="alert" className="text-xs text-destructive">
+            {erroApi}
+          </p>
         )}
 
         <div className="grid gap-1.5">
@@ -931,9 +952,9 @@ function FormularioNovoUsuario({
             {...register("papel")}
           >
             {papeis.nomes.map((p) => (
-              <option key={p} value={p}>
+              <NativeSelectOption key={p} value={p}>
                 {papeis.descricaoDe(p) ? `${p} — ${papeis.descricaoDe(p)}` : p}
-              </option>
+              </NativeSelectOption>
             ))}
           </NativeSelect>
           {errors.papel ? (

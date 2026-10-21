@@ -8,7 +8,8 @@
  * de teste antes disso.
  *
  * Os valores vêm do `.env` (carregado por `dotenv/config` no config/globalSetup)
- * com defaults para o CI, que não tem `.env`.
+ * com defaults para quando não há `.env` (ex.: o job de integração do CI no
+ * GitLab, que define `DATABASE_URL_TEST` apontando para o seu serviço postgres).
  */
 
 /** Banco de teste — porta 5434 é o `db_test` do docker-compose.yml. */

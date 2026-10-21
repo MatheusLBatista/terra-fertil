@@ -23,17 +23,18 @@ mesma regra nos três níveis.
 
 ## Pré-requisitos e como rodar
 
-- Postgres de teste no ar (uma vez): `cd backend && docker compose -p template-ia-dev --env-file .env -f docker-compose.yml up -d db_test`
-  (serviço `db_test`, porta `POSTGRES_PORT_TEST`, padrão 5434, dados em `backend/data/postgres-test`).
+- Postgres de teste no ar (uma vez): `bun run db:test:up` na raiz (`docker compose --env-file backend/.env up -d --wait db_test`)
+  (serviço `db_test`, porta `POSTGRES_PORT_TEST`, padrão 5434, dados em `data/postgres-test`).
 - `DATABASE_URL_TEST` no `.env` só se você mudou porta/credenciais; o padrão é
   `postgresql://user_template:102030fs@localhost:5434/db_template_test`. O nome do
   banco PRECISA conter `test` — o setup recusa outro (ele dropa o schema).
-- `cd backend && npm run test:integration` (só integração) · `npm run test:all`
-  (unitários + integração) · `npm test` continua sendo só os unitários.
-- Na raiz: `make dev-test-integration` / `make dev-test-all`. `make check` **não** inclui
+- `cd backend && bun run test:integration` (só integração) · `bun run test:all`
+  (unitários + integração) · `bun run test` continua sendo só os unitários.
+- Na raiz: `bun run test:integration` / `bun run test:all`. `bun run check` **não** inclui
   integração (não depende de banco) — rode-a à parte antes de commitar um módulo novo.
-- No CI (`.github/workflows/ci.yml`) o Postgres é um service container com as
-  mesmas credenciais — nada a configurar.
+- No CI (GitLab, job `backend` do `.gitlab-ci.yml`) o Postgres é um `service` do job; ele só precisa
+  apontar `DATABASE_URL_TEST` para esse serviço (os demais valores têm default em
+  `src/test/env.ts`).
 
 O que acontece a cada rodada (`src/test/globalSetup.ts`, uma vez por processo):
 `DATABASE_URL` é apontada para o banco de teste **antes** de qualquer import de
@@ -62,14 +63,15 @@ import { comCookie, anonima, json, login } from "../../test/http.ts";
 import { PREFIXO_TESTE } from "../../test/setup.ts";
 
 let cookie: string;
-beforeAll(async () => { cookie = await login("admin@example.com"); });
+beforeAll(async () => { cookie = await login("fslab.vilhena@ifro.edu.br"); });
 
 const res = await app.request("/papeis", comCookie(cookie, { method: "POST", json: { nome } }));
 const corpo = await json<PapelResposta>(res);   // { data, meta, erros } tipado
 ```
 
 - `login(email, senha?)` → `POST /auth/sign-in/email` e devolve o header `Cookie`
-  pronto; a senha das contas do seed (`admin@`, `gestor@`, `usuario@example.com`)
+  pronto; a senha das contas do seed (`USUARIOS_DEMO`: o admin
+  `fslab.vilhena@ifro.edu.br`, `gestor@example.com`, `usuario@example.com`)
   é resolvida sozinha. Outra conta: crie-a no `beforeAll` e passe a senha.
 - `comCookie(cookie, init)` / `anonima(init)` — montam o `RequestInit` com
   `Origin: http://localhost:3000` (TRUSTED_ORIGINS: better-auth e CORS validam a
@@ -113,7 +115,11 @@ const corpo = await json<PapelResposta>(res);   // { data, meta, erros } tipado
 - Tabelas de **referência semeadas** (`papeis`, `permissoes`, `user`, `estados`,
   `municipios`) nunca são truncadas. Registro criado nelas usa nome com
   `PREFIXO_TESTE` (`teste-`) + sufixo aleatório (`randomUUID().slice(0, 8)`), e o
-  arquivo remove o seu no `afterAll` (hard delete via `db.delete`).
+  arquivo remove o seu no `afterAll` (hard delete via `db.delete`). Para `papeis` o
+  `setup.ts` já faz isso por você: `limparDadosDeTeste()` apaga toda linha com nome
+  `teste-%` antes e depois de cada arquivo (as permissões caem pelo cascade) — o
+  `afterAll` do arquivo é só cinto e suspensório. Tabela semeada nova onde o teste
+  cria linhas? Acrescente o `DELETE ... LIKE 'teste-%'` dela em `limparDadosDeTeste`.
 - `historico_alteracoes` é log append-only: não limpe; filtre por `registro_id`.
 - Não altere os papéis/usuários do seed (renomear `admin` quebra os outros
   arquivos). Precisa de um papel com permissões específicas? Crie um `teste-*`.
@@ -126,8 +132,19 @@ const corpo = await json<PapelResposta>(res);   // { data, meta, erros } tipado
 const NOME = `${PREFIXO_TESTE}${randomUUID().slice(0, 8)}`;
 let cookie: string; let id: string;
 
-beforeAll(async () => { cookie = await login("admin@example.com"); });
+beforeAll(async () => { cookie = await login("fslab.vilhena@ifro.edu.br"); });
 afterAll(async () => { await db.delete(papel).where(eq(papel.nome, NOME)); });
+
+it("POST /papeis sem cookie → 401; com usuario@example.com → 403", async () => {
+  const anon = await app.request("/papeis", anonima({ method: "POST", json: { nome: NOME } }));
+  expect(anon.status).toBe(401);
+  expect(await json(anon)).toEqual({ data: [], meta: {}, erros: ["Não autenticado"] });
+
+  const usuario = await login("usuario@example.com");
+  const negado = await app.request("/papeis", comCookie(usuario, { method: "POST", json: { nome: NOME } }));
+  expect(negado.status).toBe(403);
+  expect(await json(negado)).toEqual({ data: [], meta: {}, erros: ["Acesso negado: permissão insuficiente"] });
+});
 
 it("POST /papeis cria o papel com permissões (201)", async () => {
   const res = await app.request("/papeis", comCookie(cookie, {
@@ -136,15 +153,20 @@ it("POST /papeis cria o papel com permissões (201)", async () => {
   }));
   expect(res.status).toBe(201);
   const corpo = await json<PapelResposta>(res);
-  expect(corpo.data).toEqual({ id: expect.any(String), nome: NOME, descricao: null,
-    permissoes: [{ acao: "read", subject: "Papel" }] });
+  expect(corpo).toEqual({   // envelope completo
+    data: { id: expect.any(String), nome: NOME, descricao: null, permissoes: [{ acao: "read", subject: "Papel" }] },
+    meta: {}, erros: [],
+  });
   id = corpo.data.id;
 });
 
 it("POST /papeis com o mesmo nome responde 409", async () => {
   const res = await app.request("/papeis", comCookie(cookie, { method: "POST", json: { nome: NOME } }));
   expect(res.status).toBe(409);
-  expect(await json(res)).toEqual({ data: [], meta: {}, erros: [`Já existe um papel "${NOME}"`] });
+  // AppError com `codigo` → meta.codigo; sem código, meta: {}
+  expect(await json(res)).toEqual({
+    data: [], meta: { codigo: "PAPEL_DUPLICADO" }, erros: [`Já existe um papel "${NOME}"`],
+  });
 });
 
 it("DELETE faz soft delete (204) e o GET passa a responder 404", async () => {
@@ -170,4 +192,4 @@ it("trigger registrou INSERT/UPDATE/DELETE com o usuário da sessão", async () 
 - [ ] Linha do histórico com `INSERT`, `UPDATE`, `DELETE` e `alteradoPor` do usuário logado
 - [ ] Tabela nova em `TABELAS_DOMINIO` (setup.ts); nomes com `PREFIXO_TESTE` em tabelas semeadas + `afterAll`
 - [ ] Nenhum `vi.mock`; nenhum servidor/porta; `Origin` vai pelos helpers
-- [ ] `npm run test:integration`, `npm run typecheck` e `npm run test:all` verdes
+- [ ] `bun run test:integration`, `bun run typecheck` e `bun run test:all` verdes

@@ -1,0 +1,28 @@
+{
+  "name": "template-ia",
+  "private": true,
+  "description": "Monorepo do template — API (backend/) e painel (frontend/). Cada app tem o seu bun.lock e o seu node_modules; a raiz só orquestra (sem dependências e sem node_modules).",
+  "packageManager": "bun@1.4.3",
+  "scripts": {
+    "postinstall": "bun run install:all && rm -rf node_modules",
+    "install:all": "bun install --cwd backend && bun install --cwd frontend",
+    "setup": "bun run env:init && bun run install:all && bun run db:up && bun run db:reset && echo '✓ Pronto: bun run dev:api (API :3080) e bun run dev:front (painel :3000). Login fslab.vilhena@ifro.edu.br / 102030fs'",
+    "env:init": "([ -f backend/.env ] || cp backend/.env.example backend/.env) && ([ -f frontend/.env.local ] || cp frontend/.env.example frontend/.env.local)",
+    "check": "bun run --cwd backend typecheck && bun run --cwd backend test && bun run --cwd backend lint && bun run --cwd frontend typecheck && bun run --cwd frontend lint",
+    "types": "bun run --cwd backend openapi:export && bun run --cwd frontend types:file",
+    "dev:api": "bun run --cwd backend dev",
+    "dev:front": "bun run --cwd frontend dev",
+    "db:up": "docker compose --env-file backend/.env up -d --wait",
+    "db:down": "docker compose --env-file backend/.env down",
+    "db:test:up": "docker compose --env-file backend/.env up -d --wait db_test",
+    "db:reset": "bun run --cwd backend db:reset",
+    "test": "bun run --cwd backend test",
+    "test:integration": "bun run --cwd backend test:integration",
+    "test:all": "bun run --cwd backend test:all",
+    "ui:verify": "bun run --cwd frontend ui:verify",
+    "e2e": "bun run --cwd frontend e2e"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  }
+}

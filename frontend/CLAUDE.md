@@ -21,33 +21,35 @@ backend estão em `../CLAUDE.md`.
 - **Fontes**: `next/font` self-hosted em `app/layout.tsx` — Inter (`--font-sans`) e JetBrains Mono
   (`--font-mono`); `--font-heading` é um alias da sans em `globals.css`. Trocar de fonte = trocar
   ali e manter os nomes das variáveis.
-- **Marca**: `lib/marca.ts` (desenho + cores fixas dos ícones) alimenta `components/logo.tsx`
-  (cores do tema: `--sidebar`/`--primary`) e `app/apple-icon.tsx`. `app/icon.svg` é estático com
-  o mesmo desenho — trocar a marca é editar `lib/marca.ts` **e** o `icon.svg`.
+- **Marca** (Projeto Terra Fértil, verde `#589E3A` = `--primary`): PNGs brancos recortados do
+  `ID-Projeto-Terra-Fertil-Branco-952x1536.png` da raiz — `public/marca-terra-fertil.png` (símbolo)
+  e `public/logo-terra-fertil.png` (assinatura completa) entram como `mask-image` em
+  `components/logo.tsx` (`Logo` = ladrilho do menu; `LogoCompleto` = telas de login), então a cor
+  vem do tema. `app/icon.png` e `app/apple-icon.png` são estáticos (símbolo sobre o verde).
 
 ## Comandos
 
 ```bash
-npm run dev            # servidor de desenvolvimento (porta 3000)
-npm run build          # build de produção (output standalone)
-npm run typecheck      # tsc --noEmit
-npm run lint           # ESLint
-npm run format         # Prettier (printWidth 110, aspas duplas, plugin tailwind)
-npm run format:check   # só confere
-npm run check          # typecheck + lint + format:check — rode antes de entregar
-npm run types          # exporta o OpenAPI do backend (npm run openapi:export lá) e regenera types/api.d.ts
-npm run types:file     # regenera só de ../backend/openapi.json (sem exportar)
+bun run dev            # servidor de desenvolvimento (porta 3000)
+bun run build          # build de produção (output standalone)
+bun run typecheck      # tsc --noEmit
+bun run lint           # ESLint
+bun run format         # Prettier (printWidth 110, aspas duplas, plugin tailwind)
+bun run format:check   # só confere
+bun run check          # typecheck + lint + format:check — rode antes de entregar
+bun run types          # exporta o OpenAPI do backend (bun run openapi:export lá) e regenera types/api.d.ts
+bun run types:file     # regenera só de ../backend/openapi.json (sem exportar)
 ```
 
-Verificação visual (prints por breakpoint, overflow, axe): `npm run ui:verify` (skill
+Verificação visual (prints por breakpoint, overflow, axe): `bun run ui:verify` (skill
 `ui-verify`, prints em `e2e/prints`; `CHECAR=axe` para só acessibilidade). Testes ponta
-a ponta: `npm run e2e` (skill `teste-e2e`, `e2e/tests/*.e2e.ts`).
+a ponta: `bun run e2e` (skill `teste-e2e`, `e2e/tests/*.e2e.ts`).
 Revisão de acessibilidade além do axe (teclado, foco, nomes, ARIA): skill `acessibility`.
 
-Produção: imagem Docker própria (`Dockerfile`, Next standalone) orquestrada pelo
-`docker-compose.prod.yml` da raiz (serviço `front`) — as `NEXT_PUBLIC_*` entram
-como build args a partir das `FRONT_*` do `.env` do backend (não há `.env` do
-front em produção).
+Deploy: imagem Docker própria (`Dockerfile`, Next standalone) orquestrada pelo
+`docker-compose.qa.yml` da raiz (serviço `front`), construída pelo `.gitlab-ci.yml` — as
+`NEXT_PUBLIC_*` entram como build args a partir das variáveis `QA_*` do CI (não há `.env`
+do front no deploy).
 
 ## Variáveis de ambiente
 
@@ -364,7 +366,7 @@ Assim o estado inicial sai direto das props e não há efeito de reset.
 
 ### Types da API
 
-Gerados em `types/api.d.ts` com `npm run types` (exporta o OpenAPI do backend e
+Gerados em `types/api.d.ts` com `bun run types` (exporta o OpenAPI do backend e
 converte) — **nunca edite à mão**. Use `components["schemas"]["Nome"]`. O envelope
 `{ data, meta, erros }` é o tipo `Envelope<T, M>` de `types/envelope.ts` (escrito à
 mão, ao lado do gerado). As rotas do better-auth (`/auth/*`) entram no mesmo arquivo,
@@ -378,7 +380,7 @@ de `asChild`, e `nativeButton={false}` no `Button` que renderiza um `Link`).
 Adicionar novos com:
 
 ```bash
-npx shadcn@latest add <componente> --yes
+bunx shadcn@latest add <componente> --yes
 ```
 
 Confira o import gerado: o CLI às vezes escreve `from "cn"`; aqui é

@@ -44,6 +44,38 @@ beforeEach(() => {
   service = new PapeisService();
 });
 
+describe("listar", () => {
+  const query = { limit: 20, offset: 0 };
+
+  it("devolve itens e total sem buscar permissões quando não há incluir", async () => {
+    repo.listar.mockResolvedValue([papel]);
+    repo.contar.mockResolvedValue(1);
+
+    await expect(service.listar(query)).resolves.toEqual({ itens: [papel], total: 1 });
+    expect(repo.listar).toHaveBeenCalledWith(query);
+    expect(repo.contar).toHaveBeenCalledWith(query);
+    expect(repo.listarPermissoesDePapeis).not.toHaveBeenCalled();
+  });
+
+  it("anexa as permissões numa consulta só quando incluir=permissoes (sem repassar incluir ao repository)", async () => {
+    repo.listar.mockResolvedValue([papel, admin]);
+    repo.contar.mockResolvedValue(2);
+    // admin fica fora do mapa de propósito: o service cai no fallback []
+    repo.listarPermissoesDePapeis.mockResolvedValue(new Map([[ID, permissoesUnicas]]));
+
+    await expect(service.listar({ ...query, incluir: "permissoes" })).resolves.toEqual({
+      itens: [
+        { ...papel, permissoes: permissoesUnicas },
+        { ...admin, permissoes: [] },
+      ],
+      total: 2,
+    });
+    expect(repo.listar).toHaveBeenCalledWith(query);
+    expect(repo.listarPermissoesDePapeis).toHaveBeenCalledTimes(1);
+    expect(repo.listarPermissoesDePapeis).toHaveBeenCalledWith([ID, admin.id]);
+  });
+});
+
 describe("listarPorId", () => {
   it("lança 404 quando o papel não existe", async () => {
     repo.porId.mockResolvedValue(undefined);
@@ -72,6 +104,7 @@ describe("criar", () => {
 
     await expect(service.criar(entrada)).rejects.toMatchObject({
       statusCode: 409,
+      codigo: "PAPEL_DUPLICADO",
       message: 'Já existe um papel "gestor-vendas"',
     });
     expect(transaction).not.toHaveBeenCalled();
@@ -83,6 +116,7 @@ describe("criar", () => {
 
     await expect(service.criar(entrada)).rejects.toMatchObject({
       statusCode: 409,
+      codigo: "PAPEL_EXCLUIDO",
       message: expect.stringContaining("reative-o"),
     });
   });
@@ -106,7 +140,10 @@ describe("alterar", () => {
   it("lança 404 quando o papel não existe", async () => {
     repo.porId.mockResolvedValue(undefined);
 
-    await expect(service.alterar(ID, { descricao: "x" })).rejects.toMatchObject({ statusCode: 404 });
+    await expect(service.alterar(ID, { descricao: "x" })).rejects.toMatchObject({
+      statusCode: 404,
+      message: "Papel não encontrado",
+    });
     expect(repo.alterar).not.toHaveBeenCalled();
   });
 
@@ -119,7 +156,11 @@ describe("alterar", () => {
       deletedAt: null,
     });
 
-    await expect(service.alterar(ID, { nome: "admin" })).rejects.toMatchObject({ statusCode: 409 });
+    await expect(service.alterar(ID, { nome: "admin" })).rejects.toMatchObject({
+      statusCode: 409,
+      codigo: "PAPEL_DUPLICADO",
+      message: 'Já existe um papel "admin"',
+    });
     expect(repo.alterar).not.toHaveBeenCalled();
   });
 
@@ -140,6 +181,7 @@ describe("alterar", () => {
     await expect(service.alterar(admin.id, { nome: "root" })).rejects.toMatchObject({
       statusCode: 409,
       codigo: "PAPEL_DE_SISTEMA",
+      message: 'Papel "admin" é de sistema e não pode ser renomeado',
     });
     expect(repo.porNomeIncluindoExcluidos).not.toHaveBeenCalled();
     expect(repo.alterar).not.toHaveBeenCalled();
@@ -153,6 +195,17 @@ describe("alterar", () => {
     await expect(service.alterar(admin.id, { nome: "admin", descricao: "Root" })).resolves.toMatchObject({
       descricao: "Root",
     });
+  });
+
+  it("lança 404 quando o papel some entre a leitura e o UPDATE (excluído em paralelo)", async () => {
+    repo.porId.mockResolvedValue(papel);
+    repo.alterar.mockResolvedValue(undefined);
+
+    await expect(service.alterar(ID, { descricao: "x" })).rejects.toMatchObject({
+      statusCode: 404,
+      message: "Papel não encontrado",
+    });
+    expect(invalidar).not.toHaveBeenCalled();
   });
 
   it("limpa o cache INTEIRO após alterar (renomear muda a chave do cache)", async () => {
@@ -170,7 +223,10 @@ describe("substituirPermissoes", () => {
   it("lança 404 quando o papel não existe", async () => {
     repo.porId.mockResolvedValue(undefined);
 
-    await expect(service.substituirPermissoes(ID, permissoes)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(service.substituirPermissoes(ID, permissoes)).rejects.toMatchObject({
+      statusCode: 404,
+      message: "Papel não encontrado",
+    });
     expect(repo.substituirPermissoes).not.toHaveBeenCalled();
   });
 
@@ -191,6 +247,7 @@ describe("substituirPermissoes", () => {
     await expect(service.substituirPermissoes(admin.id, [])).rejects.toMatchObject({
       statusCode: 409,
       codigo: "PAPEL_DE_SISTEMA",
+      message: 'Papel "admin" é de sistema e não pode ficar sem permissões',
     });
     expect(transaction).not.toHaveBeenCalled();
   });
@@ -205,6 +262,7 @@ describe("substituirPermissoes", () => {
     ).rejects.toMatchObject({
       statusCode: 409,
       codigo: "AUTO_BLOQUEIO",
+      message: expect.stringContaining("do seu próprio papel"),
     });
     expect(transaction).not.toHaveBeenCalled();
   });
@@ -234,15 +292,33 @@ describe("reativar", () => {
   it("lança 404 quando o id não existe (nem excluído)", async () => {
     repo.porIdIncluindoExcluidos.mockResolvedValue(undefined);
 
-    await expect(service.reativar(ID)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(service.reativar(ID)).rejects.toMatchObject({
+      statusCode: 404,
+      message: "Papel não encontrado",
+    });
     expect(repo.reativar).not.toHaveBeenCalled();
   });
 
   it("lança 409 quando o papel não está excluído", async () => {
     repo.porIdIncluindoExcluidos.mockResolvedValue({ ...papel, deletedAt: null });
 
-    await expect(service.reativar(ID)).rejects.toMatchObject({ statusCode: 409, codigo: "PAPEL_ATIVO" });
+    await expect(service.reativar(ID)).rejects.toMatchObject({
+      statusCode: 409,
+      codigo: "PAPEL_ATIVO",
+      message: 'Papel "gestor-vendas" não está excluído',
+    });
     expect(repo.reativar).not.toHaveBeenCalled();
+  });
+
+  it("lança 404 quando o UPDATE de reativação não pega linha", async () => {
+    repo.porIdIncluindoExcluidos.mockResolvedValue({ ...papel, deletedAt: new Date() });
+    repo.reativar.mockResolvedValue(undefined);
+
+    await expect(service.reativar(ID)).rejects.toMatchObject({
+      statusCode: 404,
+      message: "Papel não encontrado",
+    });
+    expect(invalidar).not.toHaveBeenCalled();
   });
 
   it("reativa, invalida o cache e devolve o papel com permissões", async () => {
@@ -260,7 +336,10 @@ describe("excluir", () => {
   it("lança 404 quando o papel não existe", async () => {
     repo.porId.mockResolvedValue(undefined);
 
-    await expect(service.excluir(ID)).rejects.toMatchObject({ statusCode: 404 });
+    await expect(service.excluir(ID)).rejects.toMatchObject({
+      statusCode: 404,
+      message: "Papel não encontrado",
+    });
     expect(repo.excluir).not.toHaveBeenCalled();
   });
 
@@ -270,6 +349,7 @@ describe("excluir", () => {
     await expect(service.excluir(admin.id)).rejects.toMatchObject({
       statusCode: 409,
       codigo: "PAPEL_DE_SISTEMA",
+      message: 'Papel "admin" é de sistema e não pode ser excluído',
     });
     expect(repo.contarUsuariosComPapel).not.toHaveBeenCalled();
     expect(repo.excluir).not.toHaveBeenCalled();
@@ -281,9 +361,22 @@ describe("excluir", () => {
 
     await expect(service.excluir(ID)).rejects.toMatchObject({
       statusCode: 409,
+      codigo: "PAPEL_EM_USO",
       message: 'Papel "gestor-vendas" está em uso por 3 usuário(s)',
     });
     expect(repo.excluir).not.toHaveBeenCalled();
+    expect(invalidar).not.toHaveBeenCalled();
+  });
+
+  it("lança 404 quando o soft delete não pega linha (excluído em paralelo)", async () => {
+    repo.porId.mockResolvedValue(papel);
+    repo.contarUsuariosComPapel.mockResolvedValue(0);
+    repo.excluir.mockResolvedValue(undefined);
+
+    await expect(service.excluir(ID)).rejects.toMatchObject({
+      statusCode: 404,
+      message: "Papel não encontrado",
+    });
     expect(invalidar).not.toHaveBeenCalled();
   });
 

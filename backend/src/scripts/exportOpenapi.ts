@@ -7,7 +7,7 @@ import { getMergedSpec } from "../app.ts";
  * subir o servidor. O front também pode gerar os types direto da API no ar
  * (http://localhost:3080/docs/openapi.json).
  *
- * Uso: npm run openapi:export
+ * Uso: bun run openapi:export
  */
 const spec = await getMergedSpec();
 writeFileSync("openapi.json", JSON.stringify(spec, null, 2));

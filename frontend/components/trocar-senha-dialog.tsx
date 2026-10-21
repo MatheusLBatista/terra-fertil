@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,6 +39,9 @@ function Formulario({ onClose }: { onClose: () => void }) {
   const [nova, setNova] = useState("");
   const [confirma, setConfirma] = useState("");
   const [salvando, setSalvando] = useState(false);
+  // Senha atual recusada pela API: erro ligado ao campo (some ao editar).
+  const [atualIncorreta, setAtualIncorreta] = useState(false);
+  const atualRef = useRef<HTMLInputElement>(null);
 
   const novaCurta = nova.length > 0 && !senhaValida(nova);
   const naoConfere = confirma.length > 0 && confirma !== nova;
@@ -55,11 +58,12 @@ function Formulario({ onClose }: { onClose: () => void }) {
         revokeOtherSessions: false,
       });
       if (res.error) {
-        toast.error(
-          res.error.code === "INVALID_PASSWORD"
-            ? "Senha atual incorreta."
-            : mensagemErroAuth(res.error, "Erro ao trocar a senha."),
-        );
+        if (res.error.code === "INVALID_PASSWORD") {
+          setAtualIncorreta(true);
+          atualRef.current?.focus();
+        } else {
+          toast.error(mensagemErroAuth(res.error, "Erro ao trocar a senha."));
+        }
         return;
       }
       toast.success("Senha alterada com sucesso.");
@@ -76,12 +80,23 @@ function Formulario({ onClose }: { onClose: () => void }) {
       <div className="grid gap-1.5">
         <Label htmlFor="senha-atual">Senha atual</Label>
         <Input
+          ref={atualRef}
           id="senha-atual"
           type="password"
           autoComplete="current-password"
           value={atual}
-          onChange={(e) => setAtual(e.target.value)}
+          onChange={(e) => {
+            setAtual(e.target.value);
+            setAtualIncorreta(false);
+          }}
+          aria-invalid={atualIncorreta}
+          aria-describedby={atualIncorreta ? "senha-atual-erro" : undefined}
         />
+        {atualIncorreta && (
+          <p id="senha-atual-erro" role="alert" className="text-xs text-destructive">
+            Senha atual incorreta.
+          </p>
+        )}
       </div>
       <div className="grid gap-1.5">
         <Label htmlFor="senha-nova">Nova senha</Label>

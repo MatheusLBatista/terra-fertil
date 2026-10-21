@@ -1,7 +1,10 @@
 # template-ia — guia para o agente
 
-Template de API em `backend/` e painel em `frontend/` (npm; rode os comandos
-sempre dentro da pasta do app, ou use os alvos do `Makefile` na raiz). As convenções
+Monorepo com a API em `backend/` e o painel em `frontend/`. Gerenciador: **Bun** (runtime segue
+Node — `tsx`/`next`). Cada app tem o seu `bun.lock` e o seu `node_modules`; a raiz NÃO tem
+dependências nem `node_modules` (não use `workspaces` — o Bun criaria `node_modules/.bun` na raiz).
+Rode os comandos dentro da pasta do app (`bun run <script>`; `bun run test` — nunca `bun test`,
+que é o runner do Bun e não o vitest) ou os scripts do `package.json` da raiz. As convenções
 do painel estão em `frontend/CLAUDE.md` — leia-o antes de mexer lá.
 
 ## Arquitetura (back-end)
@@ -25,7 +28,7 @@ soft delete, cache, **ordenação por allowlist** `SORT_PAPEIS`) e `src/modules/
 - **Auditoria**: todo model de domínio termina com `...auditColumns` (src/db/audit.ts) e tem PK
   (a trigger lê a PK real pelo catálogo; fallback `id`). `createdBy/updatedBy` são preenchidos via AsyncLocalStorage — nunca passe userId à mão.
   A trigger `trg_historico` (auto-descoberta por `deleted_at`) grava tudo em
-  `historico_alteracoes`; rode `npm run db:triggers` após criar tabela.
+  `historico_alteracoes`; o `db:setup` aplica a trigger (tabela criada por outro caminho: `bun run db:triggers`).
 - **Autorização**: CASL (`src/lib/casl/ability.ts`) dirigido pelo **banco** — tabelas
   `papeis` e `permissoes` (par acao+subject), cache de 30s por papel. Papéis seed:
   admin / gestor / usuario. `user.role` tem **FK** para `papeis.nome` (chave natural;
@@ -56,7 +59,7 @@ soft delete, cache, **ordenação por allowlist** `SORT_PAPEIS`) e `src/modules/
   ficam EM BRANCO no `.env` (= desligadas) e são tudo-ou-nada por grupo; o essencial derruba o
   boot se faltar; em produção valores de exemplo (`xpto`, `102030fs`, segredo de exemplo) são
   recusados. `env.ts` é o ÚNICO lugar que lê `process.env` — todo código importa `env` daí
-  (e `env.ts` não importa o logger: ciclo). `npm run env:check` valida o `.env` contra o schema e
+  (e `env.ts` não importa o logger: ciclo). `bun run env:check` valida o `.env` contra o schema e
   o `.env.example` sem subir a API. `DOCS_ENABLED=false` esconde o `/docs` em produção.
 - **Cadastro público**: `AUTH_SIGNUP_ENABLED` (default false) controla `POST /auth/sign-up`
   e o primeiro login com Google; desligado, contas nascem pelo painel ou pelo seed.
@@ -76,34 +79,37 @@ acessibilidade) e `acessibility`; fluxos críticos ganham `teste-e2e`.
 
 ## Checklist ao criar entidade (registros fáceis de esquecer)
 
-1. Model em `src/db/<x>.ts` + `export` no barrel `src/db/schema.ts` → `npm run db:generate` (migration commitada)
-2. `npm run db:triggers` (auditoria da tabela nova; o `db:setup` também aplica)
+1. Model em `src/db/<x>.ts` + `export` no barrel `src/db/schema.ts` → `bun run db:generate` (migration commitada)
+2. `bun run db:triggers` (auditoria da tabela nova; o `db:setup` também aplica)
 3. Módulo em `src/modules/index.ts` (`MODULOS` + import do `<x>.schema.ts`) — `routes/index.ts` e `app.ts` não mudam
-4. Permissões do novo Subject no seed de papéis (`src/seeds/papeis.ts`) + `npm run db:seed:papeis`
+4. Permissões do novo Subject no seed de papéis (`src/seeds/papeis.ts`) + `bun run db:seed:papeis`
 5. Tabela em `TABELAS_DOMINIO` (`src/test/setup.ts`) para os testes de integração
-6. `make types` (openapi.json + types/api.d.ts) e item em `NAV_GROUPS` no painel
+6. `bun run types` (openapi.json + types/api.d.ts) e item em `NAV_GROUPS` no painel
 
 ## Validação rápida
 
-`make check` (typecheck + lint + unitários do back; typecheck + lint do front) ·
-`make types` (regenera `backend/openapi.json` + `frontend/types/api.d.ts`; o CI acusa drift)
-· `npm run test:integration` em `backend/` (precisa do `db_test`: `make dev-test-db-up`).
+`bun run check` (typecheck + lint + unitários do back; typecheck + lint do front) ·
+`bun run types` (regenera `backend/openapi.json` + `frontend/types/api.d.ts`; o CI acusa drift)
+· `bun run test:integration` em `backend/` (precisa do `db_test`: `bun run db:test:up`).
 
 ## Ambiente dev
 
-Projeto novo: `make init NOME=meu-app` (renomeia, gera segredo, cria os `.env`) →
-`make setup` (npm ci nos dois apps, Postgres de dev, `db:reset`) → `make dev-api` (porta 3080,
-docs em /docs) + `make dev-front` (porta 3000). Node 24 (`.nvmrc`).
-Postgres de dev em Docker (`backend/docker-compose.yml`, dados em `backend/data/postgres-dev`,
-testes em `postgres-test`; ignorados no git). `npm run db:reset` = drop + migrate + triggers +
-seeds (inclui estados/municípios do IBGE). Login demo: `admin@example.com` / `102030fs`
-(também gestor@ e usuario@).
+Projeto novo: editar `backend/.env` e `frontend/.env.local` (a partir dos `.env.example`) →
+`bun run setup` (bun install nos dois apps, Postgres de dev, `db:reset`) → `bun run dev:api` (porta 3080,
+docs em /docs) + `bun run dev:front` (porta 3000). Node 24 + Bun. `bun install` na raiz instala os dois
+apps (postinstall). Dependência nova: `bun add <pkg>` DENTRO de `backend/` ou `frontend/`.
+Postgres de dev em Docker (`docker-compose.yml` da raiz, variáveis do `backend/.env`; `bun run db:up` /
+`db:down` / `db:test:up`), dados em `data/postgres-dev` e `data/postgres-test` na raiz (ignorados no git). `bun run db:reset` = drop + migrate + triggers +
+seeds (inclui estados/municípios do IBGE). Login demo: `fslab.vilhena@ifro.edu.br` / `102030fs`
+(também gestor@example.com e usuario@example.com).
 **Migrations desde o dia 1**: `backend/drizzle/` é versionado; ao alterar um model rode
-`npm run db:generate` e commite a migration. `db:setup` aplica `drizzle-kit migrate`
+`bun run db:generate` e commite a migration. `db:setup` aplica `drizzle-kit migrate`
 (`DB_SCHEMA_MODE=push` ou `--push` troca por push — só protótipo sem dados reais).
-Produção: `docker-compose.prod.yml` na raiz (alvos `prod-*` do Makefile; `make help`): containers
-`_prod`, dados em `backend/data/postgres-prod`, portas em 127.0.0.1; o serviço `migrate` roda o
-`db:setup` a cada subida antes da API (`prod-db-migrate`/`prod-db-sync`/`prod-db-seed` manuais).
+CI/CD: `.gitlab-ci.yml` — em todo push/MR, jobs `backend` (typecheck, lint, format, unitários,
+integração com Postgres de serviço, build, drift do `openapi.json`) e `frontend` (drift do
+`types/api.d.ts`, typecheck, lint, format, build). No branch `development` publica as imagens no
+Harbor e faz o deploy do QA: `docker-compose.qa.yml` + `ci/deploy-qa.sh` na VM (backup do banco,
+pull, `up -d` — o serviço `migrate` roda o `db:setup` antes da API —, espera o `/health`).
 
 ## Front-end (`frontend/` — detalhes em `frontend/CLAUDE.md`)
 
@@ -113,7 +119,7 @@ Next.js 16 (App Router) + TanStack Query + better-auth + shadcn/ui, na porta 300
   401 desloga, 403 é falta de permissão do papel e fica na tela.
 - Papel = `user.role` (admin/gestor/usuario) via `lib/papeis.ts`. Módulo novo:
   permissão no seed do back + item em `NAV_GROUPS` (`lib/navegacao.ts`).
-- Tipos **gerados** do OpenAPI do back (`make types` ou `npm run types`) — nunca editar
+- Tipos **gerados** do OpenAPI do back (`bun run types` ou `bun run types`) — nunca editar
   `types/api.d.ts` à mão.
 - `/dashboard` é intencionalmente vazio; a listagem de referência para copiar é
   `app/(auth)/municipios/page.tsx` (ordenação: `papeis/page.tsx`).

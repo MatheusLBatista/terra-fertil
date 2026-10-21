@@ -1,0 +1,110 @@
+# Docker Compose do QA — banco + migrate + API + painel com as IMAGENS publicadas pelo CI
+# no Harbor (registry.fslab.dev/template-ia-qa), sem build na VM. Quem sobe é o job
+# `deploy-qa` do .gitlab-ci.yml (via ci/deploy-qa.sh); à mão, na VM (~/template-ia):
+#
+#   IMAGE_TAG=<commit curto> docker compose --env-file backend/.env -f docker-compose.qa.yml up -d
+#
+# Sem IMAGE_TAG vale `latest` (a última publicada). Na VM ficam só este arquivo, o
+# backend/.env do QA, data/postgres-qa (banco) e backup/.
+#
+# - O painel traz as URLs e opções de tela embutidas no build (CI): o FRONT_PORT do .env aqui
+#   só define a porta publicada.
+# - Portas publicadas só em 127.0.0.1 (BIND_IP): quem expõe é o reverse proxy.
+# - Logs do docker com rotação (10 MB × 3 por container).
+#
+# Validar: docker compose --env-file backend/.env -f docker-compose.qa.yml config --quiet
+
+name: template-ia-qa
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: ${CONTAINER_DB:-db_template_ia}_qa
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      TZ: UTC
+    volumes:
+      - ./data/postgres-qa:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+    networks:
+      - template
+
+  # One-shot a cada subida: schema (drizzle-kit migrate; DB_SCHEMA_MODE=push troca por
+  # push) + trigger + seeds, todos idempotentes. A API só sobe depois que ele termina bem.
+  migrate:
+    image: ${IMAGENS:-registry.fslab.dev/template-ia-qa}/template-ia-api-qa:${IMAGE_TAG:-latest}
+    platform: linux/amd64
+    container_name: ${CONTAINER_APP:-api_template}_qa_migrate
+    env_file: ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      NODE_ENV: production
+      TZ: UTC
+    command: ["bunx", "tsx", "src/scripts/setupDb.ts"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    logging: *logging
+    networks:
+      - template
+
+  api:
+    image: ${IMAGENS:-registry.fslab.dev/template-ia-qa}/template-ia-api-qa:${IMAGE_TAG:-latest}
+    platform: linux/amd64
+    container_name: ${CONTAINER_APP:-api_template}_qa
+    restart: always
+    env_file: ./backend/.env
+    environment:
+      # Dentro da rede do compose, o banco é resolvido pelo nome do serviço
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      NODE_ENV: production
+      TZ: UTC
+    ports:
+      - "${BIND_IP:-127.0.0.1}:${API_PORT:-3080}:${API_PORT:-3080}"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      # /health faz select 1 no banco — detecta API de pé com banco fora
+      test: ["CMD-SHELL", "wget -qO- http://localhost:${API_PORT:-3080}/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging: *logging
+    networks:
+      - template
+
+  front:
+    image: ${IMAGENS:-registry.fslab.dev/template-ia-qa}/template-ia-webapp-qa:${IMAGE_TAG:-latest}
+    platform: linux/amd64
+    container_name: ${CONTAINER_FRONT:-front_template}_qa
+    restart: always
+    ports:
+      - "${BIND_IP:-127.0.0.1}:${FRONT_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    logging: *logging
+    networks:
+      - template
+
+networks:
+  template:

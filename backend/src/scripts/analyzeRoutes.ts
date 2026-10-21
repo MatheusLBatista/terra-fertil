@@ -13,7 +13,7 @@ import { dirname, join, resolve, relative } from "node:path";
  *    "qual tela usa qual rota".
  *
  * Gera o relatório HTML na raiz (relatorio.html) com um diagrama mermaid
- * por rota. Uso: npm run relatorio:rotas
+ * por rota. Uso: bun run relatorio:rotas
  */
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -1108,7 +1108,7 @@ function html(mods: ModuleInfo[], telas: TelaInfo[], papeis: PapelSeed[]): strin
     <h1>Relatório de rotas</h1>
     <p>Fluxo <code>route → controller → service → repository</code> de cada rota da API e o
     cruzamento com as telas do painel que as consomem — tudo por análise estática
-    (<code>src/scripts/analyzeRoutes.ts</code>). Regenerar: <code>npm run relatorio:rotas</code>.</p>
+    (<code>src/scripts/analyzeRoutes.ts</code>). Regenerar: <code>bun run relatorio:rotas</code>.</p>
     <div class="stats">
       <span>${mods.length} módulos</span>
       <span>${totalRotas} rotas</span>

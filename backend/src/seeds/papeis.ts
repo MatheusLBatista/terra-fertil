@@ -6,7 +6,7 @@ import { permissao, type NewPermissao } from "../db/permissao.ts";
 /**
  * Papéis e permissões (RBAC dirigido pelo banco — o CASL carrega daqui).
  * Ao criar um módulo novo, adicione as permissões do subject dele neste seed
- * e rode `npm run db:seed:papeis` (ou insira direto na tabela `permissoes`).
+ * e rode `bun run db:seed:papeis` (ou insira direto na tabela `permissoes`).
  * Idempotente: só insere o que não existe. Papel soft-deletado com o mesmo
  * nome é REATIVADO (o unique de `nome` é total — a FK de user.role exige).
  */

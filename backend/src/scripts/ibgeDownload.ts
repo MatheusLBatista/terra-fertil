@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
  * `src/seeds/data/`. Os arquivos são COMMITADOS — os seeds leem do disco e
  * funcionam offline; rode este script só quando quiser atualizar a base.
  *
- * Uso: npm run ibge:download
+ * Uso: bun run ibge:download
  */
 
 const IBGE = "https://servicodados.ibge.gov.br/api/v1/localidades";

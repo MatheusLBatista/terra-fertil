@@ -129,7 +129,7 @@ describe("autenticação e autorização", () => {
   });
 
   it("login do admin devolve set-cookie e o cookie abre /papeis (200)", async () => {
-    const cookie = await login("admin@example.com");
+    const cookie = await login("fslab.vilhena@ifro.edu.br");
     expect(cookie).toContain("better-auth.session_token=");
 
     const res = await app.request("/papeis", comCookie(cookie));
@@ -144,7 +144,7 @@ describe("autenticação e autorização", () => {
   it("login com senha errada responde 401 com mensagem em pt-BR e o `code` intacto", async () => {
     const res = await app.request(
       "/auth/sign-in/email",
-      anonima({ method: "POST", json: { email: "admin@example.com", password: "senha-errada" } }),
+      anonima({ method: "POST", json: { email: "fslab.vilhena@ifro.edu.br", password: "senha-errada" } }),
     );
 
     expect(res.status).toBe(401);

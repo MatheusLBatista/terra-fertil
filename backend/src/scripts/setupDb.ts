@@ -4,10 +4,10 @@ import { env } from "../lib/env.ts";
 /**
  * Prepara o banco de ponta a ponta, idempotente — serve tanto para o dev
  * (`db:reset` chama isto depois de dropar) quanto para o serviço one-shot
- * `migrate` do docker-compose.prod.yml, que roda a cada subida.
+ * `migrate` do compose de deploy, que roda a cada deploy antes da API.
  *
  * 1. Schema: `drizzle-kit migrate` (default) aplica as migrations versionadas
- *    de drizzle/ (geradas com `npm run db:generate` após mudar um model).
+ *    de drizzle/ (geradas com `bun run db:generate` após mudar um model).
  *    `DB_SCHEMA_MODE=push` no .env ou `--push` na linha de comando troca por
  *    `drizzle-kit push` (sincroniza direto do model, sem histórico — só para
  *    protótipo sem dados reais).
@@ -27,11 +27,11 @@ function rodar(descricao: string, cmd: string, args: string[]) {
 }
 
 if (usarPush) {
-  rodar("Sincronizando schema (drizzle-kit push)", "npx", ["drizzle-kit", "push", "--force"]);
+  rodar("Sincronizando schema (drizzle-kit push)", "bunx", ["drizzle-kit", "push", "--force"]);
 } else {
-  rodar("Aplicando migrations (drizzle-kit migrate)", "npx", ["drizzle-kit", "migrate"]);
+  rodar("Aplicando migrations (drizzle-kit migrate)", "bunx", ["drizzle-kit", "migrate"]);
 }
-rodar("Trigger de histórico", "npx", ["tsx", "src/scripts/applyTriggers.ts"]);
-rodar("Seeds", "npx", ["tsx", "src/seeds/index.ts"]);
+rodar("Trigger de histórico", "bunx", ["tsx", "src/scripts/applyTriggers.ts"]);
+rodar("Seeds", "bunx", ["tsx", "src/seeds/index.ts"]);
 
 console.log("\n✓ Banco pronto.");

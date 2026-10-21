@@ -30,7 +30,7 @@ import { itemAtivo, NAV_GROUPS, type NavItem } from "@/lib/navegacao";
 // Estrutura do menu em lib/navegacao.ts — módulo novo entra lá.
 
 const BOTAO_RODAPE =
-  "flex size-7 items-center justify-center rounded-md text-sidebar-foreground/80 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-1 focus-visible:ring-sidebar-ring focus-visible:outline-none";
+  "flex size-7 items-center justify-center rounded-md text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-1 focus-visible:ring-sidebar-ring focus-visible:outline-none";
 
 // Traço um pouco mais fino que o padrão do lucide (2): fica no peso do menu.
 const TRACO = 1.75;
@@ -71,7 +71,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             render={<Link href={item.url} onClick={fecharNoCelular} />}
             isActive={ativo(item)}
             tooltip={item.title}
-            className="font-medium text-sidebar-foreground/90"
+            className="font-medium text-sidebar-foreground"
           >
             <Icone className="size-4 shrink-0" strokeWidth={TRACO} />
             <span>{item.title}</span>
@@ -92,7 +92,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           onClick={fecharNoCelular}
           className="flex h-12 items-center gap-2 px-2 transition-opacity group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0 hover:opacity-80"
         >
-          <Logo className="size-7 rounded-md" />
+          <Logo className="size-7" />
           {/* Recolhido, sobra só o símbolo — o lettering some na largura do ícone. */}
           <span className="text-base font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
             {APP_NOME}
@@ -129,7 +129,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             />
           ) : (
             <span title={session?.user?.name} className="flex shrink-0">
-              <CircleUserRound className="size-8 text-sidebar-foreground/70" strokeWidth={1.5} />
+              <CircleUserRound className="size-8 text-sidebar-foreground" strokeWidth={1.5} />
             </span>
           )}
 
@@ -143,7 +143,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 </Badge>
               )}
             </span>
-            <span className="truncate text-xs text-sidebar-foreground/70">{session?.user?.email ?? ""}</span>
+            <span className="truncate text-xs text-sidebar-foreground">{session?.user?.email ?? ""}</span>
           </div>
 
           {/* Ações de conta: trocar senha, tema e sair. */}
@@ -157,7 +157,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <Lock className="size-4" strokeWidth={TRACO} />
             </button>
-            <ThemeToggle className="text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" />
+            <ThemeToggle className="text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground" />
             <button
               type="button"
               onClick={handleLogout}

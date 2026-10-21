@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -30,12 +30,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { NativeSelect } from "@/components/ui/native-select";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Spinner } from "@/components/ui/spinner";
 import { ConfirmacaoDialog, type Confirmacao } from "@/components/confirmacao-dialog";
 import { ehSemPermissao, fetchData, mensagemDeErro, type ErroApi } from "@/lib/fetchData";
+import { aplicarErrosDaApi } from "@/lib/erros-form";
 import { numero } from "@/lib/formato";
 import type { Envelope } from "@/types/envelope";
 import { usePapel } from "@/lib/papeis";
@@ -75,6 +76,7 @@ export default function PapeisPage() {
   const [editar, setEditar] = useState<PapelApi | null>(null);
   const [permissoesDe, setPermissoesDe] = useState<PapelApi | null>(null);
   const [excluir, setExcluir] = useState<PapelApi | null>(null);
+  const tabelaRef = useRef<HTMLTableElement>(null);
 
   const [sort, setSort] = useQueryState("sort", parseAsString.withDefault(SORT_PAPEIS_PADRAO));
   const [campoOrdenacao, direcaoOrdenacao] = sort.split(":");
@@ -98,66 +100,72 @@ export default function PapeisPage() {
     onError: (erro) => toast.error(mensagemDeErro(erro, "Não foi possível excluir o papel.")),
   });
 
-  const linhas = papeis.data?.data ?? [];
+  const linhas = papeis.itens;
+  const total = papeis.total ?? linhas.length;
 
-  const colunas: ColumnDef<typeof features, PapelApi>[] = [
-    {
-      accessorKey: "nome",
-      header: "Nome",
-      meta: { className: "w-44" },
-      cell: ({ row }) => <span className="font-mono text-sm font-medium">{row.original.nome}</span>,
-    },
-    {
-      accessorKey: "descricao",
-      header: "Descrição",
-      enableSorting: false,
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{row.original.descricao ?? "—"}</span>
-      ),
-    },
-    {
-      id: "permissoes",
-      header: "Permissões",
-      enableSorting: false,
-      cell: ({ row }) => <ResumoPermissoes permissoes={row.original.permissoes} />,
-    },
-    {
-      id: "acoes",
-      header: "Ações",
-      meta: { className: "w-36 text-right" },
-      cell: ({ row }) => (
-        <div className="flex justify-end gap-1">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            title="Permissões"
-            aria-label={`Permissões de ${row.original.nome}`}
-            onClick={() => setPermissoesDe(row.original)}
-          >
-            <ShieldCheck className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            title="Editar"
-            aria-label={`Editar ${row.original.nome}`}
-            onClick={() => setEditar(row.original)}
-          >
-            <Pencil className="size-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            title="Excluir"
-            aria-label={`Excluir ${row.original.nome}`}
-            onClick={() => setExcluir(row.original)}
-          >
-            <Trash2 className="size-4 text-destructive" />
-          </Button>
-        </div>
-      ),
-    },
-  ];
+  // Memoizado: o `flexRender` monta cada `cell` como componente — um array novo a
+  // cada render trocaria o tipo e remontaria as células (o botão focado some).
+  const colunas = useMemo<ColumnDef<typeof features, PapelApi>[]>(
+    () => [
+      {
+        accessorKey: "nome",
+        header: "Nome",
+        meta: { className: "w-44" },
+        cell: ({ row }) => <span className="font-mono text-sm font-medium">{row.original.nome}</span>,
+      },
+      {
+        accessorKey: "descricao",
+        header: "Descrição",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <span className="text-sm text-muted-foreground">{row.original.descricao ?? "—"}</span>
+        ),
+      },
+      {
+        id: "permissoes",
+        header: "Permissões",
+        enableSorting: false,
+        cell: ({ row }) => <ResumoPermissoes permissoes={row.original.permissoes} />,
+      },
+      {
+        id: "acoes",
+        header: "Ações",
+        meta: { className: "w-36 text-right" },
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-1">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              title="Permissões"
+              aria-label={`Permissões de ${row.original.nome}`}
+              onClick={() => setPermissoesDe(row.original)}
+            >
+              <ShieldCheck className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              title="Editar"
+              aria-label={`Editar ${row.original.nome}`}
+              onClick={() => setEditar(row.original)}
+            >
+              <Pencil className="size-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              title="Excluir"
+              aria-label={`Excluir ${row.original.nome}`}
+              onClick={() => setExcluir(row.original)}
+            >
+              <Trash2 className="size-4 text-destructive" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    [],
+  );
 
   const table = useTable({
     features,
@@ -194,6 +202,7 @@ export default function PapeisPage() {
         destrutivo: true,
         pendente: excluirMutation.isPending,
         onConfirmar: () => excluirMutation.mutate(),
+        focoAposConfirmar: tabelaRef,
       }
     : null;
 
@@ -207,7 +216,7 @@ export default function PapeisPage() {
       }
     >
       <div className="border" aria-busy={papeis.isPending}>
-        <Table aria-label="Lista de papéis">
+        <Table aria-label="Lista de papéis" ref={tabelaRef} tabIndex={-1}>
           <TableHeader>
             {table.getHeaderGroups().map((grupo) => (
               <TableRow key={grupo.id}>
@@ -312,15 +321,18 @@ export default function PapeisPage() {
             {papeis.isPending ? (
               <Skeleton className="h-3 w-32" />
             ) : (
-              <p className="text-xs text-muted-foreground">Mostrando {numero(linhas.length)} papéis</p>
+              <p className="text-xs text-muted-foreground">
+                {total > linhas.length
+                  ? `Mostrando os primeiros ${numero(linhas.length)} de ${numero(total)} papéis`
+                  : `Mostrando ${numero(linhas.length)} papéis`}
+              </p>
             )}
           </div>
         )}
       </div>
 
-      {/* Criar */}
       <Sheet open={novoAberto} onOpenChange={setNovoAberto}>
-        <SheetContent className="flex flex-col p-0">
+        <SheetContent className="flex w-full flex-col p-0 sm:max-w-md">
           <SheetHeader className="border-b">
             <SheetTitle>Novo papel</SheetTitle>
             <SheetDescription>
@@ -339,9 +351,8 @@ export default function PapeisPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Editar */}
       <Sheet open={!!editar} onOpenChange={(aberto) => !aberto && setEditar(null)}>
-        <SheetContent className="flex flex-col p-0">
+        <SheetContent className="flex w-full flex-col p-0 sm:max-w-md">
           <SheetHeader className="border-b">
             <SheetTitle>Editar papel</SheetTitle>
             <SheetDescription>
@@ -362,9 +373,8 @@ export default function PapeisPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Permissões */}
       <Sheet open={!!permissoesDe} onOpenChange={(aberto) => !aberto && setPermissoesDe(null)}>
-        <SheetContent className="flex flex-col p-0 sm:max-w-lg">
+        <SheetContent className="flex w-full flex-col p-0 sm:max-w-lg">
           <SheetHeader className="border-b">
             <SheetTitle>Permissões — {permissoesDe?.nome}</SheetTitle>
             <SheetDescription>
@@ -376,6 +386,7 @@ export default function PapeisPage() {
             <EditorPermissoes
               key={permissoesDe.id}
               papel={permissoesDe}
+              onFechar={() => setPermissoesDe(null)}
               onSalvo={() => {
                 setPermissoesDe(null);
                 invalidar();
@@ -385,7 +396,6 @@ export default function PapeisPage() {
         </SheetContent>
       </Sheet>
 
-      {/* Excluir */}
       <ConfirmacaoDialog confirmacao={confirmacaoExcluir} onFechar={() => setExcluir(null)} />
     </PageLayout>
   );
@@ -406,7 +416,6 @@ function ResumoPermissoes({ permissoes }: { permissoes?: PermissaoItem[] }) {
   );
 }
 
-/** Criar/editar nome e descrição. Montado só com o sheet aberto (sem useEffect). */
 function FormularioPapel({
   registro,
   onFechar,
@@ -417,14 +426,15 @@ function FormularioPapel({
   onSalvo: () => void;
 }) {
   const [errosApi, setErrosApi] = useState<string[]>([]);
+  const form = useForm<FormPapel>({
+    resolver: zodResolver(schemaPapel),
+    defaultValues: { nome: registro?.nome ?? "", descricao: registro?.descricao ?? "" },
+  });
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormPapel>({
-    resolver: zodResolver(schemaPapel),
-    defaultValues: { nome: registro?.nome ?? "", descricao: registro?.descricao ?? "" },
-  });
+  } = form;
 
   const salvar = useMutation({
     mutationFn: (dados: FormPapel) => {
@@ -438,8 +448,8 @@ function FormularioPapel({
       onSalvo();
     },
     onError: (erro) => {
-      const api = erro as ErroApi;
-      if (api.status === 400 && api.erros?.length) setErrosApi(api.erros);
+      const erros = aplicarErrosDaApi(erro, form);
+      if (erros) setErrosApi(erros);
       else toast.error(mensagemDeErro(erro, "Não foi possível salvar o papel."));
     },
   });
@@ -525,7 +535,15 @@ function FormularioPapel({
  * Substitui o conjunto de permissões do papel (PUT /papeis/:id/permissoes).
  * As permissões iniciais vêm da própria linha; sem elas (API antiga), busca o detalhe.
  */
-function EditorPermissoes({ papel, onSalvo }: { papel: PapelApi; onSalvo: () => void }) {
+function EditorPermissoes({
+  papel,
+  onFechar,
+  onSalvo,
+}: {
+  papel: PapelApi;
+  onFechar: () => void;
+  onSalvo: () => void;
+}) {
   const detalhe = useQuery({
     queryKey: ["papeis", papel.id],
     queryFn: ({ signal }) => fetchData<Envelope<PapelComPermissoes>>(`/papeis/${papel.id}`, { signal }),
@@ -534,7 +552,10 @@ function EditorPermissoes({ papel, onSalvo }: { papel: PapelApi; onSalvo: () => 
 
   if (papel.permissoes === undefined && detalhe.isPending) {
     return (
-      <div className="flex flex-col gap-2 p-4">
+      <div className="flex flex-col gap-2 p-4" aria-busy>
+        <span role="status" className="sr-only">
+          Carregando…
+        </span>
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-8 w-full" />
       </div>
@@ -545,6 +566,7 @@ function EditorPermissoes({ papel, onSalvo }: { papel: PapelApi; onSalvo: () => 
     <LinhasPermissoes
       papel={papel}
       iniciais={papel.permissoes ?? detalhe.data?.data.permissoes ?? []}
+      onFechar={onFechar}
       onSalvo={onSalvo}
     />
   );
@@ -553,14 +575,16 @@ function EditorPermissoes({ papel, onSalvo }: { papel: PapelApi; onSalvo: () => 
 function LinhasPermissoes({
   papel,
   iniciais,
+  onFechar,
   onSalvo,
 }: {
   papel: PapelApi;
   iniciais: PermissaoItem[];
+  onFechar: () => void;
   onSalvo: () => void;
 }) {
-  const queryClient = useQueryClient();
   const [linhas, setLinhas] = useState<PermissaoItem[]>(iniciais);
+  const [errosApi, setErrosApi] = useState<string[]>([]);
 
   const salvar = useMutation({
     mutationFn: () =>
@@ -570,18 +594,36 @@ function LinhasPermissoes({
       }),
     onSuccess: () => {
       toast.success("Permissões atualizadas.");
-      queryClient.invalidateQueries({ queryKey: ["papeis", papel.id] });
       onSalvo();
     },
-    onError: (erro) => toast.error(mensagemDeErro(erro, "Não foi possível salvar as permissões.")),
+    onError: (erro) => {
+      const api = erro as ErroApi;
+      if (api.status === 400) setErrosApi(api.erros?.length ? api.erros : [api.message]);
+      else toast.error(mensagemDeErro(erro, "Não foi possível salvar as permissões."));
+    },
   });
 
   const atualizar = (i: number, patch: Partial<PermissaoItem>) =>
     setLinhas((atual) => atual.map((l, j) => (j === i ? { ...l, ...patch } : l)));
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <form
+      className="flex flex-1 flex-col overflow-hidden"
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        setErrosApi([]);
+        salvar.mutate();
+      }}
+    >
       <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-4">
+        {errosApi.length > 0 && (
+          <ul role="alert" className="list-disc pl-4 text-xs text-destructive">
+            {errosApi.map((e) => (
+              <li key={e}>{e}</li>
+            ))}
+          </ul>
+        )}
         {linhas.length === 0 && (
           <p className="text-sm text-muted-foreground">
             Nenhuma permissão — este papel só vê o que é público.
@@ -596,9 +638,9 @@ function LinhasPermissoes({
               onChange={(e) => atualizar(i, { acao: e.target.value as PermissaoItem["acao"] })}
             >
               {ACOES.map((acao) => (
-                <option key={acao} value={acao}>
+                <NativeSelectOption key={acao} value={acao}>
                   {acao}
-                </option>
+                </NativeSelectOption>
               ))}
             </NativeSelect>
             <Input
@@ -609,6 +651,7 @@ function LinhasPermissoes({
               placeholder='Recurso (ex.: HistoricoAlteracao) ou "all"'
             />
             <Button
+              type="button"
               variant="ghost"
               size="icon-sm"
               aria-label={`Remover permissão ${i + 1}`}
@@ -620,6 +663,7 @@ function LinhasPermissoes({
           </div>
         ))}
         <Button
+          type="button"
           variant="outline"
           size="sm"
           className="self-start"
@@ -629,7 +673,10 @@ function LinhasPermissoes({
         </Button>
       </div>
       <SheetFooter className="flex-row justify-end gap-2 border-t">
-        <Button onClick={() => salvar.mutate()} disabled={salvar.isPending}>
+        <Button type="button" variant="outline" onClick={onFechar}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={salvar.isPending}>
           {salvar.isPending ? (
             <>
               <Spinner /> Salvando…
@@ -639,6 +686,6 @@ function LinhasPermissoes({
           )}
         </Button>
       </SheetFooter>
-    </div>
+    </form>
   );
 }

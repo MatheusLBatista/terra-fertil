@@ -6,7 +6,7 @@ import { db } from "../../db/index.ts";
 import { historicoAlteracao } from "../../db/historicoAlteracao.ts";
 import { papel } from "../../db/papel.ts";
 import { user } from "../../db/user.ts";
-import { comCookie, json, login } from "../../test/http.ts";
+import { anonima, comCookie, json, login } from "../../test/http.ts";
 import { PREFIXO_TESTE } from "../../test/setup.ts";
 
 /**
@@ -41,8 +41,11 @@ const linhasDeHistorico = async (registroId: string) => {
 };
 
 beforeAll(async () => {
-  cookie = await login("admin@example.com");
-  const [admin] = await db.select({ id: user.id }).from(user).where(eq(user.email, "admin@example.com"));
+  cookie = await login("fslab.vilhena@ifro.edu.br");
+  const [admin] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.email, "fslab.vilhena@ifro.edu.br"));
   adminId = admin.id;
   const [papelAdmin] = await db.select({ id: papel.id }).from(papel).where(eq(papel.nome, "admin"));
   adminPapelId = papelAdmin.id;
@@ -50,6 +53,28 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.delete(papel).where(eq(papel.nome, NOME)); // hard delete — permissões caem pelo cascade
+});
+
+describe("gates: requireAuth + requirePermission", () => {
+  it("POST /papeis sem cookie responde 401 e não grava nada", async () => {
+    const res = await app.request("/papeis", anonima({ method: "POST", json: { nome: NOME } }));
+
+    expect(res.status).toBe(401);
+    expect(await json(res)).toEqual({ data: [], meta: {}, erros: ["Não autenticado"] });
+    expect(await db.select({ id: papel.id }).from(papel).where(eq(papel.nome, NOME))).toEqual([]);
+  });
+
+  it("POST /papeis com usuario@example.com (papel sem permissão) responde 403 e não grava nada", async () => {
+    const cookieUsuario = await login("usuario@example.com");
+    const res = await app.request(
+      "/papeis",
+      comCookie(cookieUsuario, { method: "POST", json: { nome: NOME } }),
+    );
+
+    expect(res.status).toBe(403);
+    expect(await json(res)).toEqual({ data: [], meta: {}, erros: ["Acesso negado: permissão insuficiente"] });
+    expect(await db.select({ id: papel.id }).from(papel).where(eq(papel.nome, NOME))).toEqual([]);
+  });
 });
 
 describe("ciclo de vida de um papel", () => {
@@ -64,12 +89,16 @@ describe("ciclo de vida de um papel", () => {
 
     expect(res.status).toBe(201);
     const corpo = await json<PapelResposta>(res);
-    expect(corpo.erros).toEqual([]);
-    expect(corpo.data).toEqual({
-      id: expect.any(String),
-      nome: NOME,
-      descricao: "Papel de teste",
-      permissoes: [{ acao: "read", subject: "Papel" }],
+    // Envelope completo: item único sai com meta vazio e erros vazio
+    expect(corpo).toEqual({
+      data: {
+        id: expect.any(String),
+        nome: NOME,
+        descricao: "Papel de teste",
+        permissoes: [{ acao: "read", subject: "Papel" }],
+      },
+      meta: {},
+      erros: [],
     });
     id = corpo.data.id;
   });
@@ -159,6 +188,20 @@ describe("ciclo de vida de um papel", () => {
     // Sem o flag, o item não traz `permissoes`
     const sem = await app.request(`/papeis?nome=${NOME}`, comCookie(cookie));
     expect((await json<PapelResposta[]>(sem)).data[0]).not.toHaveProperty("permissoes");
+  });
+
+  it("GET /papeis?nome= vazio ou só espaços não filtra (filtroTexto) nem responde 400", async () => {
+    const todos = await json<unknown[]>(await app.request("/papeis?limit=200", comCookie(cookie)));
+
+    for (const nome of ["", "%20%20"]) {
+      const res = await app.request(`/papeis?limit=200&nome=${nome}`, comCookie(cookie));
+      expect(res.status).toBe(200);
+      expect((await json<unknown[]>(res)).meta.total).toBe(todos.meta.total);
+    }
+
+    // Espaços nas pontas são aparados antes do ilike
+    const aparado = await app.request(`/papeis?nome=%20${NOME}%20`, comCookie(cookie));
+    expect((await json<PapelResposta[]>(aparado)).data.map((p) => p.nome)).toEqual([NOME]);
   });
 
   it("GET /papeis?nome=% não usa o curinga do LIKE (escaparLike)", async () => {

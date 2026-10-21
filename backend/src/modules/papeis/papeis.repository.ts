@@ -92,7 +92,11 @@ export default class PapeisRepository {
     return row;
   }
 
-  async alterar(id: string, data: { nome?: string; descricao?: string | null }, tx: DbOrTx = db) {
+  async alterar(
+    id: string,
+    data: { nome?: string; descricao?: string | null },
+    tx: DbOrTx = db,
+  ): Promise<PapelResumo | undefined> {
     const campos = camposParaAtualizar(data);
     if (Object.keys(campos).length === 0) return this.porId(id, tx);
     const [row] = await tx
@@ -104,7 +108,7 @@ export default class PapeisRepository {
   }
 
   /** Soft delete — a linha permanece para auditoria e para o unique total do nome. */
-  async excluir(id: string, tx: DbOrTx = db) {
+  async excluir(id: string, tx: DbOrTx = db): Promise<{ id: string } | undefined> {
     const [row] = await tx
       .update(papel)
       .set({ deletedAt: new Date() })

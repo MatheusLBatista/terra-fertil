@@ -5,7 +5,7 @@ import { env } from "../lib/env.ts";
  * Dropa TUDO (schema public inteiro, incluindo enums e triggers) e recria o
  * schema vazio. Também derruba o schema `drizzle` (tabela de controle das
  * migrations) — senão um `db:migrate` posterior acharia que tudo já foi
- * aplicado. É o primeiro passo do `npm run db:reset`.
+ * aplicado. É o primeiro passo do `bun run db:reset`.
  *
  * Recusa rodar em produção.
  */

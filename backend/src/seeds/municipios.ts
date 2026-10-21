@@ -7,7 +7,7 @@ import { municipio, type NewMunicipio } from "../db/municipio.ts";
 
 /**
  * Insere os ~5.570 municípios do Brasil a partir de `data/municipios.json`
- * (baixado do IBGE com `npm run ibge:download`). Idempotente e em lotes.
+ * (baixado do IBGE com `bun run ibge:download`). Idempotente e em lotes.
  */
 export async function seedMunicipios() {
   console.log("Seeding municípios...");

@@ -32,6 +32,7 @@ export default function ErroPublico({
     <main className="flex min-h-svh flex-col items-center justify-center p-8">
       <EmptyState
         icon={TriangleAlert}
+        titleAs="h1"
         title="Algo deu errado"
         description="O problema foi registrado. Tente novamente e, se persistir, avise o suporte."
         action={

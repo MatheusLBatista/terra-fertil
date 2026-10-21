@@ -14,17 +14,21 @@ import path from "node:path";
  *    demais violações saem como aviso no relatório.
  *
  * Variáveis (todas opcionais):
- *   ROTAS=/municipios,/usuarios   telas a verificar (default: todas do menu)
+ *   ROTAS=/municipios,/usuarios   telas a verificar (default: ROTAS_PADRAO — menu + telas públicas)
  *   TEMA=light|dark               tema (default: dark, o padrão do painel)
  *   LARGURAS=375,1440             breakpoints (default: 375,768,1024,1440)
- *   UI_VERIFY_EMAIL / UI_VERIFY_SENHA  credenciais (default: admin demo)
+ *   UI_VERIFY_EMAIL / UI_VERIFY_SENHA  credenciais (default: admin do seed; se o backend/.env
+ *                                 define ADMIN_EMAIL/ADMIN_PASSWORD, passe-os aqui — o spec
+ *                                 não lê o .env do backend)
  *   CHECAR=tudo|prints|axe        tudo (default) = prints + overflow + axe;
  *                                 prints = só prints + overflow (pula o axe);
  *                                 axe = overflow + axe (não tira prints)
  */
 
+// URLs do .env.local do front (o playwright.config.ts carrega).
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3080";
-const EMAIL = process.env.UI_VERIFY_EMAIL ?? "admin@example.com";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const EMAIL = process.env.UI_VERIFY_EMAIL ?? "fslab.vilhena@ifro.edu.br";
 const SENHA = process.env.UI_VERIFY_SENHA ?? "102030fs";
 const TEMA = process.env.TEMA ?? "dark";
 const CHECAR = (process.env.CHECAR || "tudo") as "tudo" | "prints" | "axe";
@@ -34,8 +38,16 @@ if (!["tudo", "prints", "axe"].includes(CHECAR)) {
 const TIRAR_PRINTS = CHECAR !== "axe";
 const RODAR_AXE = CHECAR !== "prints";
 
+// Telas públicas: abertas sem cookie de sessão (o proxy as deixa passar).
+// /registrar só existe com NEXT_PUBLIC_SIGNUP_ENABLED=true (senão redireciona ao login).
+const ROTAS_PUBLICAS = new Set(["/login", "/registrar", "/recuperar-senha", "/definir-senha"]);
+const SIGNUP = process.env.NEXT_PUBLIC_SIGNUP_ENABLED === "true";
+
 const ROTAS_PADRAO = [
   "/login",
+  "/recuperar-senha",
+  "/definir-senha", // sem ?token= mostra "Link inválido" — o estado que abre sem e-mail
+  ...(SIGNUP ? ["/registrar"] : []),
   "/dashboard",
   "/estados",
   "/municipios",
@@ -61,7 +73,7 @@ async function cookieDeSessao(): Promise<string> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Origin: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+      Origin: APP_URL,
     },
     body: JSON.stringify({ email: EMAIL, password: SENHA }),
   });
@@ -111,14 +123,11 @@ for (const rota of ROTAS) {
           colorScheme: TEMA === "light" ? "light" : "dark",
         });
         await context.addInitScript((tema) => localStorage.setItem("theme", tema), TEMA);
-        if (rota !== "/login") {
+        // Cookie de sessão no host do painel (NEXT_PUBLIC_APP_URL): o Playwright deriva
+        // domínio, caminho e `secure` da URL — vale para localhost e para um host de staging.
+        if (!ROTAS_PUBLICAS.has(rota.split("?")[0])) {
           await context.addCookies([
-            {
-              name: "better-auth.session_token",
-              value: await cookieDeSessao(),
-              domain: "localhost",
-              path: "/",
-            },
+            { name: "better-auth.session_token", value: await cookieDeSessao(), url: APP_URL },
           ]);
         }
 

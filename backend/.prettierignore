@@ -4,5 +4,5 @@ drizzle/
 logs/
 data/
 openapi.json
-package-lock.json
+bun.lock
 src/seeds/data/

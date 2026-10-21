@@ -1,4 +1,3 @@
-import { type InferSelectModel, type InferInsertModel } from "drizzle-orm";
 import { pgTable, bigserial, text, jsonb, timestamp, index } from "drizzle-orm/pg-core";
 import { operacaoHistoricoEnum } from "./enums.ts";
 
@@ -6,7 +5,7 @@ import { operacaoHistoricoEnum } from "./enums.ts";
  * Tabela única de histórico de alterações para todos os models.
  *
  * É populada automaticamente por uma trigger genérica no PostgreSQL
- * (ver `src/db/triggers/historico.sql` e `npm run db:triggers`), que registra
+ * (ver `src/db/triggers/historico.sql` e `bun run db:triggers`), que registra
  * cada INSERT / UPDATE / DELETE das tabelas auditadas (as que têm `deleted_at`).
  */
 export const historicoAlteracao = pgTable(
@@ -31,5 +30,5 @@ export const historicoAlteracao = pgTable(
   ],
 );
 
-export type HistoricoAlteracao = InferSelectModel<typeof historicoAlteracao>;
-export type NewHistoricoAlteracao = InferInsertModel<typeof historicoAlteracao>;
+export type HistoricoAlteracao = typeof historicoAlteracao.$inferSelect;
+export type NewHistoricoAlteracao = typeof historicoAlteracao.$inferInsert;
