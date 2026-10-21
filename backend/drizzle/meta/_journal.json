@@ -50,6 +50,13 @@
       "when": 1792606807119,
       "tag": "0006_visitas_diagnosticos",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792606834227,
+      "tag": "0007_analises_solo",
+      "breakpoints": true
     }
   ]
 }

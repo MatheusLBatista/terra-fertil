@@ -47,3 +47,6 @@ export * from "./diagnosticoAssociacao.ts";
 export * from "./diagnosticoPropriedade.ts";
 export * from "./diagnosticoOpcao.ts";
 export * from "./recomendacao.ts";
+
+// Solo
+export * from "./analiseSolo.ts";
