@@ -15,6 +15,8 @@ import propriedadesRoutes from "./propriedades/propriedades.routes.ts";
 import eventosRoutes from "./eventos/eventos.routes.ts";
 import producoesRoutes from "./producoes/producoes.routes.ts";
 import analisesSoloRoutes from "./analises-solo/analisesSolo.routes.ts";
+import pedidosCompraRoutes from "./pedidos-compra/pedidosCompra.routes.ts";
+import entregasRoutes from "./entregas/entregas.routes.ts";
 
 // Schemas — importados por efeito colateral para popular o registry OpenAPI
 import "./estados/estados.schema.ts";
@@ -32,6 +34,8 @@ import "./propriedades/propriedades.schema.ts";
 import "./eventos/eventos.schema.ts";
 import "./producoes/producoes.schema.ts";
 import "./analises-solo/analisesSolo.schema.ts";
+import "./pedidos-compra/pedidosCompra.schema.ts";
+import "./entregas/entregas.schema.ts";
 
 /**
  * Registro dos módulos da API — o ÚNICO lugar a editar ao criar um módulo:
@@ -55,4 +59,6 @@ export const MODULOS: { path: string; routes: Hono<AppEnv> }[] = [
   { path: "/eventos", routes: eventosRoutes },
   { path: "/producoes", routes: producoesRoutes },
   { path: "/analises-solo", routes: analisesSoloRoutes },
+  { path: "/pedidos-compra", routes: pedidosCompraRoutes },
+  { path: "/entregas", routes: entregasRoutes },
 ];
