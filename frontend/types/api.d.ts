@@ -8167,6 +8167,1508 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/metas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Metas do projeto com indicadores, etapas e a apuração calculada */
+        get: {
+            parameters: {
+                query: {
+                    projetoId: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Metas ordenadas por número; `meta` traz o % do projeto e o valor aprovado total */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Meta"][];
+                            meta: {
+                                /** @description Σ (% da meta × peso da meta ÷ 100) */
+                                percentualProjeto: number;
+                                valorAprovadoTotalCentavos: number;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Criar meta (número único no projeto) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        projetoId: string;
+                        numero: number;
+                        descricao: string;
+                        /** @description Valor em centavos */
+                        valorAprovadoCentavos: number;
+                        /** @description Peso (0–100) */
+                        peso: number;
+                        /** @enum {string} */
+                        situacao?: "nao_iniciado" | "em_execucao" | "concluido";
+                    };
+                };
+            };
+            responses: {
+                /** @description Criada */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Meta"];
+                            meta: {
+                                /** @description Avisos que não bloqueiam (ex.: Σ pesos das metas acima de 100) */
+                                avisos: string[];
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metas/chaves": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Chaves de apuração automática permitidas (allowlist) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lista */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["ChaveApuracao"][];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalhar uma meta (com indicadores, etapas e apuração) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Meta"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Excluir meta com indicadores e etapas (bloqueado se houver produções ou lançamentos nela) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removido com sucesso */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Alterar meta */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        numero?: number;
+                        descricao?: string;
+                        /** @description Valor em centavos */
+                        valorAprovadoCentavos?: number;
+                        /** @description Peso (0–100) */
+                        peso?: number;
+                        /** @enum {string} */
+                        situacao?: "nao_iniciado" | "em_execucao" | "concluido";
+                    };
+                };
+            };
+            responses: {
+                /** @description Alterada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Meta"];
+                            meta: {
+                                /** @description Avisos que não bloqueiam (ex.: Σ pesos das metas acima de 100) */
+                                avisos: string[];
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/metas/{id}/indicadores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Incluir indicador na meta */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        descricao: string;
+                        /** @description Posição na tela */
+                        ordem?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Criado */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Indicador"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metas/indicadores/{indicadorId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Excluir indicador (com as etapas) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    indicadorId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removido com sucesso */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Alterar indicador */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    indicadorId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        descricao?: string;
+                        /** @description Posição na tela */
+                        ordem?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Indicador"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/metas/indicadores/{indicadorId}/etapas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Incluir etapa no indicador (automática exige chave da allowlist) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    indicadorId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        descricao: string;
+                        quantidadePrevista: number;
+                        /** @description Peso (0–100) */
+                        peso: number;
+                        /** @enum {string} */
+                        apuracao: "automatica" | "manual";
+                        /**
+                         * @description Chave da allowlist de apuração automática
+                         * @enum {string|null}
+                         */
+                        chave?: "assoc.visita_inicial" | "assoc.diagnostico_revisado" | "assoc.demanda_identificada" | "producao.relatorio_tecnico_participativo" | "assoc.parceria" | "doc.plano_gestao" | "solo.laudos" | "entrega.demandadas" | "entrega.compradas" | "entrega.termo" | "entrega.entregues" | "visita.assistencia" | "visita.retorno" | "evento.realizados" | "evento.capacitados" | "equipe.estudantes" | "producao.relatorio_ou_resumo" | "producao.relatorio_pesquisa" | "fin.execucao" | "equipe.coordenadores" | null;
+                        quantidadeManual?: number | null;
+                        /** @description Posição na tela */
+                        ordem?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Criado */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["EtapaIndicador"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/metas/etapas/{etapaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Excluir etapa */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    etapaId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removido com sucesso */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Alterar etapa */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    etapaId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        descricao?: string;
+                        quantidadePrevista?: number;
+                        /** @description Peso (0–100) */
+                        peso?: number;
+                        /** @enum {string} */
+                        apuracao?: "automatica" | "manual";
+                        /**
+                         * @description Chave da allowlist de apuração automática
+                         * @enum {string|null}
+                         */
+                        chave?: "assoc.visita_inicial" | "assoc.diagnostico_revisado" | "assoc.demanda_identificada" | "producao.relatorio_tecnico_participativo" | "assoc.parceria" | "doc.plano_gestao" | "solo.laudos" | "entrega.demandadas" | "entrega.compradas" | "entrega.termo" | "entrega.entregues" | "visita.assistencia" | "visita.retorno" | "evento.realizados" | "evento.capacitados" | "equipe.estudantes" | "producao.relatorio_ou_resumo" | "producao.relatorio_pesquisa" | "fin.execucao" | "equipe.coordenadores" | null;
+                        quantidadeManual?: number | null;
+                        /** @description Posição na tela */
+                        ordem?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["EtapaIndicador"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/metas/etapas/{etapaId}/quantidade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Registrar o executado de uma etapa manual */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    etapaId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        quantidadeManual: number | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["EtapaIndicador"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Etapa automática — o executado vem dos registros */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lancamentos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar lançamentos (só os dos projetos do escopo) com os totais do filtro */
+        get: {
+            parameters: {
+                query?: {
+                    projetoId?: string;
+                    tipo?: "liberacao" | "despesa";
+                    metaId?: string;
+                    /** @description Data inicial (inclusive) */
+                    de?: string;
+                    /** @description Data final (inclusive) */
+                    ate?: string;
+                    /** @description Descrição ou documento (contém) */
+                    busca?: string;
+                    limit?: number;
+                    offset?: number | null;
+                    /** @description Ordenação no formato campo:asc|desc. Campos: data, valorCentavos, createdAt */
+                    sort?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lista paginada; `meta.totais` soma liberações e despesas de TODO o filtro (não só da página) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["LancamentoFinanceiro"][];
+                            meta: {
+                                total: number;
+                                limit: number;
+                                offset: number;
+                                totais: {
+                                    liberadoCentavos: number;
+                                    despesaCentavos: number;
+                                };
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Registrar liberação ou despesa */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        projetoId: string;
+                        /**
+                         * Format: uuid
+                         * @description Meta (rubrica) do mesmo projeto
+                         */
+                        metaId?: string | null;
+                        /** @enum {string} */
+                        tipo: "liberacao" | "despesa";
+                        descricao: string;
+                        /** @description Valor em centavos */
+                        valorCentavos: number;
+                        /**
+                         * Format: date
+                         * @example 2026-03-10
+                         */
+                        data: string;
+                        /** @description NF, empenho, OB… */
+                        documentoRef?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Criado */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["LancamentoFinanceiro"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description A meta informada não é deste projeto */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/lancamentos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalhar um lançamento */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["LancamentoFinanceiro"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Excluir lançamento */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removido com sucesso */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Alterar lançamento */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @description Meta (rubrica) do mesmo projeto
+                         */
+                        metaId?: string | null;
+                        /** @enum {string} */
+                        tipo?: "liberacao" | "despesa";
+                        descricao?: string;
+                        /** @description Valor em centavos */
+                        valorCentavos?: number;
+                        /**
+                         * Format: date
+                         * @example 2026-03-10
+                         */
+                        data?: string;
+                        /** @description NF, empenho, OB… */
+                        documentoRef?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["LancamentoFinanceiro"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description A meta informada não é deste projeto */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/estados": {
         parameters: {
             query?: never;
@@ -11012,6 +12514,78 @@ export interface components {
             observacao: string | null;
             /** @description Há termo de uso anexado (baixe em GET /entregas/{id}/termo-uso) */
             temTermoUso: boolean;
+        };
+        EtapaIndicador: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            indicadorId: string;
+            descricao: string;
+            quantidadePrevista: number;
+            peso: number;
+            /** @enum {string} */
+            apuracao: "automatica" | "manual";
+            chave: string | null;
+            quantidadeManual: number | null;
+            ordem: number;
+        };
+        EtapaApurada: components["schemas"]["EtapaIndicador"] & {
+            /** @description Executado real (pode passar do previsto) */
+            executado: number;
+            /** @description min(executado ÷ previsto, 1) × peso da etapa */
+            percentual: number;
+        };
+        Indicador: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            metaId: string;
+            descricao: string;
+            ordem: number;
+        };
+        IndicadorApurado: components["schemas"]["Indicador"] & {
+            /** @description Σ % das etapas do indicador */
+            percentual: number;
+            etapas: components["schemas"]["EtapaApurada"][];
+        };
+        /** @description Meta do projeto com indicadores, etapas e a apuração calculada */
+        Meta: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projetoId: string;
+            numero: number;
+            descricao: string;
+            valorAprovadoCentavos: number;
+            peso: number;
+            /** @enum {string} */
+            situacao: "nao_iniciado" | "em_execucao" | "concluido";
+            /** @description % concluída da meta (0–100) — calculada */
+            percentual: number;
+            indicadores: components["schemas"]["IndicadorApurado"][];
+        };
+        ChaveApuracao: {
+            chave: string;
+            descricao: string;
+        };
+        /** @description Liberação ou despesa do projeto (Meta 9 = Σ despesa ÷ Σ liberação) */
+        LancamentoFinanceiro: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projetoId: string;
+            /** Format: uuid */
+            metaId: string | null;
+            /** @description Número da meta (rubrica), se houver */
+            metaNumero: number | null;
+            /** @enum {string} */
+            tipo: "liberacao" | "despesa";
+            descricao: string;
+            valorCentavos: number;
+            data: string;
+            documentoRef: string | null;
+            /** Format: date-time */
+            createdAt: string;
         };
         /** @description Unidade federativa (dados do IBGE) */
         Estado: {

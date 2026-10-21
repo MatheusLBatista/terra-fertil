@@ -33,6 +33,8 @@ const SUBJECTS_DOMINIO = [
   "AnaliseSolo",
   "PedidoCompra",
   "Entrega",
+  "Meta",
+  "LancamentoFinanceiro",
 ];
 const gerencia = (subjects: string[]): Perm[] => subjects.map((subject) => ({ acao: "manage", subject }));
 const le = (subjects: string[]): Perm[] => subjects.map((subject) => ({ acao: "read", subject }));
@@ -52,6 +54,9 @@ const PERMISSOES_TECNICO: Perm[] = [
   { acao: "read", subject: "Entrega" },
   { acao: "create", subject: "Entrega" },
   { acao: "update", subject: "Entrega" },
+  // Acompanha as metas e o financeiro do próprio projeto, sem editar
+  { acao: "read", subject: "Meta" },
+  { acao: "read", subject: "LancamentoFinanceiro" },
 ];
 
 export const PAPEIS_DEMO: {

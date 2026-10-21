@@ -1801,6 +1801,272 @@
         ],
         "description": "Destinação de um item a uma associação — de demanda até a entrega"
       },
+      "EtapaIndicador": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "indicadorId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "quantidadePrevista": {
+            "type": "integer"
+          },
+          "peso": {
+            "type": "number"
+          },
+          "apuracao": {
+            "type": "string",
+            "enum": [
+              "automatica",
+              "manual"
+            ]
+          },
+          "chave": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quantidadeManual": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "ordem": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "indicadorId",
+          "descricao",
+          "quantidadePrevista",
+          "peso",
+          "apuracao",
+          "chave",
+          "quantidadeManual",
+          "ordem"
+        ]
+      },
+      "EtapaApurada": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/EtapaIndicador"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "executado": {
+                "type": "number",
+                "description": "Executado real (pode passar do previsto)"
+              },
+              "percentual": {
+                "type": "number",
+                "description": "min(executado ÷ previsto, 1) × peso da etapa"
+              }
+            },
+            "required": [
+              "executado",
+              "percentual"
+            ]
+          }
+        ]
+      },
+      "Indicador": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "ordem": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "metaId",
+          "descricao",
+          "ordem"
+        ]
+      },
+      "IndicadorApurado": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Indicador"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "percentual": {
+                "type": "number",
+                "description": "Σ % das etapas do indicador"
+              },
+              "etapas": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/EtapaApurada"
+                }
+              }
+            },
+            "required": [
+              "percentual",
+              "etapas"
+            ]
+          }
+        ]
+      },
+      "Meta": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projetoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "numero": {
+            "type": "integer"
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "valorAprovadoCentavos": {
+            "type": "integer"
+          },
+          "peso": {
+            "type": "number"
+          },
+          "situacao": {
+            "type": "string",
+            "enum": [
+              "nao_iniciado",
+              "em_execucao",
+              "concluido"
+            ]
+          },
+          "percentual": {
+            "type": "number",
+            "description": "% concluída da meta (0–100) — calculada"
+          },
+          "indicadores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IndicadorApurado"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "projetoId",
+          "numero",
+          "descricao",
+          "valorAprovadoCentavos",
+          "peso",
+          "situacao",
+          "percentual",
+          "indicadores"
+        ],
+        "description": "Meta do projeto com indicadores, etapas e a apuração calculada"
+      },
+      "ChaveApuracao": {
+        "type": "object",
+        "properties": {
+          "chave": {
+            "type": "string"
+          },
+          "descricao": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chave",
+          "descricao"
+        ]
+      },
+      "LancamentoFinanceiro": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projetoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "metaId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "metaNumero": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Número da meta (rubrica), se houver"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "liberacao",
+              "despesa"
+            ]
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "valorCentavos": {
+            "type": "integer"
+          },
+          "data": {
+            "type": "string"
+          },
+          "documentoRef": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "projetoId",
+          "metaId",
+          "metaNumero",
+          "tipo",
+          "descricao",
+          "valorCentavos",
+          "data",
+          "documentoRef",
+          "createdAt"
+        ],
+        "description": "Liberação ou despesa do projeto (Meta 9 = Σ despesa ÷ Σ liberação)"
+      },
       "Estado": {
         "type": "object",
         "properties": {
@@ -14666,6 +14932,2254 @@
           }
         ],
         "summary": "Remover o termo de uso da entrega",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removido com sucesso"
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metas": {
+      "get": {
+        "tags": [
+          "Metas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Metas do projeto com indicadores, etapas e a apuração calculada",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projetoId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Metas ordenadas por número; `meta` traz o % do projeto e o valor aprovado total",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Meta"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "percentualProjeto": {
+                          "type": "number",
+                          "description": "Σ (% da meta × peso da meta ÷ 100)"
+                        },
+                        "valorAprovadoTotalCentavos": {
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "percentualProjeto",
+                        "valorAprovadoTotalCentavos"
+                      ]
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Metas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Criar meta (número único no projeto)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "projetoId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "numero": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 32767
+                  },
+                  "descricao": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "valorAprovadoCentavos": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Valor em centavos"
+                  },
+                  "peso": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Peso (0–100)"
+                  },
+                  "situacao": {
+                    "type": "string",
+                    "enum": [
+                      "nao_iniciado",
+                      "em_execucao",
+                      "concluido"
+                    ]
+                  }
+                },
+                "required": [
+                  "projetoId",
+                  "numero",
+                  "descricao",
+                  "valorAprovadoCentavos",
+                  "peso"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Criada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Meta"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "avisos": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Avisos que não bloqueiam (ex.: Σ pesos das metas acima de 100)"
+                        }
+                      },
+                      "required": [
+                        "avisos"
+                      ]
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metas/chaves": {
+      "get": {
+        "tags": [
+          "Metas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Chaves de apuração automática permitidas (allowlist)",
+        "responses": {
+          "200": {
+            "description": "Lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ChaveApuracao"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metas/{id}": {
+      "get": {
+        "tags": [
+          "Metas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Detalhar uma meta (com indicadores, etapas e apuração)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Meta"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Metas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Alterar meta",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "numero": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 32767
+                  },
+                  "descricao": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "valorAprovadoCentavos": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "description": "Valor em centavos"
+                  },
+                  "peso": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Peso (0–100)"
+                  },
+                  "situacao": {
+                    "type": "string",
+                    "enum": [
+                      "nao_iniciado",
+                      "em_execucao",
+                      "concluido"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Alterada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Meta"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "avisos": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          },
+                          "description": "Avisos que não bloqueiam (ex.: Σ pesos das metas acima de 100)"
+                        }
+                      },
+                      "required": [
+                        "avisos"
+                      ]
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Metas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Excluir meta com indicadores e etapas (bloqueado se houver produções ou lançamentos nela)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removido com sucesso"
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metas/{id}/indicadores": {
+      "post": {
+        "tags": [
+          "Metas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Incluir indicador na meta",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "descricao": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "ordem": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 32767,
+                    "description": "Posição na tela"
+                  }
+                },
+                "required": [
+                  "descricao"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Criado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Indicador"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metas/indicadores/{indicadorId}": {
+      "patch": {
+        "tags": [
+          "Metas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Alterar indicador",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "indicadorId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "descricao": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "ordem": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 32767,
+                    "description": "Posição na tela"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Indicador"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Metas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Excluir indicador (com as etapas)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "indicadorId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removido com sucesso"
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metas/indicadores/{indicadorId}/etapas": {
+      "post": {
+        "tags": [
+          "Metas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Incluir etapa no indicador (automática exige chave da allowlist)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "indicadorId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "descricao": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "quantidadePrevista": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2147483647
+                  },
+                  "peso": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Peso (0–100)"
+                  },
+                  "apuracao": {
+                    "type": "string",
+                    "enum": [
+                      "automatica",
+                      "manual"
+                    ]
+                  },
+                  "chave": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "assoc.visita_inicial",
+                      "assoc.diagnostico_revisado",
+                      "assoc.demanda_identificada",
+                      "producao.relatorio_tecnico_participativo",
+                      "assoc.parceria",
+                      "doc.plano_gestao",
+                      "solo.laudos",
+                      "entrega.demandadas",
+                      "entrega.compradas",
+                      "entrega.termo",
+                      "entrega.entregues",
+                      "visita.assistencia",
+                      "visita.retorno",
+                      "evento.realizados",
+                      "evento.capacitados",
+                      "equipe.estudantes",
+                      "producao.relatorio_ou_resumo",
+                      "producao.relatorio_pesquisa",
+                      "fin.execucao",
+                      "equipe.coordenadores",
+                      null
+                    ],
+                    "description": "Chave da allowlist de apuração automática"
+                  },
+                  "quantidadeManual": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "ordem": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 32767,
+                    "description": "Posição na tela"
+                  }
+                },
+                "required": [
+                  "descricao",
+                  "quantidadePrevista",
+                  "peso",
+                  "apuracao"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Criado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EtapaIndicador"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metas/etapas/{etapaId}": {
+      "patch": {
+        "tags": [
+          "Metas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Alterar etapa",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "etapaId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "descricao": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "quantidadePrevista": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 2147483647
+                  },
+                  "peso": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100,
+                    "description": "Peso (0–100)"
+                  },
+                  "apuracao": {
+                    "type": "string",
+                    "enum": [
+                      "automatica",
+                      "manual"
+                    ]
+                  },
+                  "chave": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "assoc.visita_inicial",
+                      "assoc.diagnostico_revisado",
+                      "assoc.demanda_identificada",
+                      "producao.relatorio_tecnico_participativo",
+                      "assoc.parceria",
+                      "doc.plano_gestao",
+                      "solo.laudos",
+                      "entrega.demandadas",
+                      "entrega.compradas",
+                      "entrega.termo",
+                      "entrega.entregues",
+                      "visita.assistencia",
+                      "visita.retorno",
+                      "evento.realizados",
+                      "evento.capacitados",
+                      "equipe.estudantes",
+                      "producao.relatorio_ou_resumo",
+                      "producao.relatorio_pesquisa",
+                      "fin.execucao",
+                      "equipe.coordenadores",
+                      null
+                    ],
+                    "description": "Chave da allowlist de apuração automática"
+                  },
+                  "quantidadeManual": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 2147483647
+                  },
+                  "ordem": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 32767,
+                    "description": "Posição na tela"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EtapaIndicador"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Metas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Excluir etapa",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "etapaId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removido com sucesso"
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metas/etapas/{etapaId}/quantidade": {
+      "put": {
+        "tags": [
+          "Metas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Registrar o executado de uma etapa manual",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "etapaId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "quantidadeManual": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 2147483647
+                  }
+                },
+                "required": [
+                  "quantidadeManual"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/EtapaIndicador"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Etapa automática — o executado vem dos registros",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lancamentos": {
+      "get": {
+        "tags": [
+          "Lançamentos financeiros"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Listar lançamentos (só os dos projetos do escopo) com os totais do filtro",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "projetoId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "liberacao",
+                "despesa"
+              ]
+            },
+            "required": false,
+            "name": "tipo",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "metaId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-03-10",
+              "description": "Data inicial (inclusive)"
+            },
+            "required": false,
+            "description": "Data inicial (inclusive)",
+            "name": "de",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-03-10",
+              "description": "Data final (inclusive)"
+            },
+            "required": false,
+            "description": "Data final (inclusive)",
+            "name": "ate",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Descrição ou documento (contém)"
+            },
+            "required": false,
+            "description": "Descrição ou documento (contém)",
+            "name": "busca",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 10
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "default": 0
+            },
+            "required": false,
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z]+:(asc|desc)$",
+              "description": "Ordenação no formato campo:asc|desc. Campos: data, valorCentavos, createdAt"
+            },
+            "required": false,
+            "description": "Ordenação no formato campo:asc|desc. Campos: data, valorCentavos, createdAt",
+            "name": "sort",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista paginada; `meta.totais` soma liberações e despesas de TODO o filtro (não só da página)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/LancamentoFinanceiro"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "total": {
+                          "type": "integer"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "offset": {
+                          "type": "integer"
+                        },
+                        "totais": {
+                          "type": "object",
+                          "properties": {
+                            "liberadoCentavos": {
+                              "type": "integer"
+                            },
+                            "despesaCentavos": {
+                              "type": "integer"
+                            }
+                          },
+                          "required": [
+                            "liberadoCentavos",
+                            "despesaCentavos"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "total",
+                        "limit",
+                        "offset",
+                        "totais"
+                      ]
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Lançamentos financeiros"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Registrar liberação ou despesa",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "projetoId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "metaId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "description": "Meta (rubrica) do mesmo projeto"
+                  },
+                  "tipo": {
+                    "type": "string",
+                    "enum": [
+                      "liberacao",
+                      "despesa"
+                    ]
+                  },
+                  "descricao": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "valorCentavos": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991,
+                    "description": "Valor em centavos"
+                  },
+                  "data": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-03-10"
+                  },
+                  "documentoRef": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 200,
+                    "description": "NF, empenho, OB…"
+                  }
+                },
+                "required": [
+                  "projetoId",
+                  "tipo",
+                  "descricao",
+                  "valorCentavos",
+                  "data"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Criado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/LancamentoFinanceiro"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A meta informada não é deste projeto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/lancamentos/{id}": {
+      "get": {
+        "tags": [
+          "Lançamentos financeiros"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Detalhar um lançamento",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/LancamentoFinanceiro"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Lançamentos financeiros"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Alterar lançamento",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "metaId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "description": "Meta (rubrica) do mesmo projeto"
+                  },
+                  "tipo": {
+                    "type": "string",
+                    "enum": [
+                      "liberacao",
+                      "despesa"
+                    ]
+                  },
+                  "descricao": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 500
+                  },
+                  "valorCentavos": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991,
+                    "description": "Valor em centavos"
+                  },
+                  "data": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-03-10"
+                  },
+                  "documentoRef": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 200,
+                    "description": "NF, empenho, OB…"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/LancamentoFinanceiro"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "A meta informada não é deste projeto",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Lançamentos financeiros"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Excluir lançamento",
         "parameters": [
           {
             "schema": {
