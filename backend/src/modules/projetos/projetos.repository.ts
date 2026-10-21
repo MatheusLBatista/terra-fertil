@@ -87,7 +87,9 @@ const semEmailTecnico = <T extends { email: string | null }>(m: T): T => ({
 
 /**
  * Condição "a associação (coluna `associacoes.id` da query) está no escopo":
- * tem adesão ativa a algum projeto do escopo. Sem escopo (`undefined`) não filtra.
+ * tem adesão (não excluída — inativa também conta, para o histórico continuar
+ * visível) a algum projeto do escopo. Sem escopo (`undefined`) não filtra.
+ * Registrar algo NOVO num projeto exige adesão ativa — isso é regra de cada service.
  * Use em qualquer query que já tenha `associacoes` no FROM/JOIN.
  */
 export function associacaoNoEscopo(escopo: Escopo, coluna: AnyPgColumn | SQL = associacao.id) {

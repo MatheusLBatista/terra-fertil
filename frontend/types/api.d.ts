@@ -6563,6 +6563,551 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analises-solo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar necessidades de análise de solo (só as dos projetos do escopo) */
+        get: {
+            parameters: {
+                query?: {
+                    projetoId?: string;
+                    propriedadeId?: string;
+                    associacaoId?: string;
+                    situacao?: "pendente" | "com_laudo";
+                    /** @description Nome da propriedade ou do produtor (contém) */
+                    busca?: string;
+                    /** @description Identificada a partir de (YYYY-MM-DD, inclusive) */
+                    de?: string;
+                    /** @description Identificada até (YYYY-MM-DD, inclusive) */
+                    ate?: string;
+                    limit?: number;
+                    offset?: number | null;
+                    /** @description Ordenação no formato campo:asc|desc. Campos: identificadaEm, laudoRegistradoEm, createdAt */
+                    sort?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lista paginada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["AnaliseSolo"][];
+                            meta: components["schemas"]["MetaPaginacao"];
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Registrar a necessidade de análise de solo de uma propriedade */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @description Opcional — gerado no app (registro offline)
+                         */
+                        id?: string;
+                        /** Format: uuid */
+                        projetoId: string;
+                        /** Format: uuid */
+                        propriedadeId: string;
+                        /** Format: uuid */
+                        visitaId?: string | null;
+                        /**
+                         * Format: date
+                         * @example 2026-03-10
+                         */
+                        identificadaEm: string;
+                        observacao?: string | null;
+                        /**
+                         * Format: uri
+                         * @description Link externo do laudo
+                         * @example https://drive.google.com/file/d/abc123
+                         */
+                        laudoUrl?: string | null;
+                        /**
+                         * Format: date
+                         * @example 2026-03-10
+                         */
+                        laudoRegistradoEm?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Criado */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["AnaliseSolo"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Associação da propriedade sem adesão ativa ao projeto, ou visita de outra propriedade/projeto */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analises-solo/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalhar uma necessidade de análise de solo */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["AnaliseSolo"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Excluir a necessidade de análise de solo */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removido com sucesso */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Alterar a necessidade de análise de solo */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        propriedadeId?: string;
+                        /** Format: uuid */
+                        visitaId?: string | null;
+                        /**
+                         * Format: date
+                         * @example 2026-03-10
+                         */
+                        identificadaEm?: string;
+                        observacao?: string | null;
+                        /**
+                         * Format: uri
+                         * @description Link externo do laudo
+                         * @example https://drive.google.com/file/d/abc123
+                         */
+                        laudoUrl?: string | null;
+                        /**
+                         * Format: date
+                         * @example 2026-03-10
+                         */
+                        laudoRegistradoEm?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["AnaliseSolo"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Associação da propriedade sem adesão ativa ao projeto, ou visita de outra propriedade/projeto */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/analises-solo/{id}/laudo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Registrar (ou remover, com `laudoUrl: null`) o link do laudo */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uri
+                         * @description Link do laudo; `null` remove o laudo
+                         * @example https://drive.google.com/file/d/abc123
+                         */
+                        laudoUrl: string | null;
+                        /**
+                         * Format: date
+                         * @description Quando o link foi informado (padrão: hoje)
+                         * @example 2026-03-10
+                         */
+                        laudoRegistradoEm?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["AnaliseSolo"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/estados": {
         parameters: {
             query?: never;
@@ -9341,6 +9886,28 @@ export interface components {
                 projetoEquipeId: string;
                 nome: string;
             }[];
+        };
+        /** @description Necessidade de análise de solo de uma propriedade e, depois, o link do laudo */
+        AnaliseSolo: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projetoId: string;
+            /** Format: uuid */
+            propriedadeId: string;
+            propriedadeNome: string | null;
+            produtorNome: string;
+            /** Format: uuid */
+            associacaoId: string;
+            associacaoSigla: string;
+            /** Format: uuid */
+            visitaId: string | null;
+            identificadaEm: string;
+            observacao: string | null;
+            laudoUrl: string | null;
+            laudoRegistradoEm: string | null;
+            /** @enum {string} */
+            situacao: "pendente" | "com_laudo";
         };
         /** @description Unidade federativa (dados do IBGE) */
         Estado: {
