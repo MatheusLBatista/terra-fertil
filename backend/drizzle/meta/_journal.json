@@ -57,6 +57,13 @@
       "when": 1792606834227,
       "tag": "0007_analises_solo",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792606870459,
+      "tag": "0008_equipamentos",
+      "breakpoints": true
     }
   ]
 }

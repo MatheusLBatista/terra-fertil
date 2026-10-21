@@ -50,3 +50,8 @@ export * from "./recomendacao.ts";
 
 // Solo
 export * from "./analiseSolo.ts";
+
+// Equipamentos
+export * from "./item.ts";
+export * from "./pedidoCompra.ts";
+export * from "./entrega.ts";

@@ -74,3 +74,23 @@ export const recomendacaoSituacaoEnum = pgEnum("recomendacao_situacao", [
   "adotada",
   "nao_adotada",
 ]);
+
+// ─── Equipamentos ────────────────────────────────────────────────────────────
+
+export const itemTipoEnum = pgEnum("item_tipo", ["investimento", "custeio"]);
+
+export const pedidoSituacaoEnum = pgEnum("pedido_situacao", [
+  "aberto",
+  "em_compra",
+  "concluido",
+  "cancelado",
+]);
+
+export const entregaSituacaoEnum = pgEnum("entrega_situacao", [
+  "demandado",
+  "aprovado",
+  "em_compra",
+  "comprado",
+  "entregue",
+  "cancelado",
+]);
