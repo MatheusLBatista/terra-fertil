@@ -49,8 +49,9 @@
 }
 
 /* Tema do Projeto Terra Fértil: primária = verde da marca #589E3A
-   (oklch 0.631 0.152 137.6) nos dois temas, com texto escuro por cima
-   (branco daria só 3,3:1). Neutros levemente esverdeados (matiz ~140–150).
+   (oklch 0.631 0.152 137.6) nos dois temas, com texto #F1F1F1 por cima
+   (botões e badges primários — pedido da identidade visual; contraste ~3:1).
+   Neutros levemente esverdeados (matiz ~140–150).
    O menu lateral (e o painel institucional do login) é escuro nos dois temas:
    os tokens --sidebar* valem o mesmo no claro e no escuro — fundo #27272a,
    texto #F1F1F1, hover/ativo e borda #3f3f46, foco no verde da marca. */
@@ -60,7 +61,7 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.631 0.152 137.6);
-  --primary-foreground: oklch(0.18 0.045 140);
+  --primary-foreground: #f1f1f1;
   --secondary: oklch(0.965 0.006 140);
   --secondary-foreground: oklch(0.21 0.02 145);
   --muted: oklch(0.965 0.004 140);
@@ -97,7 +98,7 @@
   --popover: oklch(0.235 0.012 150);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.631 0.152 137.6);
-  --primary-foreground: oklch(0.18 0.045 140);
+  --primary-foreground: #f1f1f1;
   --secondary: oklch(0.29 0.012 150);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.28 0.012 150);
