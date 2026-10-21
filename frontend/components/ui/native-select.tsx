@@ -10,14 +10,19 @@ type NativeSelectProps = Omit<React.ComponentProps<"select">, "size"> & {
 function NativeSelect({ className, size = "default", ...props }: NativeSelectProps) {
   return (
     <div
-      className={cn("group/native-select relative w-fit has-[select:disabled]:opacity-50", className)}
+      // A altura mora no invólucro (h-8 / h-7 no sm) e o <select> a preenche — assim
+      // `className="h-9 …"` (padrão das linhas de filtro) iguala o select aos inputs.
+      className={cn(
+        "group/native-select relative h-8 w-fit has-[select:disabled]:opacity-50 data-[size=sm]:h-7",
+        className,
+      )}
       data-slot="native-select-wrapper"
       data-size={size}
     >
       <select
         data-slot="native-select"
         data-size={size}
-        className="h-8 w-full min-w-0 appearance-none rounded-none border border-input bg-transparent py-1 pr-8 pl-2.5 text-xs transition-colors outline-none select-none selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-[size=sm]:h-7 data-[size=sm]:rounded-none data-[size=sm]:py-0.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
+        className="h-full w-full min-w-0 appearance-none rounded-none border border-input bg-transparent py-1 pr-8 pl-2.5 text-xs transition-colors outline-none select-none selection:bg-primary selection:text-primary-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-1 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed aria-invalid:border-destructive aria-invalid:ring-1 aria-invalid:ring-destructive/20 data-[size=sm]:rounded-none data-[size=sm]:py-0.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40"
         {...props}
       />
       <ChevronDownIcon
