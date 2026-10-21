@@ -21,11 +21,11 @@ backend estão em `../CLAUDE.md`.
 - **Fontes**: `next/font` self-hosted em `app/layout.tsx` — Inter (`--font-sans`) e JetBrains Mono
   (`--font-mono`); `--font-heading` é um alias da sans em `globals.css`. Trocar de fonte = trocar
   ali e manter os nomes das variáveis.
-- **Marca** (Projeto Terra Fértil, verde `#589E3A` = `--primary`): PNGs brancos recortados do
-  `ID-Projeto-Terra-Fertil-Branco-952x1536.png` da raiz — `public/marca-terra-fertil.png` (símbolo)
-  e `public/logo-terra-fertil.png` (assinatura completa) entram como `mask-image` em
-  `components/logo.tsx` (`Logo` = ladrilho do menu; `LogoCompleto` = telas de login), então a cor
-  vem do tema. `app/icon.png` e `app/apple-icon.png` são estáticos (símbolo sobre o verde).
+- **Marca** (Projeto Terra Fértil, verde `#589E3A` = `--primary`): em `components/logo.tsx`,
+  `Logo` (menu) é o símbolo do `docs/ID Projeto Terra Fértil Branco.svg`, sem o texto, branco sobre
+  um círculo `fill-primary` (SVG inline — o verde acompanha o tema); `LogoCompleto` (telas de login)
+  é `public/logo-terra-fertil.png` como `mask-image`. Favicon `app/icon.svg` (mesmo desenho, verde
+  fixo) e `app/apple-icon.png` (180 px, gerado do mesmo SVG).
 
 ## Comandos
 
