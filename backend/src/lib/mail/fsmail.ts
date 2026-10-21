@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { AppError } from "../appError.ts";
 import { getLogger } from "../logger.ts";
 import { env } from "../env.ts";
+import { ehEmailTecnico } from "../documentos.ts";
 
 /**
  * Cliente do FS-Mail — envio de e-mail transacional via POST na API REST.
@@ -12,6 +13,8 @@ import { env } from "../env.ts";
  * com a mesma `Idempotency-Key` — o FS-Mail não duplica o e-mail.
  *
  * Sem `FSMAIL_API_KEY` configurada (dev), o envio é apenas logado.
+ * Endereços técnicos (`@sem-email.invalid`, de quem não tem e-mail) são
+ * descartados; se não sobrar destinatário, nada é enviado.
  */
 
 const TIMEOUT_MS = 10_000;
@@ -37,6 +40,14 @@ export async function sendEmail(payload: EmailPayload): Promise<{ emailId: strin
   const baseUrl = (env.FSMAIL_URL ?? "").replace(/\/$/, "");
   const from = env.FSMAIL_FROM;
 
+  const destinatarios = (Array.isArray(payload.to) ? payload.to : [payload.to]).filter(
+    (email) => !ehEmailTecnico(email),
+  );
+  if (destinatarios.length === 0) {
+    logger.info({ to: payload.to }, "[fsmail] só destinatários sem e-mail real — nada enviado");
+    return { emailId: null };
+  }
+
   if (!apiKey || !baseUrl) {
     logger.info(
       { to: payload.to, subject: payload.subject },
@@ -47,7 +58,7 @@ export async function sendEmail(payload: EmailPayload): Promise<{ emailId: strin
 
   const body: Record<string, unknown> = {
     from,
-    to: Array.isArray(payload.to) ? payload.to : [payload.to],
+    to: destinatarios,
     ...(payload.cc ? { cc: payload.cc } : {}),
     ...(payload.bcc ? { bcc: payload.bcc } : {}),
     ...(payload.replyTo ? { reply_to: payload.replyTo } : {}),

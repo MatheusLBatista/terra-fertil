@@ -18,7 +18,35 @@ import { pool } from "../db/index.ts";
  *   trigger filtram por `registro_id`.
  */
 export const TABELAS_DOMINIO: string[] = [
-  // "fornecedores", "pedidos", ...
+  "projetos",
+  "projeto_equipe",
+  "associacoes",
+  "associacao_contatos",
+  "tipos_documento",
+  "associacao_documentos",
+  "projeto_associacoes",
+  "produtores",
+  "propriedades",
+  "visitas",
+  "visita_equipe",
+  "visita_anexos",
+  "opcoes_diagnostico",
+  "diagnosticos_associacao",
+  "diagnosticos_propriedade",
+  "diagnostico_opcoes",
+  "recomendacoes",
+  "analises_solo",
+  "itens",
+  "pedidos_compra",
+  "entregas",
+  "eventos",
+  "evento_participantes",
+  "metas",
+  "indicadores",
+  "etapas_indicador",
+  "lancamentos_financeiros",
+  "producoes",
+  "producao_autores",
 ];
 
 export const PREFIXO_TESTE = "teste-";
@@ -29,6 +57,8 @@ export async function limparDadosDeTeste() {
     await pool.query(`TRUNCATE ${lista} RESTART IDENTITY CASCADE`);
   }
   await pool.query("DELETE FROM papeis WHERE nome LIKE $1", [`${PREFIXO_TESTE}%`]);
+  // Pessoas criadas pelos testes (e-mail ou nome com o prefixo) — sessões/contas caem pelo cascade
+  await pool.query(`DELETE FROM "user" WHERE email LIKE $1 OR name LIKE $1`, [`${PREFIXO_TESTE}%`]);
 }
 
 beforeAll(async () => {

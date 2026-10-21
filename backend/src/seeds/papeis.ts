@@ -12,11 +12,29 @@ import { permissao, type NewPermissao } from "../db/permissao.ts";
  * `acessoTodosProjetos: true` é aplicado também a papel que já existe (só liga,
  * nunca desliga — quem desliga é o painel).
  */
+type Perm = { acao: NewPermissao["acao"]; subject: string };
+
+/**
+ * Subjects do domínio Terra Fértil. O gestor gerencia todos; o técnico atua no
+ * campo (o que ele vê é limitado pelo escopo de projetos — src/lib/escopo.ts);
+ * o usuário só lê.
+ */
+const SUBJECTS_DOMINIO = ["Projeto", "Pessoa", "Associacao"];
+const gerencia = (subjects: string[]): Perm[] => subjects.map((subject) => ({ acao: "manage", subject }));
+const le = (subjects: string[]): Perm[] => subjects.map((subject) => ({ acao: "read", subject }));
+
+const PERMISSOES_TECNICO: Perm[] = [
+  ...le(["Projeto", "Pessoa", "Associacao"]),
+  { acao: "create", subject: "Pessoa" },
+  { acao: "create", subject: "Associacao" },
+  { acao: "update", subject: "Associacao" },
+];
+
 export const PAPEIS_DEMO: {
   nome: string;
   descricao: string;
   acessoTodosProjetos?: boolean;
-  permissoes: { acao: NewPermissao["acao"]; subject: string }[];
+  permissoes: Perm[];
 }[] = [
   {
     nome: "admin",
@@ -28,15 +46,12 @@ export const PAPEIS_DEMO: {
     nome: "gestor",
     descricao: "Gerencia os cadastros do domínio e lê a auditoria",
     acessoTodosProjetos: true,
-    permissoes: [
-      { acao: "read", subject: "HistoricoAlteracao" },
-      // permissões dos módulos do domínio entram aqui (ex.: { acao: "manage", subject: "SeuSubject" })
-    ],
+    permissoes: [{ acao: "read", subject: "HistoricoAlteracao" }, ...gerencia(SUBJECTS_DOMINIO)],
   },
   {
     nome: "tecnico",
     descricao: "Equipe de campo: visitas, análises de solo e atendimento nos projetos em que atua",
-    permissoes: [],
+    permissoes: PERMISSOES_TECNICO,
   },
   {
     nome: "produtor",
@@ -46,9 +61,7 @@ export const PAPEIS_DEMO: {
   {
     nome: "usuario",
     descricao: "Somente leitura no domínio",
-    permissoes: [
-      // ex.: { acao: "read", subject: "SeuSubject" }
-    ],
+    permissoes: le(SUBJECTS_DOMINIO),
   },
 ];
 
