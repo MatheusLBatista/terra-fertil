@@ -59,3 +59,9 @@ export * from "./entrega.ts";
 // Capacitação
 export * from "./evento.ts";
 export * from "./eventoParticipante.ts";
+
+// Metas e financeiro
+export * from "./meta.ts";
+export * from "./indicador.ts";
+export * from "./etapaIndicador.ts";
+export * from "./lancamentoFinanceiro.ts";

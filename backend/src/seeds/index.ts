@@ -7,6 +7,7 @@ import { seedProjetos } from "./projetos.ts";
 import { seedTiposDocumento } from "./tiposDocumento.ts";
 import { seedOpcoesDiagnostico } from "./opcoesDiagnostico.ts";
 import { seedItens } from "./itens.ts";
+import { seedMetas } from "./metas.ts";
 
 // Ordem de dependência: localização → papéis → usuários → domínio
 async function main() {
@@ -18,6 +19,7 @@ async function main() {
   await seedTiposDocumento();
   await seedOpcoesDiagnostico();
   await seedItens();
+  await seedMetas();
   console.log("\nTodos os seeds concluídos.");
   process.exit(0);
 }

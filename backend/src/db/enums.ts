@@ -106,3 +106,11 @@ export const eventoTipoEnum = pgEnum("evento_tipo", [
 ]);
 
 export const eventoSituacaoEnum = pgEnum("evento_situacao", ["planejado", "realizado", "cancelado"]);
+
+// ─── Metas e financeiro ──────────────────────────────────────────────────────
+
+export const metaSituacaoEnum = pgEnum("meta_situacao", ["nao_iniciado", "em_execucao", "concluido"]);
+
+export const apuracaoTipoEnum = pgEnum("apuracao_tipo", ["automatica", "manual"]);
+
+export const lancamentoTipoEnum = pgEnum("lancamento_tipo", ["liberacao", "despesa"]);

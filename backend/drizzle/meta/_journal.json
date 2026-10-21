@@ -71,6 +71,13 @@
       "when": 1792606898158,
       "tag": "0009_capacitacao",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792606984666,
+      "tag": "0010_metas_financeiro",
+      "breakpoints": true
     }
   ]
 }
