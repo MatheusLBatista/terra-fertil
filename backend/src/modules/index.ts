@@ -7,6 +7,9 @@ import papeisRoutes from "./papeis/papeis.routes.ts";
 import pessoasRoutes from "./pessoas/pessoas.routes.ts";
 import projetosRoutes from "./projetos/projetos.routes.ts";
 import associacoesRoutes from "./associacoes/associacoes.routes.ts";
+import tiposDocumentoRoutes from "./tipos-documento/tiposDocumento.routes.ts";
+import opcoesDiagnosticoRoutes from "./opcoes-diagnostico/opcoesDiagnostico.routes.ts";
+import itensRoutes from "./itens/itens.routes.ts";
 
 // Schemas — importados por efeito colateral para popular o registry OpenAPI
 import "./estados/estados.schema.ts";
@@ -16,6 +19,9 @@ import "./papeis/papeis.schema.ts";
 import "./pessoas/pessoas.schema.ts";
 import "./projetos/projetos.schema.ts";
 import "./associacoes/associacoes.schema.ts";
+import "./tipos-documento/tiposDocumento.schema.ts";
+import "./opcoes-diagnostico/opcoesDiagnostico.schema.ts";
+import "./itens/itens.schema.ts";
 
 /**
  * Registro dos módulos da API — o ÚNICO lugar a editar ao criar um módulo:
@@ -31,4 +37,7 @@ export const MODULOS: { path: string; routes: Hono<AppEnv> }[] = [
   { path: "/pessoas", routes: pessoasRoutes },
   { path: "/projetos", routes: projetosRoutes },
   { path: "/associacoes", routes: associacoesRoutes },
+  { path: "/tipos-documento", routes: tiposDocumentoRoutes },
+  { path: "/opcoes-diagnostico", routes: opcoesDiagnosticoRoutes },
+  { path: "/itens", routes: itensRoutes },
 ];
