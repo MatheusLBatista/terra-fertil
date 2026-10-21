@@ -43,6 +43,13 @@
       "when": 1792606712851,
       "tag": "0005_produtores_propriedades",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792606807119,
+      "tag": "0006_visitas_diagnosticos",
+      "breakpoints": true
     }
   ]
 }

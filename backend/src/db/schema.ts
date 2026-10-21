@@ -37,3 +37,13 @@ export * from "./projetoAssociacao.ts";
 // Produtores e propriedades
 export * from "./produtor.ts";
 export * from "./propriedade.ts";
+
+// Visitas e diagnósticos
+export * from "./visita.ts";
+export * from "./visitaEquipe.ts";
+export * from "./visitaAnexo.ts";
+export * from "./opcaoDiagnostico.ts";
+export * from "./diagnosticoAssociacao.ts";
+export * from "./diagnosticoPropriedade.ts";
+export * from "./diagnosticoOpcao.ts";
+export * from "./recomendacao.ts";

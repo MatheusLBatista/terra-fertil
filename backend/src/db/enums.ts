@@ -29,3 +29,48 @@ export const documentoSituacaoEnum = pgEnum("documento_situacao", [
   "validado",
   "rejeitado",
 ]);
+
+// ─── Visitas e diagnósticos ──────────────────────────────────────────────────
+
+export const visitaTipoEnum = pgEnum("visita_tipo", [
+  "inicial_associacao",
+  "diagnostico_propriedade",
+  "assistencia_tecnica",
+  "acompanhamento",
+]);
+
+export const visitaSituacaoEnum = pgEnum("visita_situacao", ["agendada", "realizada", "cancelada"]);
+
+export const respostaDiagnosticoEnum = pgEnum("resposta_diagnostico", [
+  "sim",
+  "nao",
+  "parcialmente",
+  "nao_sei",
+]);
+
+export const grupoOpcaoEnum = pgEnum("grupo_opcao", [
+  "atividade_produtiva",
+  "problema_solo",
+  "tema_capacitacao",
+  "parceiro_institucional",
+  "apoio_necessario",
+]);
+
+export const anexoTipoEnum = pgEnum("anexo_tipo", ["foto", "documento", "audio"]);
+
+export const recomendacaoCategoriaEnum = pgEnum("recomendacao_categoria", [
+  "calagem",
+  "adubacao",
+  "manejo_solo",
+  "manejo_cultura",
+  "sanidade",
+  "gestao",
+  "outro",
+]);
+
+export const recomendacaoSituacaoEnum = pgEnum("recomendacao_situacao", [
+  "pendente",
+  "em_andamento",
+  "adotada",
+  "nao_adotada",
+]);
