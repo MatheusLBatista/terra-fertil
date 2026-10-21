@@ -1,0 +1,133 @@
+import type { z } from "zod";
+import { successResponse } from "../../lib/response.ts";
+import { lerJson, type AppContext } from "../../lib/hono.ts";
+import { respostaValidacao } from "../../lib/zod.ts";
+import { lerDocumento, respostaDeStream } from "../../lib/storage/upload.ts";
+import VisitasService from "./visitas.service.ts";
+import {
+  ListVisitasQuerySchema,
+  VisitaIdParamSchema,
+  CreateVisitaSchema,
+  UpdateVisitaSchema,
+  PutEquipeSchema,
+  AnexoIdParamSchema,
+  AnexoFormSchema,
+  PutDiagnosticoSchema,
+} from "./visitas.schema.ts";
+
+/** Valida params + corpo JSON juntos (as issues dos dois saem no mesmo 400). */
+async function parsear<P extends z.ZodTypeAny, B extends z.ZodTypeAny>(c: AppContext, params: P, body: B) {
+  const p = params.safeParse(c.req.param());
+  const b = body.safeParse(await lerJson(c));
+  if (!p.success || !b.success) {
+    return {
+      erro: respostaValidacao(c, [
+        ...(p.success ? [] : p.error.issues),
+        ...(b.success ? [] : b.error.issues),
+      ]),
+    } as const;
+  }
+  return { params: p.data as z.infer<P>, body: b.data as z.infer<B> };
+}
+
+export default class VisitasController {
+  private service = new VisitasService();
+
+  listar = async (c: AppContext) => {
+    const parsed = ListVisitasQuerySchema.safeParse(c.req.query());
+    if (!parsed.success) return respostaValidacao(c, parsed.error.issues);
+    const { itens, total } = await this.service.listar(parsed.data);
+    return c.json(successResponse(itens, { total, limit: parsed.data.limit, offset: parsed.data.offset }));
+  };
+
+  listarPorId = async (c: AppContext) => {
+    const params = VisitaIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    return c.json(successResponse(await this.service.listarPorId(params.data.id)));
+  };
+
+  inserir = async (c: AppContext) => {
+    const parsed = CreateVisitaSchema.safeParse(await lerJson(c));
+    if (!parsed.success) return respostaValidacao(c, parsed.error.issues);
+    return c.json(successResponse(await this.service.criar(parsed.data)), 201);
+  };
+
+  alterar = async (c: AppContext) => {
+    const r = await parsear(c, VisitaIdParamSchema, UpdateVisitaSchema);
+    if ("erro" in r) return r.erro;
+    return c.json(successResponse(await this.service.alterar(r.params.id, r.body)));
+  };
+
+  excluir = async (c: AppContext) => {
+    const params = VisitaIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    await this.service.excluir(params.data.id);
+    return c.body(null, 204);
+  };
+
+  // ─── Equipe ───────────────────────────────────────────────────────────────
+
+  listarEquipe = async (c: AppContext) => {
+    const params = VisitaIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    return c.json(successResponse(await this.service.listarEquipe(params.data.id)));
+  };
+
+  definirEquipe = async (c: AppContext) => {
+    const r = await parsear(c, VisitaIdParamSchema, PutEquipeSchema);
+    if ("erro" in r) return r.erro;
+    return c.json(successResponse(await this.service.definirEquipe(r.params.id, r.body)));
+  };
+
+  // ─── Anexos ───────────────────────────────────────────────────────────────
+
+  listarAnexos = async (c: AppContext) => {
+    const params = VisitaIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    return c.json(successResponse(await this.service.listarAnexos(params.data.id)));
+  };
+
+  enviarAnexo = async (c: AppContext) => {
+    const params = VisitaIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    const arquivo = await lerDocumento(c);
+    // O Hono guarda o corpo já lido: os campos de texto do multipart saem do mesmo parse
+    const campos = await c.req.parseBody();
+    const form = AnexoFormSchema.safeParse({
+      legenda: typeof campos.legenda === "string" ? campos.legenda : undefined,
+    });
+    if (!form.success) return respostaValidacao(c, form.error.issues);
+    return c.json(
+      successResponse(await this.service.enviarAnexo(params.data.id, arquivo, form.data.legenda)),
+      201,
+    );
+  };
+
+  baixarAnexo = async (c: AppContext) => {
+    const params = AnexoIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    const { nomeArquivo, ...obj } = await this.service.baixarAnexo(params.data.id, params.data.anexoId);
+    return respostaDeStream(obj, { cacheControl: "private, no-store", nomeArquivo });
+  };
+
+  excluirAnexo = async (c: AppContext) => {
+    const params = AnexoIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    await this.service.excluirAnexo(params.data.id, params.data.anexoId);
+    return c.body(null, 204);
+  };
+
+  // ─── Diagnóstico da propriedade ───────────────────────────────────────────
+
+  diagnostico = async (c: AppContext) => {
+    const params = VisitaIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    return c.json(successResponse(await this.service.diagnostico(params.data.id)));
+  };
+
+  salvarDiagnostico = async (c: AppContext) => {
+    const r = await parsear(c, VisitaIdParamSchema, PutDiagnosticoSchema);
+    if ("erro" in r) return r.erro;
+    return c.json(successResponse(await this.service.salvarDiagnostico(r.params.id, r.body)));
+  };
+}

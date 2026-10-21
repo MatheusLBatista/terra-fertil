@@ -35,6 +35,7 @@ const SUBJECTS_DOMINIO = [
   "Entrega",
   "Meta",
   "LancamentoFinanceiro",
+  "Visita",
 ];
 const gerencia = (subjects: string[]): Perm[] => subjects.map((subject) => ({ acao: "manage", subject }));
 const le = (subjects: string[]): Perm[] => subjects.map((subject) => ({ acao: "read", subject }));
@@ -49,7 +50,7 @@ const PERMISSOES_TECNICO: Perm[] = [
     { acao: "create", subject },
     { acao: "update", subject },
   ]),
-  ...gerencia(["Evento", "Producao", "AnaliseSolo"]),
+  ...gerencia(["Visita", "Evento", "Producao", "AnaliseSolo"]),
   { acao: "read", subject: "PedidoCompra" },
   { acao: "read", subject: "Entrega" },
   { acao: "create", subject: "Entrega" },

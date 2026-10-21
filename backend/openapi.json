@@ -2067,6 +2067,475 @@
         ],
         "description": "Liberação ou despesa do projeto (Meta 9 = Σ despesa ÷ Σ liberação)"
       },
+      "Visita": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projetoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "projetoSigla": {
+            "type": "string"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "inicial_associacao",
+              "diagnostico_propriedade",
+              "assistencia_tecnica",
+              "acompanhamento"
+            ]
+          },
+          "situacao": {
+            "type": "string",
+            "enum": [
+              "agendada",
+              "realizada",
+              "cancelada"
+            ]
+          },
+          "associacaoId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Só na visita inicial"
+          },
+          "associacaoSigla": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Associação da visita inicial ou a que atende a propriedade"
+          },
+          "propriedadeId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Demais tipos"
+          },
+          "propriedadeNome": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "produtorNome": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "visitaAnteriorId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Acompanhamento → visita de origem"
+          },
+          "data": {
+            "type": "string",
+            "description": "Prevista ou realizada (YYYY-MM-DD)"
+          },
+          "realizadaEm": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Data-hora da conclusão (ISO 8601)"
+          },
+          "tecnicoId": {
+            "type": "string"
+          },
+          "tecnicoNome": {
+            "type": "string"
+          },
+          "latitude": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "longitude": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "relato": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "noticiaUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "projetoId",
+          "projetoSigla",
+          "tipo",
+          "situacao",
+          "associacaoId",
+          "associacaoSigla",
+          "propriedadeId",
+          "propriedadeNome",
+          "produtorNome",
+          "visitaAnteriorId",
+          "data",
+          "realizadaEm",
+          "tecnicoId",
+          "tecnicoNome",
+          "latitude",
+          "longitude",
+          "relato",
+          "noticiaUrl"
+        ],
+        "description": "Ida a campo — inicial na associação; as demais na propriedade"
+      },
+      "VisitaMembro": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "visitaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "visitaId",
+          "userId",
+          "nome",
+          "email"
+        ],
+        "description": "Pessoa que foi à visita além do técnico responsável"
+      },
+      "VisitaAnexo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "visitaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "foto",
+              "documento",
+              "audio"
+            ]
+          },
+          "nomeArquivo": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "tamanhoBytes": {
+            "type": "integer"
+          },
+          "legenda": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "visitaId",
+          "tipo",
+          "nomeArquivo",
+          "mimeType",
+          "tamanhoBytes",
+          "legenda",
+          "createdAt"
+        ],
+        "description": "Foto ou documento da visita — o arquivo sai por GET .../arquivo"
+      },
+      "DiagnosticoPropriedadeOpcao": {
+        "type": "object",
+        "properties": {
+          "opcaoId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "grupo": {
+            "type": "string",
+            "enum": [
+              "atividade_produtiva",
+              "problema_solo",
+              "tema_capacitacao",
+              "parceiro_institucional",
+              "apoio_necessario"
+            ]
+          },
+          "nome": {
+            "type": "string"
+          },
+          "detalhe": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "opcaoId",
+          "grupo",
+          "nome",
+          "detalhe"
+        ]
+      },
+      "DiagnosticoPropriedade": {
+        "type": "object",
+        "properties": {
+          "visitaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "areaProdutivaHa": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "areaPastagemHa": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "areaPreservadaHa": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "principaisCulturas": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "rebanhoBovino": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "fonteAgua": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "possuiEnergia": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "possuiIrrigacao": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "pessoasTrabalham": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "analiseSoloRecente": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "sim",
+              "nao",
+              "parcialmente",
+              "nao_sei",
+              null
+            ]
+          },
+          "acessoMaquinario": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "sim",
+              "nao",
+              "parcialmente",
+              "nao_sei",
+              null
+            ]
+          },
+          "comentarios": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "opcoes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DiagnosticoPropriedadeOpcao"
+            }
+          }
+        },
+        "required": [
+          "visitaId",
+          "areaProdutivaHa",
+          "areaPastagemHa",
+          "areaPreservadaHa",
+          "principaisCulturas",
+          "rebanhoBovino",
+          "fonteAgua",
+          "possuiEnergia",
+          "possuiIrrigacao",
+          "pessoasTrabalham",
+          "analiseSoloRecente",
+          "acessoMaquinario",
+          "comentarios",
+          "opcoes"
+        ],
+        "description": "Questionário da visita de diagnóstico (1:1 com a visita)"
+      },
+      "Recomendacao": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "visitaId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Visita de assistência técnica que gerou"
+          },
+          "visitaData": {
+            "type": "string"
+          },
+          "projetoId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Projeto da visita (a recomendação herda)"
+          },
+          "propriedadeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "propriedadeNome": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "produtorNome": {
+            "type": "string"
+          },
+          "categoria": {
+            "type": "string",
+            "enum": [
+              "calagem",
+              "adubacao",
+              "manejo_solo",
+              "manejo_cultura",
+              "sanidade",
+              "gestao",
+              "outro"
+            ]
+          },
+          "cultura": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "descricao": {
+            "type": "string"
+          },
+          "prazo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "situacao": {
+            "type": "string",
+            "enum": [
+              "pendente",
+              "em_andamento",
+              "adotada",
+              "nao_adotada"
+            ]
+          },
+          "verificadaEmVisitaId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Visita de acompanhamento que conferiu a adoção"
+          }
+        },
+        "required": [
+          "id",
+          "visitaId",
+          "visitaData",
+          "projetoId",
+          "propriedadeId",
+          "propriedadeNome",
+          "produtorNome",
+          "categoria",
+          "cultura",
+          "descricao",
+          "prazo",
+          "situacao",
+          "verificadaEmVisitaId"
+        ],
+        "description": "Orientação técnica dada numa visita de assistência"
+      },
       "Estado": {
         "type": "object",
         "properties": {
@@ -17180,6 +17649,2477 @@
           }
         ],
         "summary": "Excluir lançamento",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removido com sucesso"
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/visitas": {
+      "get": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Listar visitas (só as dos projetos do escopo do usuário)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "projetoId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "inicial_associacao",
+                "diagnostico_propriedade",
+                "assistencia_tecnica",
+                "acompanhamento"
+              ]
+            },
+            "required": false,
+            "name": "tipo",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "agendada",
+                "realizada",
+                "cancelada"
+              ]
+            },
+            "required": false,
+            "name": "situacao",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Visitas na associação ou em propriedades atendidas por ela"
+            },
+            "required": false,
+            "description": "Visitas na associação ou em propriedades atendidas por ela",
+            "name": "associacaoId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "propriedadeId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": false,
+            "name": "tecnicoId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-03-10",
+              "description": "Data da visita a partir de (inclusive)"
+            },
+            "required": false,
+            "description": "Data da visita a partir de (inclusive)",
+            "name": "de",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2026-03-10",
+              "description": "Data da visita até (inclusive)"
+            },
+            "required": false,
+            "description": "Data da visita até (inclusive)",
+            "name": "ate",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Sigla da associação, nome da propriedade ou do produtor (contém)"
+            },
+            "required": false,
+            "description": "Sigla da associação, nome da propriedade ou do produtor (contém)",
+            "name": "busca",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 10
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "default": 0
+            },
+            "required": false,
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z]+:(asc|desc)$",
+              "description": "Ordenação no formato campo:asc|desc. Campos: data, tipo, situacao, createdAt"
+            },
+            "required": false,
+            "description": "Ordenação no formato campo:asc|desc. Campos: data, tipo, situacao, createdAt",
+            "name": "sort",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista paginada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Visita"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaPaginacao"
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Registrar visita (alvo conforme o tipo; associação com adesão ativa; técnico da equipe)",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Opcional — o app pode gerar o id offline"
+                  },
+                  "projetoId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "tipo": {
+                    "type": "string",
+                    "enum": [
+                      "inicial_associacao",
+                      "diagnostico_propriedade",
+                      "assistencia_tecnica",
+                      "acompanhamento"
+                    ]
+                  },
+                  "associacaoId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "propriedadeId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "situacao": {
+                    "type": "string",
+                    "enum": [
+                      "agendada",
+                      "realizada",
+                      "cancelada"
+                    ]
+                  },
+                  "visitaAnteriorId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "data": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-03-10"
+                  },
+                  "realizadaEm": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time",
+                    "description": "Obrigatório com situação realizada — se faltar, vale o momento do registro"
+                  },
+                  "tecnicoId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "latitude": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "longitude": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": -180,
+                    "maximum": 180
+                  },
+                  "relato": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 10000
+                  },
+                  "noticiaUrl": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 2000,
+                    "format": "uri",
+                    "example": "https://exemplo.org/noticia"
+                  }
+                },
+                "required": [
+                  "projetoId",
+                  "tipo",
+                  "data",
+                  "tecnicoId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Criado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Visita"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regra de negócio violada (equipe, adesão, tipo da visita)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/visitas/{id}": {
+      "get": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Detalhar uma visita",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Visita"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Alterar visita (projeto, tipo e alvo são fixos)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "projetoId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Fixo — só aceita o valor atual"
+                  },
+                  "tipo": {
+                    "type": "string",
+                    "enum": [
+                      "inicial_associacao",
+                      "diagnostico_propriedade",
+                      "assistencia_tecnica",
+                      "acompanhamento"
+                    ],
+                    "description": "Fixo — só aceita o valor atual"
+                  },
+                  "associacaoId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "description": "Fixo — só aceita o valor atual"
+                  },
+                  "propriedadeId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid",
+                    "description": "Fixo — só aceita o valor atual"
+                  },
+                  "situacao": {
+                    "type": "string",
+                    "enum": [
+                      "agendada",
+                      "realizada",
+                      "cancelada"
+                    ]
+                  },
+                  "visitaAnteriorId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "data": {
+                    "type": "string",
+                    "format": "date",
+                    "example": "2026-03-10"
+                  },
+                  "realizadaEm": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time",
+                    "description": "Obrigatório com situação realizada — se faltar, vale o momento do registro"
+                  },
+                  "tecnicoId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "latitude": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": -90,
+                    "maximum": 90
+                  },
+                  "longitude": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": -180,
+                    "maximum": 180
+                  },
+                  "relato": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 10000
+                  },
+                  "noticiaUrl": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 2000,
+                    "format": "uri",
+                    "example": "https://exemplo.org/noticia"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Visita"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regra de negócio violada (equipe, adesão, tipo da visita)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Excluir visita (bloqueado se tiver recomendações, análises, acompanhamentos ou diagnóstico)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removido com sucesso"
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/visitas/{id}/equipe": {
+      "get": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Equipe da visita (além do técnico responsável)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/VisitaMembro"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Definir a equipe da visita (substitui o conjunto; só pessoas da equipe do projeto)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "maxItems": 50,
+                    "description": "Conjunto completo (substitui o atual). O técnico responsável é ignorado"
+                  }
+                },
+                "required": [
+                  "userIds"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/VisitaMembro"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regra de negócio violada (equipe, adesão, tipo da visita)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/visitas/{id}/anexos": {
+      "get": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Fotos e documentos da visita",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/VisitaAnexo"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Enviar foto ou documento (multipart: arquivo + legenda opcional; imagem ou PDF, até 20 MB)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "arquivo": {
+                    "type": "string",
+                    "format": "binary"
+                  },
+                  "legenda": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "arquivo"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Criado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/VisitaAnexo"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Arquivo muito grande",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Tipo de arquivo não permitido",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Falha ao enviar ao storage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/visitas/{id}/anexos/{anexoId}/arquivo": {
+      "get": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Baixar o arquivo do anexo (proxy autenticado — o bucket é privado)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "anexoId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Conteúdo do arquivo",
+            "content": {
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/visitas/{id}/anexos/{anexoId}": {
+      "delete": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Excluir anexo",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "anexoId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removido com sucesso"
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/visitas/{id}/diagnostico": {
+      "get": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Diagnóstico da propriedade (só em visita de diagnóstico)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DiagnosticoPropriedade"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regra de negócio violada (equipe, adesão, tipo da visita)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Preencher/atualizar o diagnóstico da propriedade com as opções marcadas",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "areaProdutivaHa": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 99999999.99
+                  },
+                  "areaPastagemHa": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 99999999.99
+                  },
+                  "areaPreservadaHa": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 99999999.99
+                  },
+                  "principaisCulturas": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 2000
+                  },
+                  "rebanhoBovino": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 2000000000
+                  },
+                  "fonteAgua": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 200
+                  },
+                  "possuiEnergia": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "possuiIrrigacao": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "pessoasTrabalham": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 32767
+                  },
+                  "analiseSoloRecente": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "sim",
+                      "nao",
+                      "parcialmente",
+                      "nao_sei",
+                      null
+                    ]
+                  },
+                  "acessoMaquinario": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "sim",
+                      "nao",
+                      "parcialmente",
+                      "nao_sei",
+                      null
+                    ]
+                  },
+                  "comentarios": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 10000
+                  },
+                  "opcoes": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "opcaoId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "detalhe": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "maxLength": 500,
+                          "description": "Texto do \"Outro\" — só em opção com permiteDetalhe"
+                        }
+                      },
+                      "required": [
+                        "opcaoId"
+                      ]
+                    },
+                    "maxItems": 200,
+                    "default": [],
+                    "description": "Atividades produtivas e problemas de solo marcados (substitui o conjunto)"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DiagnosticoPropriedade"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regra de negócio violada (equipe, adesão, tipo da visita)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recomendacoes": {
+      "get": {
+        "tags": [
+          "Recomendações"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Listar recomendações (só as das visitas dos projetos do escopo)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Projeto da visita"
+            },
+            "required": false,
+            "description": "Projeto da visita",
+            "name": "projetoId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "propriedadeId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "visitaId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pendente",
+                "em_andamento",
+                "adotada",
+                "nao_adotada"
+              ]
+            },
+            "required": false,
+            "name": "situacao",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "calagem",
+                "adubacao",
+                "manejo_solo",
+                "manejo_cultura",
+                "sanidade",
+                "gestao",
+                "outro"
+              ]
+            },
+            "required": false,
+            "name": "categoria",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 10
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "default": 0
+            },
+            "required": false,
+            "name": "offset",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-zA-Z]+:(asc|desc)$",
+              "description": "Ordenação no formato campo:asc|desc. Campos: prazo, situacao, createdAt"
+            },
+            "required": false,
+            "description": "Ordenação no formato campo:asc|desc. Campos: prazo, situacao, createdAt",
+            "name": "sort",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista paginada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Recomendacao"
+                      }
+                    },
+                    "meta": {
+                      "$ref": "#/components/schemas/MetaPaginacao"
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Recomendações"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Registrar recomendação numa visita de assistência técnica",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Opcional — o app pode gerar o id offline"
+                  },
+                  "visitaId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "categoria": {
+                    "type": "string",
+                    "enum": [
+                      "calagem",
+                      "adubacao",
+                      "manejo_solo",
+                      "manejo_cultura",
+                      "sanidade",
+                      "gestao",
+                      "outro"
+                    ]
+                  },
+                  "cultura": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 200
+                  },
+                  "descricao": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 5000
+                  },
+                  "prazo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date",
+                    "example": "2026-06-30"
+                  },
+                  "situacao": {
+                    "type": "string",
+                    "enum": [
+                      "pendente",
+                      "em_andamento",
+                      "adotada",
+                      "nao_adotada"
+                    ]
+                  },
+                  "verificadaEmVisitaId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "visitaId",
+                  "categoria",
+                  "descricao"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Criado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Recomendacao"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Visita de tipo, propriedade ou projeto incompatível",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/recomendacoes/{id}": {
+      "get": {
+        "tags": [
+          "Recomendações"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Detalhar uma recomendação",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Recomendacao"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Recomendações"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Alterar recomendação (situação, verificação no acompanhamento…)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "categoria": {
+                    "type": "string",
+                    "enum": [
+                      "calagem",
+                      "adubacao",
+                      "manejo_solo",
+                      "manejo_cultura",
+                      "sanidade",
+                      "gestao",
+                      "outro"
+                    ]
+                  },
+                  "cultura": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 200
+                  },
+                  "descricao": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 5000
+                  },
+                  "prazo": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date",
+                    "example": "2026-06-30"
+                  },
+                  "situacao": {
+                    "type": "string",
+                    "enum": [
+                      "pendente",
+                      "em_andamento",
+                      "adotada",
+                      "nao_adotada"
+                    ]
+                  },
+                  "verificadaEmVisitaId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/Recomendacao"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Visita de tipo, propriedade ou projeto incompatível",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Recomendações"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Excluir recomendação",
         "parameters": [
           {
             "schema": {

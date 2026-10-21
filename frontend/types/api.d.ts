@@ -9669,6 +9669,1566 @@ export interface paths {
         };
         trace?: never;
     };
+    "/visitas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar visitas (só as dos projetos do escopo do usuário) */
+        get: {
+            parameters: {
+                query?: {
+                    projetoId?: string;
+                    tipo?: "inicial_associacao" | "diagnostico_propriedade" | "assistencia_tecnica" | "acompanhamento";
+                    situacao?: "agendada" | "realizada" | "cancelada";
+                    /** @description Visitas na associação ou em propriedades atendidas por ela */
+                    associacaoId?: string;
+                    propriedadeId?: string;
+                    tecnicoId?: string;
+                    /** @description Data da visita a partir de (inclusive) */
+                    de?: string;
+                    /** @description Data da visita até (inclusive) */
+                    ate?: string;
+                    /** @description Sigla da associação, nome da propriedade ou do produtor (contém) */
+                    busca?: string;
+                    limit?: number;
+                    offset?: number | null;
+                    /** @description Ordenação no formato campo:asc|desc. Campos: data, tipo, situacao, createdAt */
+                    sort?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lista paginada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Visita"][];
+                            meta: components["schemas"]["MetaPaginacao"];
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Registrar visita (alvo conforme o tipo; associação com adesão ativa; técnico da equipe) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @description Opcional — o app pode gerar o id offline
+                         */
+                        id?: string;
+                        /** Format: uuid */
+                        projetoId: string;
+                        /** @enum {string} */
+                        tipo: "inicial_associacao" | "diagnostico_propriedade" | "assistencia_tecnica" | "acompanhamento";
+                        /** Format: uuid */
+                        associacaoId?: string | null;
+                        /** Format: uuid */
+                        propriedadeId?: string | null;
+                        /** @enum {string} */
+                        situacao?: "agendada" | "realizada" | "cancelada";
+                        /** Format: uuid */
+                        visitaAnteriorId?: string | null;
+                        /**
+                         * Format: date
+                         * @example 2026-03-10
+                         */
+                        data: string;
+                        /**
+                         * Format: date-time
+                         * @description Obrigatório com situação realizada — se faltar, vale o momento do registro
+                         */
+                        realizadaEm?: string | null;
+                        tecnicoId: string;
+                        latitude?: number | null;
+                        longitude?: number | null;
+                        relato?: string | null;
+                        /**
+                         * Format: uri
+                         * @example https://exemplo.org/noticia
+                         */
+                        noticiaUrl?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Criado */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Visita"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Regra de negócio violada (equipe, adesão, tipo da visita) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/visitas/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalhar uma visita */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Visita"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Excluir visita (bloqueado se tiver recomendações, análises, acompanhamentos ou diagnóstico) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removido com sucesso */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Alterar visita (projeto, tipo e alvo são fixos) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @description Fixo — só aceita o valor atual
+                         */
+                        projetoId?: string;
+                        /**
+                         * @description Fixo — só aceita o valor atual
+                         * @enum {string}
+                         */
+                        tipo?: "inicial_associacao" | "diagnostico_propriedade" | "assistencia_tecnica" | "acompanhamento";
+                        /**
+                         * Format: uuid
+                         * @description Fixo — só aceita o valor atual
+                         */
+                        associacaoId?: string | null;
+                        /**
+                         * Format: uuid
+                         * @description Fixo — só aceita o valor atual
+                         */
+                        propriedadeId?: string | null;
+                        /** @enum {string} */
+                        situacao?: "agendada" | "realizada" | "cancelada";
+                        /** Format: uuid */
+                        visitaAnteriorId?: string | null;
+                        /**
+                         * Format: date
+                         * @example 2026-03-10
+                         */
+                        data?: string;
+                        /**
+                         * Format: date-time
+                         * @description Obrigatório com situação realizada — se faltar, vale o momento do registro
+                         */
+                        realizadaEm?: string | null;
+                        tecnicoId?: string;
+                        latitude?: number | null;
+                        longitude?: number | null;
+                        relato?: string | null;
+                        /**
+                         * Format: uri
+                         * @example https://exemplo.org/noticia
+                         */
+                        noticiaUrl?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Visita"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Regra de negócio violada (equipe, adesão, tipo da visita) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/visitas/{id}/equipe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Equipe da visita (além do técnico responsável) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lista */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["VisitaMembro"][];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        /** Definir a equipe da visita (substitui o conjunto; só pessoas da equipe do projeto) */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description Conjunto completo (substitui o atual). O técnico responsável é ignorado */
+                        userIds: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Lista */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["VisitaMembro"][];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Regra de negócio violada (equipe, adesão, tipo da visita) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/visitas/{id}/anexos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fotos e documentos da visita */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lista */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["VisitaAnexo"][];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Enviar foto ou documento (multipart: arquivo + legenda opcional; imagem ou PDF, até 20 MB) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "multipart/form-data": {
+                        /** Format: binary */
+                        arquivo: string;
+                        legenda?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Criado */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["VisitaAnexo"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Arquivo muito grande */
+                413: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Tipo de arquivo não permitido */
+                415: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Falha ao enviar ao storage */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/visitas/{id}/anexos/{anexoId}/arquivo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Baixar o arquivo do anexo (proxy autenticado — o bucket é privado) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    anexoId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Conteúdo do arquivo */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/octet-stream": string;
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/visitas/{id}/anexos/{anexoId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Excluir anexo */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    anexoId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removido com sucesso */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/visitas/{id}/diagnostico": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Diagnóstico da propriedade (só em visita de diagnóstico) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["DiagnosticoPropriedade"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Regra de negócio violada (equipe, adesão, tipo da visita) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        /** Preencher/atualizar o diagnóstico da propriedade com as opções marcadas */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        areaProdutivaHa?: number | null;
+                        areaPastagemHa?: number | null;
+                        areaPreservadaHa?: number | null;
+                        principaisCulturas?: string | null;
+                        rebanhoBovino?: number | null;
+                        fonteAgua?: string | null;
+                        possuiEnergia?: boolean | null;
+                        possuiIrrigacao?: boolean | null;
+                        pessoasTrabalham?: number | null;
+                        /** @enum {string|null} */
+                        analiseSoloRecente?: "sim" | "nao" | "parcialmente" | "nao_sei" | null;
+                        /** @enum {string|null} */
+                        acessoMaquinario?: "sim" | "nao" | "parcialmente" | "nao_sei" | null;
+                        comentarios?: string | null;
+                        /**
+                         * @description Atividades produtivas e problemas de solo marcados (substitui o conjunto)
+                         * @default []
+                         */
+                        opcoes?: {
+                            /** Format: uuid */
+                            opcaoId: string;
+                            /** @description Texto do "Outro" — só em opção com permiteDetalhe */
+                            detalhe?: string | null;
+                        }[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["DiagnosticoPropriedade"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Regra de negócio violada (equipe, adesão, tipo da visita) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recomendacoes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Listar recomendações (só as das visitas dos projetos do escopo) */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Projeto da visita */
+                    projetoId?: string;
+                    propriedadeId?: string;
+                    visitaId?: string;
+                    situacao?: "pendente" | "em_andamento" | "adotada" | "nao_adotada";
+                    categoria?: "calagem" | "adubacao" | "manejo_solo" | "manejo_cultura" | "sanidade" | "gestao" | "outro";
+                    limit?: number;
+                    offset?: number | null;
+                    /** @description Ordenação no formato campo:asc|desc. Campos: prazo, situacao, createdAt */
+                    sort?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lista paginada */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Recomendacao"][];
+                            meta: components["schemas"]["MetaPaginacao"];
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Registrar recomendação numa visita de assistência técnica */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /**
+                         * Format: uuid
+                         * @description Opcional — o app pode gerar o id offline
+                         */
+                        id?: string;
+                        /** Format: uuid */
+                        visitaId: string;
+                        /** @enum {string} */
+                        categoria: "calagem" | "adubacao" | "manejo_solo" | "manejo_cultura" | "sanidade" | "gestao" | "outro";
+                        cultura?: string | null;
+                        descricao: string;
+                        /**
+                         * Format: date
+                         * @example 2026-06-30
+                         */
+                        prazo?: string | null;
+                        /** @enum {string} */
+                        situacao?: "pendente" | "em_andamento" | "adotada" | "nao_adotada";
+                        /** Format: uuid */
+                        verificadaEmVisitaId?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Criado */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Recomendacao"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Visita de tipo, propriedade ou projeto incompatível */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/recomendacoes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Detalhar uma recomendação */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Recomendacao"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Excluir recomendação */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removido com sucesso */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Alterar recomendação (situação, verificação no acompanhamento…) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        categoria?: "calagem" | "adubacao" | "manejo_solo" | "manejo_cultura" | "sanidade" | "gestao" | "outro";
+                        cultura?: string | null;
+                        descricao?: string;
+                        /**
+                         * Format: date
+                         * @example 2026-06-30
+                         */
+                        prazo?: string | null;
+                        /** @enum {string} */
+                        situacao?: "pendente" | "em_andamento" | "adotada" | "nao_adotada";
+                        /** Format: uuid */
+                        verificadaEmVisitaId?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Recomendacao"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Visita de tipo, propriedade ou projeto incompatível */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
     "/estados": {
         parameters: {
             query?: never;
@@ -12586,6 +14146,131 @@ export interface components {
             documentoRef: string | null;
             /** Format: date-time */
             createdAt: string;
+        };
+        /** @description Ida a campo — inicial na associação; as demais na propriedade */
+        Visita: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            projetoId: string;
+            projetoSigla: string;
+            /** @enum {string} */
+            tipo: "inicial_associacao" | "diagnostico_propriedade" | "assistencia_tecnica" | "acompanhamento";
+            /** @enum {string} */
+            situacao: "agendada" | "realizada" | "cancelada";
+            /**
+             * Format: uuid
+             * @description Só na visita inicial
+             */
+            associacaoId: string | null;
+            /** @description Associação da visita inicial ou a que atende a propriedade */
+            associacaoSigla: string | null;
+            /**
+             * Format: uuid
+             * @description Demais tipos
+             */
+            propriedadeId: string | null;
+            propriedadeNome: string | null;
+            produtorNome: string | null;
+            /**
+             * Format: uuid
+             * @description Acompanhamento → visita de origem
+             */
+            visitaAnteriorId: string | null;
+            /** @description Prevista ou realizada (YYYY-MM-DD) */
+            data: string;
+            /** @description Data-hora da conclusão (ISO 8601) */
+            realizadaEm: string | null;
+            tecnicoId: string;
+            tecnicoNome: string;
+            latitude: number | null;
+            longitude: number | null;
+            relato: string | null;
+            noticiaUrl: string | null;
+        };
+        /** @description Pessoa que foi à visita além do técnico responsável */
+        VisitaMembro: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            visitaId: string;
+            userId: string;
+            nome: string;
+            email: string | null;
+        };
+        /** @description Foto ou documento da visita — o arquivo sai por GET .../arquivo */
+        VisitaAnexo: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            visitaId: string;
+            /** @enum {string} */
+            tipo: "foto" | "documento" | "audio";
+            nomeArquivo: string;
+            mimeType: string;
+            tamanhoBytes: number;
+            legenda: string | null;
+            createdAt: string;
+        };
+        DiagnosticoPropriedadeOpcao: {
+            /** Format: uuid */
+            opcaoId: string;
+            /** @enum {string} */
+            grupo: "atividade_produtiva" | "problema_solo" | "tema_capacitacao" | "parceiro_institucional" | "apoio_necessario";
+            nome: string;
+            detalhe: string | null;
+        };
+        /** @description Questionário da visita de diagnóstico (1:1 com a visita) */
+        DiagnosticoPropriedade: {
+            /** Format: uuid */
+            visitaId: string;
+            areaProdutivaHa: number | null;
+            areaPastagemHa: number | null;
+            areaPreservadaHa: number | null;
+            principaisCulturas: string | null;
+            rebanhoBovino: number | null;
+            fonteAgua: string | null;
+            possuiEnergia: boolean | null;
+            possuiIrrigacao: boolean | null;
+            pessoasTrabalham: number | null;
+            /** @enum {string|null} */
+            analiseSoloRecente: "sim" | "nao" | "parcialmente" | "nao_sei" | null;
+            /** @enum {string|null} */
+            acessoMaquinario: "sim" | "nao" | "parcialmente" | "nao_sei" | null;
+            comentarios: string | null;
+            opcoes: components["schemas"]["DiagnosticoPropriedadeOpcao"][];
+        };
+        /** @description Orientação técnica dada numa visita de assistência */
+        Recomendacao: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: uuid
+             * @description Visita de assistência técnica que gerou
+             */
+            visitaId: string;
+            visitaData: string;
+            /**
+             * Format: uuid
+             * @description Projeto da visita (a recomendação herda)
+             */
+            projetoId: string;
+            /** Format: uuid */
+            propriedadeId: string;
+            propriedadeNome: string | null;
+            produtorNome: string;
+            /** @enum {string} */
+            categoria: "calagem" | "adubacao" | "manejo_solo" | "manejo_cultura" | "sanidade" | "gestao" | "outro";
+            cultura: string | null;
+            descricao: string;
+            prazo: string | null;
+            /** @enum {string} */
+            situacao: "pendente" | "em_andamento" | "adotada" | "nao_adotada";
+            /**
+             * Format: uuid
+             * @description Visita de acompanhamento que conferiu a adoção
+             */
+            verificadaEmVisitaId: string | null;
         };
         /** @description Unidade federativa (dados do IBGE) */
         Estado: {
