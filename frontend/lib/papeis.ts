@@ -47,5 +47,11 @@ export function usePapel() {
     ehAdmin: papel === "admin",
     /** O papel do usuário atende ao mínimo pedido? */
     podeGerenciar: (minimo: Papel = "gestor") => nivelDe(papel) >= NIVEIS[minimo],
+    /**
+     * Registra o trabalho de campo (associações, produtores, visitas, solo…).
+     * O técnico fica fora da régua do seed (conta como "usuario" no menu), mas o
+     * backend dá a ele escrita nesses módulos — limitada aos projetos da equipe.
+     */
+    podeEditarCampo: papel === "tecnico" || nivelDe(papel) >= NIVEIS.gestor,
   };
 }

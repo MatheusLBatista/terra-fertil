@@ -44,3 +44,23 @@ export function moeda(centavos?: number | null) {
   if (typeof centavos !== "number" || Number.isNaN(centavos)) return "—";
   return MOEDA.format(centavos / 100);
 }
+
+/**
+ * Data de calendário da API ("2026-03-10", colunas `date`) → "10/03/2026".
+ * Não passa por `Date`: "2026-03-10" seria lido como meia-noite UTC e, num
+ * fuso a oeste (Rondônia, UTC−4), apareceria como o dia anterior.
+ */
+export function dataCalendario(valor?: string | null) {
+  if (!valor) return "—";
+  const [ano, mes, dia] = valor.slice(0, 10).split("-");
+  return dia && mes && ano ? `${dia}/${mes}/${ano}` : "—";
+}
+
+/** Telefone E.164 sem "+" ("5569993453103") → "(69) 99345-3103". */
+export function telefone(valor?: string | null) {
+  if (!valor) return "—";
+  const d = valor.startsWith("55") ? valor.slice(2) : valor;
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return valor;
+}
