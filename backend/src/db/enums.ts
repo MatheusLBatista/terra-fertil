@@ -18,3 +18,14 @@ export const equipeTipoEnum = pgEnum("equipe_tipo", [
   "estudante",
   "administrativo",
 ]);
+
+// ─── Associações ─────────────────────────────────────────────────────────────
+
+export const contatoFuncaoEnum = pgEnum("contato_funcao", ["presidente", "contato", "outro"]);
+
+export const documentoSituacaoEnum = pgEnum("documento_situacao", [
+  "pendente",
+  "recebido",
+  "validado",
+  "rejeitado",
+]);

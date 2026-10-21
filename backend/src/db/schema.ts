@@ -26,3 +26,10 @@ export * from "./municipio.ts";
 // Projetos
 export * from "./projeto.ts";
 export * from "./projetoEquipe.ts";
+
+// Associações
+export * from "./associacao.ts";
+export * from "./associacaoContato.ts";
+export * from "./tipoDocumento.ts";
+export * from "./associacaoDocumento.ts";
+export * from "./projetoAssociacao.ts";
