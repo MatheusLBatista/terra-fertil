@@ -24,6 +24,11 @@ export const user = pgTable(
     // string, o banco garante que o papel existe. NULL = sem papel (nega tudo).
     // Renomear um papel propaga para os usuários (cascade).
     role: text("role").references(() => papel.nome, { onUpdate: "cascade", onDelete: "restrict" }),
+    // Telefone em E.164 sem "+" (ex.: 5569993453103). Mesmos nomes do plugin
+    // `phoneNumber` do better-auth — ligá-lo depois (login por OTP) não muda o schema.
+    // Pessoa sem e-mail recebe um e-mail técnico <telefone>@sem-email.invalid.
+    phoneNumber: text("phone_number").unique(),
+    phoneNumberVerified: boolean("phone_number_verified"),
     banned: boolean("banned"),
     banReason: text("ban_reason"),
     banExpires: timestamp("ban_expires", { withTimezone: true }),

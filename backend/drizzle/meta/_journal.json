@@ -36,6 +36,13 @@
       "when": 1792606676472,
       "tag": "0004_associacoes",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1792606712851,
+      "tag": "0005_produtores_propriedades",
+      "breakpoints": true
     }
   ]
 }

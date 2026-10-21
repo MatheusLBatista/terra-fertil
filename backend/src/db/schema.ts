@@ -33,3 +33,7 @@ export * from "./associacaoContato.ts";
 export * from "./tipoDocumento.ts";
 export * from "./associacaoDocumento.ts";
 export * from "./projetoAssociacao.ts";
+
+// Produtores e propriedades
+export * from "./produtor.ts";
+export * from "./propriedade.ts";
