@@ -19,7 +19,16 @@ type Perm = { acao: NewPermissao["acao"]; subject: string };
  * campo (o que ele vê é limitado pelo escopo de projetos — src/lib/escopo.ts);
  * o usuário só lê.
  */
-const SUBJECTS_DOMINIO = ["Projeto", "Pessoa", "Associacao", "TipoDocumento", "OpcaoDiagnostico", "Item"];
+const SUBJECTS_DOMINIO = [
+  "Projeto",
+  "Pessoa",
+  "Associacao",
+  "TipoDocumento",
+  "OpcaoDiagnostico",
+  "Item",
+  "Produtor",
+  "Propriedade",
+];
 const gerencia = (subjects: string[]): Perm[] => subjects.map((subject) => ({ acao: "manage", subject }));
 const le = (subjects: string[]): Perm[] => subjects.map((subject) => ({ acao: "read", subject }));
 
@@ -28,6 +37,11 @@ const PERMISSOES_TECNICO: Perm[] = [
   { acao: "create", subject: "Pessoa" },
   { acao: "create", subject: "Associacao" },
   { acao: "update", subject: "Associacao" },
+  ...["Produtor", "Propriedade"].flatMap((subject): Perm[] => [
+    { acao: "read", subject },
+    { acao: "create", subject },
+    { acao: "update", subject },
+  ]),
 ];
 
 export const PAPEIS_DEMO: {
