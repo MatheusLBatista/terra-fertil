@@ -9,24 +9,39 @@ import { permissao, type NewPermissao } from "../db/permissao.ts";
  * e rode `bun run db:seed:papeis` (ou insira direto na tabela `permissoes`).
  * Idempotente: só insere o que não existe. Papel soft-deletado com o mesmo
  * nome é REATIVADO (o unique de `nome` é total — a FK de user.role exige).
+ * `acessoTodosProjetos: true` é aplicado também a papel que já existe (só liga,
+ * nunca desliga — quem desliga é o painel).
  */
 export const PAPEIS_DEMO: {
   nome: string;
   descricao: string;
+  acessoTodosProjetos?: boolean;
   permissoes: { acao: NewPermissao["acao"]; subject: string }[];
 }[] = [
   {
     nome: "admin",
     descricao: "Acesso total ao sistema",
+    acessoTodosProjetos: true,
     permissoes: [{ acao: "manage", subject: "all" }],
   },
   {
     nome: "gestor",
     descricao: "Gerencia os cadastros do domínio e lê a auditoria",
+    acessoTodosProjetos: true,
     permissoes: [
       { acao: "read", subject: "HistoricoAlteracao" },
       // permissões dos módulos do domínio entram aqui (ex.: { acao: "manage", subject: "SeuSubject" })
     ],
+  },
+  {
+    nome: "tecnico",
+    descricao: "Equipe de campo: visitas, análises de solo e atendimento nos projetos em que atua",
+    permissoes: [],
+  },
+  {
+    nome: "produtor",
+    descricao: "Produtor rural ou contato de associação (acesso ao painel a definir)",
+    permissoes: [],
   },
   {
     nome: "usuario",
@@ -52,13 +67,16 @@ export async function seedPapeis() {
     if (!existente) {
       [{ id: papelId }] = await db
         .insert(papel)
-        .values({ nome: p.nome, descricao: p.descricao })
+        .values({ nome: p.nome, descricao: p.descricao, acessoTodosProjetos: p.acessoTodosProjetos ?? false })
         .returning({ id: papel.id });
     } else {
       papelId = existente.id;
       if (existente.deletedAt) {
         await db.update(papel).set({ deletedAt: null }).where(eq(papel.id, papelId));
         console.log(`  ~ ${p.nome}: estava excluído — reativado`);
+      }
+      if (p.acessoTodosProjetos) {
+        await db.update(papel).set({ acessoTodosProjetos: true }).where(eq(papel.id, papelId));
       }
     }
 

@@ -1,4 +1,4 @@
-import { pgTable, uuid, text } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, boolean } from "drizzle-orm/pg-core";
 import { auditColumns } from "./audit.ts";
 
 /**
@@ -9,11 +9,15 @@ import { auditColumns } from "./audit.ts";
  * `nome` tem unique TOTAL (não parcial): a FK exige. Consequência: para
  * "recriar" um papel soft-deletado com o mesmo nome, reative a linha antiga
  * (deletedAt = null) em vez de inserir outra.
+ *
+ * `acessoTodosProjetos` libera todos os projetos (admin e gestor no seed); sem
+ * ela o usuário só enxerga os projetos em que está na equipe (src/lib/escopo.ts).
  */
 export const papel = pgTable("papeis", {
   id: uuid("id").primaryKey().defaultRandom(),
   nome: text("nome").notNull().unique(),
   descricao: text("descricao"),
+  acessoTodosProjetos: boolean("acesso_todos_projetos").notNull().default(false),
   ...auditColumns,
 });
 

@@ -22,4 +22,7 @@ export * from "./estado.ts";
 export * from "./municipio.ts";
 
 // ─── Domínio ─────────────────────────────────────────────────────────────────
-// (os models das entidades do seu domínio entram aqui)
+
+// Projetos
+export * from "./projeto.ts";
+export * from "./projetoEquipe.ts";
