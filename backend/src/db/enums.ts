@@ -114,3 +114,12 @@ export const metaSituacaoEnum = pgEnum("meta_situacao", ["nao_iniciado", "em_exe
 export const apuracaoTipoEnum = pgEnum("apuracao_tipo", ["automatica", "manual"]);
 
 export const lancamentoTipoEnum = pgEnum("lancamento_tipo", ["liberacao", "despesa"]);
+
+// ─── Produção técnica ────────────────────────────────────────────────────────
+
+export const producaoTipoEnum = pgEnum("producao_tipo", [
+  "relatorio_tecnico_participativo",
+  "relatorio_tecnico",
+  "resumo_cientifico",
+  "relatorio_pesquisa",
+]);

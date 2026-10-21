@@ -65,3 +65,7 @@ export * from "./meta.ts";
 export * from "./indicador.ts";
 export * from "./etapaIndicador.ts";
 export * from "./lancamentoFinanceiro.ts";
+
+// Produção técnica
+export * from "./producao.ts";
+export * from "./producaoAutor.ts";
