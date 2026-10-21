@@ -1,10 +1,12 @@
-import { and, asc, desc, eq, gte, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, exists, gte, ilike, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { db, escaparLike, type DbOrTx } from "../../db/index.ts";
 import { projeto, type NewProjeto } from "../../db/projeto.ts";
 import { projetoEquipe, type NewProjetoEquipe } from "../../db/projetoEquipe.ts";
 import { projetoAssociacao, type NewProjetoAssociacao } from "../../db/projetoAssociacao.ts";
 import { associacao } from "../../db/associacao.ts";
 import { municipio } from "../../db/municipio.ts";
+import { propriedade } from "../../db/propriedade.ts";
 import { papel } from "../../db/papel.ts";
 import { user } from "../../db/user.ts";
 import { camposParaAtualizar } from "../../lib/update.ts";
@@ -83,6 +85,28 @@ const semEmailTecnico = <T extends { email: string | null }>(m: T): T => ({
   email: m.email && ehEmailTecnico(m.email) ? null : m.email,
 });
 
+/**
+ * Condição "a associação (coluna `associacoes.id` da query) está no escopo":
+ * tem adesão ativa a algum projeto do escopo. Sem escopo (`undefined`) não filtra.
+ * Use em qualquer query que já tenha `associacoes` no FROM/JOIN.
+ */
+export function associacaoNoEscopo(escopo: Escopo, coluna: AnyPgColumn | SQL = associacao.id) {
+  if (escopo === undefined) return undefined;
+  if (escopo.length === 0) return sql`false`;
+  return exists(
+    db
+      .select({ um: sql`1` })
+      .from(projetoAssociacao)
+      .where(
+        and(
+          eq(projetoAssociacao.associacaoId, coluna),
+          isNull(projetoAssociacao.deletedAt),
+          inArray(projetoAssociacao.projetoId, escopo),
+        ),
+      ),
+  );
+}
+
 function where({ busca, situacao, escopo }: Filtros) {
   const termo = busca ? `%${escaparLike(busca)}%` : undefined;
   return and(
@@ -120,6 +144,39 @@ export default class ProjetosRepository {
         ),
       );
     return rows.map((r) => r.id);
+  }
+
+  /** Associação existe e está visível no escopo (para `undefined`, basta existir). */
+  async associacaoVisivel(associacaoId: string, escopo: Escopo, tx: DbOrTx = db) {
+    const [row] = await tx
+      .select({ id: associacao.id, sigla: associacao.sigla, municipioId: associacao.municipioId })
+      .from(associacao)
+      .where(and(eq(associacao.id, associacaoId), isNull(associacao.deletedAt), associacaoNoEscopo(escopo)))
+      .limit(1);
+    return row;
+  }
+
+  /** Propriedade existe e a associação que a atende está visível no escopo. */
+  async propriedadeVisivel(propriedadeId: string, escopo: Escopo, tx: DbOrTx = db) {
+    const [row] = await tx
+      .select({
+        id: propriedade.id,
+        associacaoId: propriedade.associacaoId,
+        produtorId: propriedade.produtorId,
+        municipioId: propriedade.municipioId,
+      })
+      .from(propriedade)
+      .innerJoin(associacao, eq(associacao.id, propriedade.associacaoId))
+      .where(
+        and(
+          eq(propriedade.id, propriedadeId),
+          isNull(propriedade.deletedAt),
+          isNull(associacao.deletedAt),
+          associacaoNoEscopo(escopo),
+        ),
+      )
+      .limit(1);
+    return row;
   }
 
   // ─── Projetos ─────────────────────────────────────────────────────────────

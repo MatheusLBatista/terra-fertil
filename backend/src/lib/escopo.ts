@@ -66,3 +66,23 @@ export async function garantirProjeto(projetoId: string, { escrita = false } = {
   }
   return projeto;
 }
+
+/**
+ * Associação visível ao usuário: com escopo limitado, só as que têm adesão a um
+ * projeto do escopo (404 caso contrário). Devolve `{ id, sigla, municipioId }`.
+ */
+export async function garantirAssociacao(associacaoId: string) {
+  const associacao = await repository.associacaoVisivel(associacaoId, await escopoAtual());
+  if (!associacao) throw new AppError("Associação não encontrada", 404);
+  return associacao;
+}
+
+/**
+ * Propriedade visível ao usuário (pela associação que a atende) — 404 caso
+ * contrário. Devolve `{ id, associacaoId, produtorId, municipioId }`.
+ */
+export async function garantirPropriedade(propriedadeId: string) {
+  const propriedade = await repository.propriedadeVisivel(propriedadeId, await escopoAtual());
+  if (!propriedade) throw new AppError("Propriedade não encontrada", 404);
+  return propriedade;
+}
