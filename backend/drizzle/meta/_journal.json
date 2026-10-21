@@ -64,6 +64,13 @@
       "when": 1792606870459,
       "tag": "0008_equipamentos",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792606898158,
+      "tag": "0009_capacitacao",
+      "breakpoints": true
     }
   ]
 }

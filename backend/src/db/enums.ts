@@ -94,3 +94,15 @@ export const entregaSituacaoEnum = pgEnum("entrega_situacao", [
   "entregue",
   "cancelado",
 ]);
+
+// ─── Capacitação ─────────────────────────────────────────────────────────────
+
+export const eventoTipoEnum = pgEnum("evento_tipo", [
+  "curso",
+  "oficina",
+  "dia_de_campo",
+  "palestra",
+  "intercambio",
+]);
+
+export const eventoSituacaoEnum = pgEnum("evento_situacao", ["planejado", "realizado", "cancelado"]);

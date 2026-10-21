@@ -55,3 +55,7 @@ export * from "./analiseSolo.ts";
 export * from "./item.ts";
 export * from "./pedidoCompra.ts";
 export * from "./entrega.ts";
+
+// Capacitação
+export * from "./evento.ts";
+export * from "./eventoParticipante.ts";
