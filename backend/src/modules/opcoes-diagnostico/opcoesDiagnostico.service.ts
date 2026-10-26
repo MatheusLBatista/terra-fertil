@@ -5,6 +5,8 @@ import type {
   ListOpcoesDiagnosticoQuerySchema,
   CreateOpcaoDiagnosticoSchema,
   UpdateOpcaoDiagnosticoSchema,
+  CreateSubdivisaoSchema,
+  UpdateSubdivisaoSchema,
 } from "./opcoesDiagnostico.schema.ts";
 
 type ListQuery = z.infer<typeof ListOpcoesDiagnosticoQuerySchema>;
@@ -38,6 +40,18 @@ export default class OpcoesDiagnosticoService {
     if (grupo !== atual.grupo || nome.toLowerCase() !== atual.nome.toLowerCase()) {
       await this.garantirNomeLivre(grupo, nome, id);
     }
+    if (
+      grupo !== atual.grupo &&
+      atual.grupo === "atividade_produtiva" &&
+      (await this.repository.contarSubdivisoes(id)) > 0
+    ) {
+      throw new AppError(
+        `"${atual.nome}" tem subdivisões — exclua-as antes de mudar a opção de grupo`,
+        409,
+        undefined,
+        "OPCAO_COM_SUBDIVISOES",
+      );
+    }
     // Marcações e eventos já apontam para a opção dentro do grupo atual (tema de evento = tema_capacitacao)
     if (grupo !== atual.grupo && (await this.repository.contarUsos(id)) > 0) {
       throw new AppError(
@@ -54,6 +68,14 @@ export default class OpcoesDiagnosticoService {
 
   async excluir(id: string) {
     const atual = await this.listarPorId(id);
+    if ((await this.repository.contarSubdivisoes(id)) > 0) {
+      throw new AppError(
+        `"${atual.nome}" tem subdivisões — exclua-as ou desative a opção`,
+        409,
+        undefined,
+        "OPCAO_COM_SUBDIVISOES",
+      );
+    }
     const usos = await this.repository.contarUsos(id);
     if (usos > 0) {
       throw new AppError(
@@ -65,6 +87,64 @@ export default class OpcoesDiagnosticoService {
     }
     const excluida = await this.repository.excluir(id);
     if (!excluida) throw new AppError("Opção de diagnóstico não encontrada", 404);
+  }
+
+  // ─── Subdivisões ──────────────────────────────────────────────────────────
+
+  async listarSubdivisoes(opcaoId: string) {
+    await this.listarPorId(opcaoId);
+    return this.repository.listarSubdivisoes(opcaoId);
+  }
+
+  async criarSubdivisao(opcaoId: string, data: z.infer<typeof CreateSubdivisaoSchema>) {
+    const opcao = await this.listarPorId(opcaoId);
+    if (opcao.grupo !== "atividade_produtiva") {
+      throw new AppError("Só atividade produtiva tem subdivisões", 422, undefined, "OPCAO_SEM_SUBDIVISAO");
+    }
+    await this.garantirSubdivisaoLivre(opcaoId, data.nome);
+    return this.repository.inserirSubdivisao({ ...data, opcaoId });
+  }
+
+  async alterarSubdivisao(opcaoId: string, id: string, data: z.infer<typeof UpdateSubdivisaoSchema>) {
+    const atual = await this.buscarSubdivisao(opcaoId, id);
+    if (data.nome && data.nome.toLowerCase() !== atual.nome.toLowerCase()) {
+      await this.garantirSubdivisaoLivre(opcaoId, data.nome, id);
+    }
+    const alterada = await this.repository.alterarSubdivisao(id, data);
+    if (!alterada) throw new AppError("Subdivisão não encontrada", 404);
+    return alterada;
+  }
+
+  async excluirSubdivisao(opcaoId: string, id: string) {
+    const atual = await this.buscarSubdivisao(opcaoId, id);
+    if ((await this.repository.contarVerificacoesDaSubdivisao(id)) > 0) {
+      throw new AppError(
+        `"${atual.nome}" já foi verificada em visita — desative-a em vez de excluir`,
+        409,
+        undefined,
+        "SUBDIVISAO_EM_USO",
+      );
+    }
+    const excluida = await this.repository.excluirSubdivisao(id);
+    if (!excluida) throw new AppError("Subdivisão não encontrada", 404);
+  }
+
+  private async buscarSubdivisao(opcaoId: string, id: string) {
+    await this.listarPorId(opcaoId);
+    const subdivisao = await this.repository.subdivisaoPorId(opcaoId, id);
+    if (!subdivisao) throw new AppError("Subdivisão não encontrada", 404);
+    return subdivisao;
+  }
+
+  private async garantirSubdivisaoLivre(opcaoId: string, nome: string, excetoId?: string) {
+    if (await this.repository.subdivisaoPorNome(opcaoId, nome, excetoId)) {
+      throw new AppError(
+        `Já existe a subdivisão "${nome}" nesta atividade`,
+        409,
+        undefined,
+        "SUBDIVISAO_DUPLICADA",
+      );
+    }
   }
 
   private async garantirNomeLivre(grupo: Grupo, nome: string, excetoId?: string) {

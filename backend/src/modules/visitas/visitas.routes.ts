@@ -36,6 +36,10 @@ router.get("/:id/itens-verificados", ...ler, controller.listarItensVerificados);
 router.put("/:id/itens-verificados/:entregaId", ...editar, controller.verificarItem);
 router.delete("/:id/itens-verificados/:entregaId", ...editar, controller.desfazerVerificacao);
 
+router.get("/:id/atividades", ...ler, controller.atividades);
+router.put("/:id/atividades-verificadas", ...editar, controller.verificarAtividade);
+router.delete("/:id/atividades-verificadas/:verificacaoId", ...editar, controller.desfazerAtividade);
+
 router.get("/:id/diagnostico", ...ler, controller.diagnostico);
 router.put("/:id/diagnostico", ...editar, controller.salvarDiagnostico);
 

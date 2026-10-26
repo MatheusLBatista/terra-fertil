@@ -15,7 +15,7 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table";
 import { toast } from "react-toastify";
-import { ArrowDown, ArrowUp, ArrowUpDown, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ListTree, Pencil, Plus, Trash2 } from "lucide-react";
 
 import { PageLayout } from "@/components/page-layout";
 import {
@@ -49,6 +49,7 @@ import type { components } from "@/types/api";
 
 type OpcaoDiagnostico = components["schemas"]["OpcaoDiagnostico"];
 type Grupo = OpcaoDiagnostico["grupo"];
+type Subdivisao = components["schemas"]["SubdivisaoAtividade"];
 type MetaPaginacao = components["schemas"]["MetaPaginacao"];
 
 // Sem `sort` a API já devolve como no questionário (grupo → ordem → nome); "grupo:asc"
@@ -101,6 +102,7 @@ export default function OpcoesDiagnosticoPage() {
 
   const [novoAberto, setNovoAberto] = useState(false);
   const [editar, setEditar] = useState<OpcaoDiagnostico | null>(null);
+  const [subdivisoes, setSubdivisoes] = useState<OpcaoDiagnostico | null>(null);
   const [excluir, setExcluir] = useState<OpcaoDiagnostico | null>(null);
   const tabelaRef = useRef<HTMLTableElement>(null);
 
@@ -161,6 +163,32 @@ export default function OpcoesDiagnosticoPage() {
             <span className="text-xs text-muted-foreground md:hidden">{rotuloGrupo(row.original.grupo)}</span>
           </div>
         ),
+      },
+      {
+        accessorKey: "subdivisoes",
+        header: "Subdivisões",
+        enableSorting: false,
+        cell: ({ row }) => {
+          const o = row.original;
+          if (o.grupo !== "atividade_produtiva") return <span className="text-muted-foreground">—</span>;
+          const texto =
+            o.subdivisoes === 0
+              ? "Nenhuma"
+              : o.subdivisoes === 1
+                ? "1 subdivisão"
+                : `${o.subdivisoes} subdivisões`;
+          if (!gestor) return texto;
+          return (
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label={`Subdivisões de ${o.nome}: ${texto.toLowerCase()}`}
+              onClick={() => setSubdivisoes(o)}
+            >
+              <ListTree className="size-4" /> {o.subdivisoes === 0 ? "Cadastrar" : texto}
+            </Button>
+          );
+        },
       },
       {
         accessorKey: "permiteDetalhe",
@@ -482,6 +510,19 @@ export default function OpcoesDiagnosticoPage() {
         </SheetContent>
       </Sheet>
 
+      <Sheet open={subdivisoes !== null} onOpenChange={(aberto) => !aberto && setSubdivisoes(null)}>
+        <SheetContent className="flex w-full flex-col p-0 sm:max-w-md">
+          <SheetHeader className="border-b">
+            <SheetTitle>Subdivisões de {subdivisoes?.nome}</SheetTitle>
+            <SheetDescription>
+              Na assistência técnica, cada subdivisão ativa é verificada separadamente (observações e fotos).
+              Sem subdivisões, a atividade é verificada inteira.
+            </SheetDescription>
+          </SheetHeader>
+          {subdivisoes && <EditorSubdivisoes key={subdivisoes.id} opcao={subdivisoes} />}
+        </SheetContent>
+      </Sheet>
+
       <ConfirmacaoDialog confirmacao={confirmacaoExcluir} onFechar={() => setExcluir(null)} />
     </PageLayout>
   );
@@ -655,5 +696,171 @@ function FormularioOpcao({
         </Button>
       </SheetFooter>
     </form>
+  );
+}
+
+/** Lista + inclusão de subdivisões de uma atividade produtiva; cada ação salva na hora. */
+function EditorSubdivisoes({ opcao }: { opcao: OpcaoDiagnostico }) {
+  const queryClient = useQueryClient();
+  const [nome, setNome] = useState("");
+  const [erroNome, setErroNome] = useState<string | null>(null);
+  const [excluir, setExcluir] = useState<Subdivisao | null>(null);
+  const chave = ["opcoes-diagnostico", opcao.id, "subdivisoes"];
+
+  const lista = useQuery({
+    queryKey: chave,
+    queryFn: ({ signal }) =>
+      fetchData<Envelope<Subdivisao[]>>(`/opcoes-diagnostico/${opcao.id}/subdivisoes`, { signal }),
+  });
+  const linhas = lista.data?.data ?? [];
+  // Prefixo inteiro: a contagem de subdivisões da listagem também muda
+  const atualizar = () => queryClient.invalidateQueries({ queryKey: ["opcoes-diagnostico"] });
+
+  const criar = useMutation({
+    mutationFn: () =>
+      fetchData(`/opcoes-diagnostico/${opcao.id}/subdivisoes`, {
+        method: "POST",
+        body: { nome: nome.trim(), ordem: (linhas.at(-1)?.ordem ?? 0) + 1 },
+      }),
+    onSuccess: () => {
+      toast.success("Subdivisão incluída.");
+      setNome("");
+      void atualizar();
+    },
+    onError: (erro) => setErroNome(mensagemDeErro(erro, "Não foi possível incluir a subdivisão.")),
+  });
+
+  const alternar = useMutation({
+    mutationFn: (s: Subdivisao) =>
+      fetchData(`/opcoes-diagnostico/${opcao.id}/subdivisoes/${s.id}`, {
+        method: "PATCH",
+        body: { ativo: !s.ativo },
+      }),
+    onSuccess: () => void atualizar(),
+    onError: (erro) => toast.error(mensagemDeErro(erro, "Não foi possível alterar a subdivisão.")),
+  });
+
+  const excluirMutation = useMutation({
+    mutationFn: () =>
+      fetchData(`/opcoes-diagnostico/${opcao.id}/subdivisoes/${excluir!.id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast.success("Subdivisão excluída.");
+      setExcluir(null);
+      void atualizar();
+    },
+    onError: (erro) => toast.error(mensagemDeErro(erro, "Não foi possível excluir a subdivisão.")),
+  });
+
+  const confirmacao: Confirmacao | null = excluir
+    ? {
+        titulo: `Excluir “${excluir.nome}”?`,
+        descricao:
+          "Só é possível excluir uma subdivisão que nunca foi verificada em visita. Já usada, desmarque “Ativa”.",
+        textoConfirmar: "Excluir",
+        destrutivo: true,
+        pendente: excluirMutation.isPending,
+        onConfirmar: () => excluirMutation.mutate(),
+      }
+    : null;
+
+  return (
+    <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+      <form
+        className="grid gap-1.5"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          const texto = nome.trim();
+          if (!texto) return setErroNome("Informe o nome");
+          if (texto.length > 200) return setErroNome("No máximo 200 caracteres");
+          setErroNome(null);
+          criar.mutate();
+        }}
+      >
+        <Label htmlFor="subdivisao-nome">Nova subdivisão</Label>
+        <div className="flex gap-2">
+          <Input
+            id="subdivisao-nome"
+            placeholder="Ordenha, pastagem, sanidade…"
+            maxLength={200}
+            value={nome}
+            aria-invalid={!!erroNome}
+            aria-describedby={erroNome ? "subdivisao-nome-erro" : undefined}
+            onChange={(e) => setNome(e.target.value)}
+          />
+          <Button type="submit" variant="outline" disabled={criar.isPending}>
+            {criar.isPending ? <Spinner /> : <Plus className="size-4" />} Incluir
+          </Button>
+        </div>
+        {erroNome && (
+          <p id="subdivisao-nome-erro" role="alert" className="text-xs text-destructive">
+            {erroNome}
+          </p>
+        )}
+      </form>
+
+      {lista.isPending ? (
+        <div className="grid gap-2" aria-busy>
+          <span role="status" className="sr-only">
+            Carregando…
+          </span>
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-8 w-2/3" />
+        </div>
+      ) : lista.isError ? (
+        <p className="border py-6 text-center text-sm text-muted-foreground">
+          {ehSemPermissao(lista.error) ? (
+            "Você não tem permissão para ver isto."
+          ) : (
+            <>
+              Erro ao carregar as subdivisões.{" "}
+              <Button variant="link" size="sm" onClick={() => lista.refetch()}>
+                Tentar novamente
+              </Button>
+            </>
+          )}
+        </p>
+      ) : linhas.length === 0 ? (
+        <p className="border py-6 text-center text-sm text-muted-foreground">
+          Nenhuma subdivisão — a atividade é verificada inteira
+        </p>
+      ) : (
+        <ul className="divide-y border" aria-label={`Subdivisões de ${opcao.nome}`}>
+          {linhas.map((s) => (
+            <li key={s.id} className="flex items-center gap-3 px-3 py-2">
+              <Checkbox
+                id={`subdivisao-${s.id}`}
+                checked={s.ativo}
+                disabled={alternar.isPending}
+                onCheckedChange={() => alternar.mutate(s)}
+              />
+              <Label
+                htmlFor={`subdivisao-${s.id}`}
+                className={`flex-1 leading-4 font-normal ${s.ativo ? "" : "text-muted-foreground line-through"}`}
+              >
+                {s.nome}
+                <span className="sr-only">{s.ativo ? " (ativa)" : " (inativa)"}</span>
+              </Label>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                title="Excluir"
+                aria-label={`Excluir a subdivisão ${s.nome}`}
+                onClick={() => setExcluir(s)}
+              >
+                <Trash2 className="size-4 text-destructive" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {linhas.length > 0 && (
+        <p className="text-xs text-muted-foreground">
+          Marcada = ativa (entra na lista da assistência técnica).
+        </p>
+      )}
+
+      <ConfirmacaoDialog confirmacao={confirmacao} onFechar={() => setExcluir(null)} />
+    </div>
   );
 }

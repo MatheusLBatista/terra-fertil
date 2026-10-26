@@ -5,6 +5,8 @@ import { visita, type NewVisita } from "../../db/visita.ts";
 import { visitaEquipe } from "../../db/visitaEquipe.ts";
 import { visitaAnexo, type NewVisitaAnexo } from "../../db/visitaAnexo.ts";
 import { visitaItemVerificado } from "../../db/visitaItemVerificado.ts";
+import { visitaAtividadeVerificada } from "../../db/visitaAtividadeVerificada.ts";
+import { subdivisaoAtividade } from "../../db/subdivisaoAtividade.ts";
 import { entrega } from "../../db/entrega.ts";
 import { item } from "../../db/item.ts";
 import { diagnosticoPropriedade, type NewDiagnosticoPropriedade } from "../../db/diagnosticoPropriedade.ts";
@@ -87,6 +89,7 @@ const colunasAnexo = {
   tamanhoBytes: visitaAnexo.tamanhoBytes,
   legenda: visitaAnexo.legenda,
   entregaId: visitaAnexo.entregaId,
+  atividadeVerificadaId: visitaAnexo.atividadeVerificadaId,
   createdAt: visitaAnexo.createdAt,
 };
 
@@ -220,6 +223,7 @@ export default class VisitasRepository {
       + (select count(*) from visitas where visita_anterior_id = ${id} and deleted_at is null)
       + (select count(*) from diagnosticos_associacao where visita_id = ${id} and deleted_at is null)
       + (select count(*) from visita_itens_verificados where visita_id = ${id} and deleted_at is null)
+      + (select count(*) from visita_atividades_verificadas where visita_id = ${id} and deleted_at is null)
         as total`,
       )
       .then((r) => r.rows);
@@ -351,11 +355,12 @@ export default class VisitasRepository {
 
   /** Itens conferidos na visita, com os dados da entrega e quantas fotos da visita mostram cada um. */
   async listarItensVerificados(visitaId: string, entregaId?: string, tx: DbOrTx = db) {
+    // Colunas qualificadas à mão: o Drizzle pode omitir a tabela e a correlação se perderia
     const fotos = sql<number>`cast((
-      select count(*) from ${visitaAnexo}
-      where ${visitaAnexo.visitaId} = ${visitaItemVerificado.visitaId}
-        and ${visitaAnexo.entregaId} = ${visitaItemVerificado.entregaId}
-        and ${visitaAnexo.deletedAt} is null
+      select count(*) from visita_anexos a
+      where a.visita_id = visita_itens_verificados.visita_id
+        and a.entrega_id = visita_itens_verificados.entrega_id
+        and a.deleted_at is null
     ) as int)`;
     return tx
       .select({
@@ -431,6 +436,159 @@ export default class VisitasRepository {
       .where(and(eq(entrega.id, entregaId), isNull(entrega.deletedAt)))
       .limit(1);
     return row;
+  }
+
+  // ─── Atividades verificadas (assistência técnica) ─────────────────────────
+
+  /** Último diagnóstico preenchido da propriedade (de qualquer projeto), pela data da visita. */
+  async ultimoDiagnosticoDaPropriedade(propriedadeId: string, tx: DbOrTx = db) {
+    const [row] = await tx
+      .select({ visitaId: visita.id, data: visita.data })
+      .from(visita)
+      .innerJoin(
+        diagnosticoPropriedade,
+        and(eq(diagnosticoPropriedade.visitaId, visita.id), isNull(diagnosticoPropriedade.deletedAt)),
+      )
+      .where(
+        and(
+          eq(visita.propriedadeId, propriedadeId),
+          eq(visita.tipo, "diagnostico_propriedade"),
+          isNull(visita.deletedAt),
+        ),
+      )
+      .orderBy(desc(visita.data), desc(visita.createdAt))
+      .limit(1);
+    return row;
+  }
+
+  /** Atividades produtivas marcadas no diagnóstico da visita. */
+  async atividadesDoDiagnostico(visitaId: string, tx: DbOrTx = db) {
+    return tx
+      .select({
+        opcaoId: diagnosticoOpcao.opcaoId,
+        nome: opcaoDiagnostico.nome,
+        detalhe: diagnosticoOpcao.detalhe,
+      })
+      .from(diagnosticoOpcao)
+      .innerJoin(opcaoDiagnostico, eq(opcaoDiagnostico.id, diagnosticoOpcao.opcaoId))
+      .where(
+        and(
+          eq(diagnosticoOpcao.visitaId, visitaId),
+          eq(opcaoDiagnostico.grupo, "atividade_produtiva"),
+          isNull(diagnosticoOpcao.deletedAt),
+        ),
+      )
+      .orderBy(asc(opcaoDiagnostico.ordem), asc(opcaoDiagnostico.nome));
+  }
+
+  /** Subdivisões ATIVAS (vivas) das atividades, na ordem do catálogo. */
+  async subdivisoesAtivas(opcaoIds: string[], tx: DbOrTx = db) {
+    if (opcaoIds.length === 0) return [];
+    return tx
+      .select({
+        id: subdivisaoAtividade.id,
+        opcaoId: subdivisaoAtividade.opcaoId,
+        nome: subdivisaoAtividade.nome,
+      })
+      .from(subdivisaoAtividade)
+      .where(
+        and(
+          inArray(subdivisaoAtividade.opcaoId, opcaoIds),
+          eq(subdivisaoAtividade.ativo, true),
+          isNull(subdivisaoAtividade.deletedAt),
+        ),
+      )
+      .orderBy(asc(subdivisaoAtividade.ordem), asc(subdivisaoAtividade.nome));
+  }
+
+  async subdivisaoPorId(id: string, tx: DbOrTx = db) {
+    const [row] = await tx
+      .select({
+        id: subdivisaoAtividade.id,
+        opcaoId: subdivisaoAtividade.opcaoId,
+        nome: subdivisaoAtividade.nome,
+        ativo: subdivisaoAtividade.ativo,
+      })
+      .from(subdivisaoAtividade)
+      .where(and(eq(subdivisaoAtividade.id, id), isNull(subdivisaoAtividade.deletedAt)))
+      .limit(1);
+    return row;
+  }
+
+  /** Verificações vivas da visita (ou só a `id`), com nomes e quantas fotos apontam cada uma. */
+  async listarAtividadesVerificadas(visitaId: string, id?: string, tx: DbOrTx = db) {
+    // Colunas qualificadas à mão: o Drizzle pode omitir a tabela e a correlação se perderia
+    const fotos = sql<number>`cast((
+      select count(*) from visita_anexos a
+      where a.atividade_verificada_id = visita_atividades_verificadas.id
+        and a.deleted_at is null
+    ) as int)`;
+    return tx
+      .select({
+        id: visitaAtividadeVerificada.id,
+        visitaId: visitaAtividadeVerificada.visitaId,
+        opcaoId: visitaAtividadeVerificada.opcaoId,
+        atividade: opcaoDiagnostico.nome,
+        subdivisaoId: visitaAtividadeVerificada.subdivisaoId,
+        subdivisao: subdivisaoAtividade.nome,
+        observacao: visitaAtividadeVerificada.observacao,
+        fotos,
+      })
+      .from(visitaAtividadeVerificada)
+      .innerJoin(opcaoDiagnostico, eq(opcaoDiagnostico.id, visitaAtividadeVerificada.opcaoId))
+      .leftJoin(subdivisaoAtividade, eq(subdivisaoAtividade.id, visitaAtividadeVerificada.subdivisaoId))
+      .where(
+        and(
+          eq(visitaAtividadeVerificada.visitaId, visitaId),
+          id ? eq(visitaAtividadeVerificada.id, id) : undefined,
+          isNull(visitaAtividadeVerificada.deletedAt),
+        ),
+      )
+      .orderBy(asc(opcaoDiagnostico.ordem), asc(opcaoDiagnostico.nome), asc(subdivisaoAtividade.ordem));
+  }
+
+  /** Verificação viva da atividade/subdivisão na visita (null = a atividade inteira). */
+  async atividadeVerificada(visitaId: string, opcaoId: string, subdivisaoId: string | null, tx: DbOrTx = db) {
+    const [row] = await tx
+      .select({ id: visitaAtividadeVerificada.id })
+      .from(visitaAtividadeVerificada)
+      .where(
+        and(
+          eq(visitaAtividadeVerificada.visitaId, visitaId),
+          eq(visitaAtividadeVerificada.opcaoId, opcaoId),
+          subdivisaoId
+            ? eq(visitaAtividadeVerificada.subdivisaoId, subdivisaoId)
+            : isNull(visitaAtividadeVerificada.subdivisaoId),
+          isNull(visitaAtividadeVerificada.deletedAt),
+        ),
+      )
+      .limit(1);
+    return row;
+  }
+
+  async inserirAtividadeVerificada(
+    data: { visitaId: string; opcaoId: string; subdivisaoId: string | null; observacao: string | null },
+    tx: DbOrTx = db,
+  ): Promise<{ id: string }> {
+    const [row] = await tx
+      .insert(visitaAtividadeVerificada)
+      .values(data)
+      .returning({ id: visitaAtividadeVerificada.id });
+    return row;
+  }
+
+  async alterarAtividadeVerificada(id: string, observacao: string | null, tx: DbOrTx = db) {
+    await tx
+      .update(visitaAtividadeVerificada)
+      .set({ observacao })
+      .where(eq(visitaAtividadeVerificada.id, id));
+  }
+
+  async excluirAtividadeVerificada(id: string, tx: DbOrTx = db) {
+    await tx
+      .update(visitaAtividadeVerificada)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(visitaAtividadeVerificada.id, id), isNull(visitaAtividadeVerificada.deletedAt)));
   }
 
   // ─── Diagnóstico da propriedade ───────────────────────────────────────────

@@ -7,6 +7,9 @@ import {
 } from "../../db/opcaoDiagnostico.ts";
 import { diagnosticoOpcao } from "../../db/diagnosticoOpcao.ts";
 import { evento } from "../../db/evento.ts";
+import { subdivisaoAtividade, type NewSubdivisaoAtividade } from "../../db/subdivisaoAtividade.ts";
+import { visitaAtividadeVerificada } from "../../db/visitaAtividadeVerificada.ts";
+import { visita } from "../../db/visita.ts";
 import { camposParaAtualizar } from "../../lib/update.ts";
 import type { Sort } from "../../lib/openapi/helpers.ts";
 
@@ -33,9 +36,25 @@ const colunas = {
   permiteDetalhe: opcaoDiagnostico.permiteDetalhe,
   ordem: opcaoDiagnostico.ordem,
   ativo: opcaoDiagnostico.ativo,
+  // Subquery correlacionada (vale também no RETURNING). A coluna de fora vai qualificada à mão:
+  // sem join o Drizzle escreve só "id", que dentro da subquery seria o id da subdivisão
+  subdivisoes: sql<number>`cast((
+    select count(*) from subdivisoes_atividade s
+    where s.opcao_id = opcoes_diagnostico.id and s.deleted_at is null
+  ) as int)`,
 };
 
-export type OpcaoDiagnosticoRow = Pick<OpcaoDiagnostico, keyof typeof colunas>;
+const colunasSubdivisao = {
+  id: subdivisaoAtividade.id,
+  opcaoId: subdivisaoAtividade.opcaoId,
+  nome: subdivisaoAtividade.nome,
+  ordem: subdivisaoAtividade.ordem,
+  ativo: subdivisaoAtividade.ativo,
+};
+
+export type OpcaoDiagnosticoRow = Pick<OpcaoDiagnostico, Exclude<keyof typeof colunas, "subdivisoes">> & {
+  subdivisoes: number;
+};
 
 function where({ grupo, busca, ativo }: Filtros) {
   return and(
@@ -150,5 +169,95 @@ export default class OpcoesDiagnosticoRepository {
         .where(and(eq(evento.temaId, id), isNull(evento.deletedAt))),
     ]);
     return (marcacoes[0]?.total ?? 0) + (eventos[0]?.total ?? 0);
+  }
+
+  // ─── Subdivisões ──────────────────────────────────────────────────────────
+
+  async listarSubdivisoes(opcaoId: string, tx: DbOrTx = db) {
+    return tx
+      .select(colunasSubdivisao)
+      .from(subdivisaoAtividade)
+      .where(and(eq(subdivisaoAtividade.opcaoId, opcaoId), isNull(subdivisaoAtividade.deletedAt)))
+      .orderBy(asc(subdivisaoAtividade.ordem), asc(subdivisaoAtividade.nome), asc(subdivisaoAtividade.id));
+  }
+
+  async subdivisaoPorId(opcaoId: string, id: string, tx: DbOrTx = db) {
+    const [row] = await tx
+      .select(colunasSubdivisao)
+      .from(subdivisaoAtividade)
+      .where(
+        and(
+          eq(subdivisaoAtividade.id, id),
+          eq(subdivisaoAtividade.opcaoId, opcaoId),
+          isNull(subdivisaoAtividade.deletedAt),
+        ),
+      )
+      .limit(1);
+    return row;
+  }
+
+  /** Nome sem diferenciar caixa entre as subdivisões vivas da mesma atividade. */
+  async subdivisaoPorNome(opcaoId: string, nome: string, excetoId?: string, tx: DbOrTx = db) {
+    const [row] = await tx
+      .select({ id: subdivisaoAtividade.id })
+      .from(subdivisaoAtividade)
+      .where(
+        and(
+          eq(subdivisaoAtividade.opcaoId, opcaoId),
+          sql`lower(${subdivisaoAtividade.nome}) = lower(${nome})`,
+          isNull(subdivisaoAtividade.deletedAt),
+          excetoId ? ne(subdivisaoAtividade.id, excetoId) : undefined,
+        ),
+      )
+      .limit(1);
+    return row;
+  }
+
+  async inserirSubdivisao(data: NewSubdivisaoAtividade, tx: DbOrTx = db) {
+    const [row] = await tx.insert(subdivisaoAtividade).values(data).returning(colunasSubdivisao);
+    return row;
+  }
+
+  async alterarSubdivisao(id: string, data: Partial<NewSubdivisaoAtividade>, tx: DbOrTx = db) {
+    const campos = camposParaAtualizar(data);
+    const [row] = await tx
+      .update(subdivisaoAtividade)
+      .set(Object.keys(campos).length > 0 ? campos : { updatedAt: new Date() })
+      .where(and(eq(subdivisaoAtividade.id, id), isNull(subdivisaoAtividade.deletedAt)))
+      .returning(colunasSubdivisao);
+    return row;
+  }
+
+  async excluirSubdivisao(id: string, tx: DbOrTx = db) {
+    const [row] = await tx
+      .update(subdivisaoAtividade)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(subdivisaoAtividade.id, id), isNull(subdivisaoAtividade.deletedAt)))
+      .returning({ id: subdivisaoAtividade.id });
+    return row;
+  }
+
+  async contarSubdivisoes(opcaoId: string, tx: DbOrTx = db): Promise<number> {
+    const [row] = await tx
+      .select({ total: sql<number>`cast(count(*) as int)` })
+      .from(subdivisaoAtividade)
+      .where(and(eq(subdivisaoAtividade.opcaoId, opcaoId), isNull(subdivisaoAtividade.deletedAt)));
+    return row?.total ?? 0;
+  }
+
+  /** Verificações vivas (em visitas vivas) que apontam a subdivisão. */
+  async contarVerificacoesDaSubdivisao(id: string, tx: DbOrTx = db): Promise<number> {
+    const [row] = await tx
+      .select({ total: sql<number>`cast(count(*) as int)` })
+      .from(visitaAtividadeVerificada)
+      .innerJoin(visita, eq(visita.id, visitaAtividadeVerificada.visitaId))
+      .where(
+        and(
+          eq(visitaAtividadeVerificada.subdivisaoId, id),
+          isNull(visitaAtividadeVerificada.deletedAt),
+          isNull(visita.deletedAt),
+        ),
+      );
+    return row?.total ?? 0;
   }
 }

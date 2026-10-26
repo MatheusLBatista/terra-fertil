@@ -12,6 +12,7 @@ import {
   type PutEquipeSchema,
   type PutDiagnosticoSchema,
   type PutItemVerificadoSchema,
+  type PutAtividadeVerificadaSchema,
 } from "./visitas.schema.ts";
 
 type ListQuery = z.infer<typeof ListVisitasQuerySchema>;
@@ -169,7 +170,11 @@ export default class VisitasService {
   async enviarAnexo(
     id: string,
     arquivo: ArquivoUpload,
-    { legenda, entregaId }: { legenda: string | null; entregaId: string | null },
+    {
+      legenda,
+      entregaId,
+      atividadeVerificadaId,
+    }: { legenda: string | null; entregaId: string | null; atividadeVerificadaId: string | null },
   ) {
     const atual = await this.buscar(id);
     await garantirProjeto(atual.projetoId, { escrita: true });
@@ -180,6 +185,17 @@ export default class VisitasService {
         422,
         undefined,
         "ITEM_NAO_VERIFICADO",
+      );
+    }
+    if (
+      atividadeVerificadaId &&
+      (await this.repository.listarAtividadesVerificadas(id, atividadeVerificadaId)).length === 0
+    ) {
+      throw new AppError(
+        "Registre a verificação da atividade nesta visita antes de enviar fotos dela",
+        422,
+        undefined,
+        "ATIVIDADE_NAO_VERIFICADA",
       );
     }
     const pasta = `visitas/${id}`;
@@ -195,6 +211,7 @@ export default class VisitasService {
       tamanhoBytes: arquivo.buffer.length,
       legenda,
       entregaId,
+      atividadeVerificadaId,
     });
   }
 
@@ -291,6 +308,128 @@ export default class VisitasService {
       );
     }
     return { ...atual, associacaoId: atual.associacaoId };
+  }
+
+  // ─── Atividades verificadas (assistência técnica) ─────────────────────────
+
+  /**
+   * Lista de conferência: as atividades produtivas do último diagnóstico da
+   * propriedade — uma linha por subdivisão ativa, ou a atividade inteira se não
+   * tiver — mais o que esta visita já verificou fora dessa lista.
+   */
+  async atividades(id: string) {
+    const atual = await this.visitaDeAssistencia(id);
+    const diagnostico = await this.repository.ultimoDiagnosticoDaPropriedade(atual.propriedadeId);
+    const atividades = diagnostico ? await this.repository.atividadesDoDiagnostico(diagnostico.visitaId) : [];
+    const subdivisoes = await this.repository.subdivisoesAtivas(atividades.map((a) => a.opcaoId));
+    const verificadas = await this.repository.listarAtividadesVerificadas(id);
+    const verificacao = (opcaoId: string, subdivisaoId: string | null) =>
+      verificadas.find((v) => v.opcaoId === opcaoId && v.subdivisaoId === subdivisaoId) ?? null;
+
+    type Linha = {
+      opcaoId: string;
+      atividade: string;
+      detalhe: string | null;
+      subdivisaoId: string | null;
+      subdivisao: string | null;
+      verificacao: (typeof verificadas)[number] | null;
+    };
+    const linhas = atividades.flatMap((a): Linha[] => {
+      const subs = subdivisoes.filter((s) => s.opcaoId === a.opcaoId);
+      const base = { opcaoId: a.opcaoId, atividade: a.nome, detalhe: a.detalhe };
+      if (subs.length === 0) {
+        return [{ ...base, subdivisaoId: null, subdivisao: null, verificacao: verificacao(a.opcaoId, null) }];
+      }
+      return subs.map((sub) => ({
+        ...base,
+        subdivisaoId: sub.id,
+        subdivisao: sub.nome,
+        verificacao: verificacao(a.opcaoId, sub.id),
+      }));
+    });
+    // Verificadas que saíram da lista (diagnóstico refeito, subdivisão desativada) continuam visíveis
+    for (const v of verificadas) {
+      if (linhas.some((l) => l.verificacao?.id === v.id)) continue;
+      linhas.push({
+        opcaoId: v.opcaoId,
+        atividade: v.atividade,
+        detalhe: null,
+        subdivisaoId: v.subdivisaoId,
+        subdivisao: v.subdivisao,
+        verificacao: v,
+      });
+    }
+    return { diagnostico: diagnostico ?? null, linhas };
+  }
+
+  /** Cria ou atualiza a verificação; uma nova precisa estar na lista de conferência da visita. */
+  async verificarAtividade(
+    id: string,
+    { opcaoId, subdivisaoId = null, observacao }: z.infer<typeof PutAtividadeVerificadaSchema>,
+  ) {
+    const atual = await this.visitaDeAssistencia(id);
+    await garantirProjeto(atual.projetoId, { escrita: true });
+    if (subdivisaoId) {
+      const subdivisao = await this.repository.subdivisaoPorId(subdivisaoId);
+      if (!subdivisao || subdivisao.opcaoId !== opcaoId) {
+        throw new AppError("Subdivisão não encontrada nesta atividade", 404);
+      }
+    }
+
+    const existente = await this.repository.atividadeVerificada(id, opcaoId, subdivisaoId);
+    let verificacaoId: string;
+    if (existente) {
+      await this.repository.alterarAtividadeVerificada(existente.id, observacao);
+      verificacaoId = existente.id;
+    } else {
+      const { linhas } = await this.atividades(id);
+      const naLista = linhas.some((l) => l.opcaoId === opcaoId && l.subdivisaoId === subdivisaoId);
+      if (!naLista) {
+        throw new AppError(
+          "A atividade (ou subdivisão) não está entre as do último diagnóstico da propriedade",
+          422,
+          undefined,
+          "ATIVIDADE_FORA_DO_DIAGNOSTICO",
+        );
+      }
+      ({ id: verificacaoId } = await this.repository.inserirAtividadeVerificada({
+        visitaId: id,
+        opcaoId,
+        subdivisaoId,
+        observacao,
+      }));
+    }
+    const [verificada] = await this.repository.listarAtividadesVerificadas(id, verificacaoId);
+    return verificada;
+  }
+
+  async desfazerAtividade(id: string, verificacaoId: string) {
+    const atual = await this.visitaDeAssistencia(id);
+    await garantirProjeto(atual.projetoId, { escrita: true });
+    const [verificada] = await this.repository.listarAtividadesVerificadas(id, verificacaoId);
+    if (!verificada) throw new AppError("Atividade não verificada nesta visita", 404);
+    if (verificada.fotos > 0) {
+      throw new AppError(
+        "A atividade tem fotos nesta visita — exclua as fotos antes de desfazer a verificação",
+        409,
+        undefined,
+        "ATIVIDADE_COM_FOTOS",
+      );
+    }
+    await this.repository.excluirAtividadeVerificada(verificacaoId);
+  }
+
+  private async visitaDeAssistencia(id: string) {
+    const atual = await this.buscar(id);
+    if (atual.tipo !== "assistencia_tecnica" || !atual.propriedadeId) {
+      throw new AppError(
+        "Atividades verificadas só existem na visita de assistência técnica",
+        422,
+        undefined,
+        "TIPO_VISITA_INVALIDO",
+      );
+    }
+    return { ...atual, propriedadeId: atual.propriedadeId };
   }
 
   // ─── Diagnóstico da propriedade ───────────────────────────────────────────

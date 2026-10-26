@@ -60,6 +60,8 @@ type OpcaoDiagnostico = components["schemas"]["OpcaoDiagnostico"];
 type Recomendacao = components["schemas"]["Recomendacao"];
 type Entrega = components["schemas"]["Entrega"];
 type ItemVerificado = components["schemas"]["VisitaItemVerificado"];
+type AtividadesDaVisita = components["schemas"]["VisitaAtividades"];
+type LinhaAtividade = AtividadesDaVisita["linhas"][number];
 type MetaPaginacao = components["schemas"]["MetaPaginacao"];
 type TipoVisita = Visita["tipo"];
 type Categoria = Recomendacao["categoria"];
@@ -137,6 +139,14 @@ const urlArquivo = (visitaId: string, anexoId: string) =>
   `${env.API_URL}/visitas/${visitaId}/anexos/${anexoId}/arquivo`;
 /** Acompanhamento na associação: confere os itens fornecidos (reunião de 23/10). */
 const conferaItens = (v: Visita) => v.tipo === "acompanhamento" && !!v.associacaoId;
+const consultaAtividades = (visitaId: string) => ({
+  queryKey: ["visitas", visitaId, "atividades"],
+  queryFn: ({ signal }: { signal?: AbortSignal }) =>
+    fetchData<Envelope<AtividadesDaVisita>>(`/visitas/${visitaId}/atividades`, { signal }),
+});
+/** "Pecuária leiteira — Ordenha" ou só a atividade. */
+const nomeAtividade = (l: { atividade: string; subdivisao: string | null }) =>
+  l.subdivisao ? `${l.atividade} — ${l.subdivisao}` : l.atividade;
 const consultaItensVerificados = (visitaId: string) => ({
   queryKey: ["visitas", visitaId, "itens-verificados"],
   queryFn: ({ signal }: { signal?: AbortSignal }) =>
@@ -286,7 +296,15 @@ export default function VisitaDetalhePage({ params }: { params: Promise<{ id: st
         <>
           <EquipeVisita visita={v} editavel={podeEditarCampo} />
           {conferaItens(v) && <ItensVerificados visita={v} editavel={podeEditarCampo} />}
-          <Anexos visitaId={v.id} editavel={podeEditarCampo} comItens={conferaItens(v)} />
+          {v.tipo === "assistencia_tecnica" && v.propriedadeId && (
+            <AtividadesVerificadas visita={v} editavel={podeEditarCampo} />
+          )}
+          <Anexos
+            visitaId={v.id}
+            editavel={podeEditarCampo}
+            comItens={conferaItens(v)}
+            comAtividades={v.tipo === "assistencia_tecnica" && !!v.propriedadeId}
+          />
           {v.tipo === "diagnostico_propriedade" && (
             <DiagnosticoSecao visitaId={v.id} editavel={podeEditarCampo} />
           )}
@@ -556,18 +574,30 @@ function Anexos({
   visitaId,
   editavel,
   comItens,
+  comAtividades,
 }: {
   visitaId: string;
   editavel: boolean;
   /** Acompanhamento na associação: mostra de qual item verificado é cada foto. */
   comItens: boolean;
+  /** Assistência técnica: mostra de qual atividade verificada é cada foto. */
+  comAtividades: boolean;
 }) {
   const queryClient = useQueryClient();
   const [enviarAberto, setEnviarAberto] = useState(false);
   const [excluir, setExcluir] = useState<VisitaAnexo | null>(null);
   const itens = useQuery({ ...consultaItensVerificados(visitaId), enabled: comItens });
-  const nomeItem = (entregaId: string | null) =>
-    entregaId ? itens.data?.data.find((i) => i.entregaId === entregaId)?.itemDescricao : undefined;
+  const atividades = useQuery({ ...consultaAtividades(visitaId), enabled: comAtividades });
+  const vinculo = (a: VisitaAnexo) => {
+    if (a.entregaId) {
+      const item = itens.data?.data.find((i) => i.entregaId === a.entregaId);
+      return item && `Item verificado: ${item.itemDescricao}`;
+    }
+    if (a.atividadeVerificadaId) {
+      const linha = atividades.data?.data.linhas.find((l) => l.verificacao?.id === a.atividadeVerificadaId);
+      return linha && `Atividade verificada: ${nomeAtividade(linha)}`;
+    }
+  };
 
   const anexos = useQuery({
     queryKey: ["visitas", visitaId, "anexos"],
@@ -582,6 +612,7 @@ function Anexos({
       setExcluir(null);
       queryClient.invalidateQueries({ queryKey: ["visitas", visitaId, "anexos"] });
       queryClient.invalidateQueries({ queryKey: ["visitas", visitaId, "itens-verificados"] });
+      queryClient.invalidateQueries({ queryKey: ["visitas", visitaId, "atividades"] });
     },
     onError: (erro) => toast.error(mensagemDeErro(erro, "Não foi possível excluir o arquivo.")),
   });
@@ -650,9 +681,7 @@ function Anexos({
                 )}
                 <div className="flex flex-1 flex-col gap-1 p-3 text-sm">
                   <span className="line-clamp-2 font-medium">{nome}</span>
-                  {nomeItem(a.entregaId) && (
-                    <span className="line-clamp-2 text-xs">Item verificado: {nomeItem(a.entregaId)}</span>
-                  )}
+                  {vinculo(a) && <span className="line-clamp-2 text-xs">{vinculo(a)}</span>}
                   <span className="truncate text-xs text-muted-foreground">
                     {a.tipo === "foto" ? "Foto" : a.tipo === "audio" ? "Áudio" : "Documento"} ·{" "}
                     {tamanho(a.tamanhoBytes)}
@@ -1024,8 +1053,16 @@ function ItensVerificados({ visita, editavel }: { visita: Visita; editavel: bool
             <FormularioVerificacao
               key={verificar.id}
               visitaId={visita.id}
-              entrega={verificar}
               registro={verificacao(verificar.id)}
+              objeto="item"
+              placeholder="Estado do item, uso pela associação, problemas encontrados…"
+              salvarVerificacao={async (observacao) => {
+                await fetchData(`/visitas/${visita.id}/itens-verificados/${verificar.id}`, {
+                  method: "PUT",
+                  body: { observacao },
+                });
+                return ["entregaId", verificar.id];
+              }}
               onFechar={() => setVerificar(null)}
             />
           )}
@@ -1037,15 +1074,23 @@ function ItensVerificados({ visita, editavel }: { visita: Visita; editavel: bool
   );
 }
 
+/**
+ * Observação + fotos de uma verificação (item fornecido ou atividade). `salvarVerificacao`
+ * grava a verificação e devolve o campo do multipart que liga as fotos a ela.
+ */
 function FormularioVerificacao({
   visitaId,
-  entrega,
   registro,
+  objeto,
+  placeholder,
+  salvarVerificacao,
   onFechar,
 }: {
   visitaId: string;
-  entrega: Entrega;
-  registro?: ItemVerificado;
+  registro?: { observacao: string | null; fotos: number };
+  objeto: "item" | "atividade";
+  placeholder: string;
+  salvarVerificacao: (observacao: string | null) => Promise<[campo: string, valor: string]>;
   onFechar: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -1067,15 +1112,12 @@ function FormularioVerificacao({
 
   const salvar = useMutation({
     mutationFn: async () => {
-      await fetchData(`/visitas/${visitaId}/itens-verificados/${entrega.id}`, {
-        method: "PUT",
-        body: { observacao: observacao.trim() || null },
-      });
-      // A verificação precisa existir antes das fotos (a API recusa foto de item não verificado)
+      const [campo, valor] = await salvarVerificacao(observacao.trim() || null);
+      // A verificação precisa existir antes das fotos (a API recusa foto do que não foi verificado)
       for (const foto of fotos) {
         const formData = new FormData();
         formData.append("arquivo", foto);
-        formData.append("entregaId", entrega.id);
+        formData.append(campo, valor);
         await fetchData(`/visitas/${visitaId}/anexos`, { method: "POST", formData });
       }
     },
@@ -1093,7 +1135,9 @@ function FormularioVerificacao({
       ),
     // Sucesso ou falha no meio das fotos: o que chegou à API aparece na tela
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ["visitas", visitaId, "itens-verificados"] });
+      queryClient.invalidateQueries({
+        queryKey: ["visitas", visitaId, objeto === "item" ? "itens-verificados" : "atividades"],
+      });
       queryClient.invalidateQueries({ queryKey: ["visitas", visitaId, "anexos"] });
     },
   });
@@ -1116,7 +1160,7 @@ function FormularioVerificacao({
           <Textarea
             id="verificacao-observacao"
             rows={5}
-            placeholder="Estado do item, uso pela associação, problemas encontrados…"
+            placeholder={placeholder}
             value={observacao}
             aria-invalid={!!mostrarErroObservacao}
             aria-describedby={mostrarErroObservacao ? "verificacao-observacao-erro" : undefined}
@@ -1129,7 +1173,9 @@ function FormularioVerificacao({
           )}
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="verificacao-fotos">Fotos do item (opcional)</Label>
+          <Label htmlFor="verificacao-fotos">
+            {objeto === "item" ? "Fotos do item" : "Fotos da atividade"} (opcional)
+          </Label>
           <Input
             id="verificacao-fotos"
             type="file"
@@ -1146,7 +1192,7 @@ function FormularioVerificacao({
           ) : (
             <p id="verificacao-fotos-dica" className="text-xs text-muted-foreground">
               {registro?.fotos
-                ? `Já há ${registro.fotos === 1 ? "1 foto" : `${numero(registro.fotos)} fotos`} deste item; as novas se somam a elas.`
+                ? `Já há ${registro.fotos === 1 ? "1 foto" : `${numero(registro.fotos)} fotos`} ${objeto === "item" ? "deste item" : "desta atividade"}; as novas se somam a elas.`
                 : "Até 20 MB cada. As fotos também aparecem em Fotos e documentos."}
             </p>
           )}
@@ -1169,6 +1215,213 @@ function FormularioVerificacao({
         </Button>
       </SheetFooter>
     </form>
+  );
+}
+
+// ─── Atividades verificadas (assistência técnica) ──────────────────────────
+
+const chaveLinha = (l: LinhaAtividade) => `${l.opcaoId}:${l.subdivisaoId ?? ""}`;
+
+function AtividadesVerificadas({ visita, editavel }: { visita: Visita; editavel: boolean }) {
+  const queryClient = useQueryClient();
+  const [verificar, setVerificar] = useState<LinhaAtividade | null>(null);
+  const [desfazer, setDesfazer] = useState<LinhaAtividade | null>(null);
+
+  const atividades = useQuery(consultaAtividades(visita.id));
+  const diagnostico = atividades.data?.data.diagnostico;
+  const linhas = atividades.data?.data.linhas ?? [];
+  const conferidas = linhas.filter((l) => l.verificacao).length;
+  const colunas = editavel ? 3 : 2;
+
+  const desfazerMutation = useMutation({
+    mutationFn: () =>
+      fetchData(`/visitas/${visita.id}/atividades-verificadas/${desfazer!.verificacao!.id}`, {
+        method: "DELETE",
+      }),
+    onSuccess: () => {
+      toast.success("Verificação desfeita.");
+      setDesfazer(null);
+      queryClient.invalidateQueries({ queryKey: ["visitas", visita.id, "atividades"] });
+    },
+    onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível desfazer a verificação.")),
+  });
+
+  const confirmacao: Confirmacao | null = desfazer
+    ? {
+        titulo: `Desfazer a verificação de “${nomeAtividade(desfazer)}”?`,
+        descricao:
+          "A observação registrada nesta visita é descartada. Se houver fotos da atividade, exclua-as antes em Fotos e documentos.",
+        textoConfirmar: "Desfazer",
+        destrutivo: true,
+        pendente: desfazerMutation.isPending,
+        onConfirmar: () => desfazerMutation.mutate(),
+      }
+    : null;
+
+  return (
+    <section aria-labelledby="atividades-titulo" className="space-y-3">
+      <Cabecalho
+        id="atividades-titulo"
+        titulo="Atividades verificadas"
+        descricao={
+          diagnostico
+            ? `Atividades do diagnóstico de ${dataCalendario(diagnostico.data)} — ${conferidas} de ${linhas.length} verificada(s) nesta visita.`
+            : "Atividades produtivas da propriedade — registre o que foi visto, com observações e fotos."
+        }
+      />
+      {diagnostico && (
+        <p className="text-xs text-muted-foreground">
+          A lista vem do{" "}
+          <Link
+            href={`/visitas/${diagnostico.visitaId}`}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            último diagnóstico da propriedade
+          </Link>
+          ; as subdivisões são editadas em Cadastros → Opções de diagnóstico.
+        </p>
+      )}
+      <div className="border" aria-busy={atividades.isPending}>
+        <Table aria-label="Atividades da propriedade">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Atividade</TableHead>
+              <TableHead>Verificação</TableHead>
+              {editavel && <TableHead className="w-24 text-right">Ações</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {atividades.isPending ? (
+              <TableRow>
+                <TableCell colSpan={colunas}>
+                  <span role="status" className="sr-only">
+                    Carregando…
+                  </span>
+                  <Skeleton className="h-4 w-full" />
+                </TableCell>
+              </TableRow>
+            ) : atividades.isError ? (
+              <TableRow>
+                <TableCell colSpan={colunas} className="py-6 text-center text-muted-foreground">
+                  {ehSemPermissao(atividades.error) ? (
+                    "Você não tem permissão para ver isto."
+                  ) : (
+                    <>
+                      Erro ao carregar as atividades.{" "}
+                      <Button variant="link" size="sm" onClick={() => atividades.refetch()}>
+                        Tentar novamente
+                      </Button>
+                    </>
+                  )}
+                </TableCell>
+              </TableRow>
+            ) : linhas.length === 0 ? (
+              <TableRow>
+                <TableCell
+                  colSpan={colunas}
+                  className="py-6 text-center whitespace-normal text-muted-foreground"
+                >
+                  {diagnostico
+                    ? "O último diagnóstico da propriedade não tem atividades produtivas marcadas"
+                    : "A propriedade ainda não tem diagnóstico — as atividades vêm de lá"}
+                </TableCell>
+              </TableRow>
+            ) : (
+              linhas.map((l) => (
+                <TableRow key={chaveLinha(l)}>
+                  <TableCell className="max-w-[12rem] sm:max-w-md">
+                    <div className="flex flex-col">
+                      <span className="line-clamp-2 whitespace-normal">{l.subdivisao ?? l.atividade}</span>
+                      {(l.subdivisao || l.detalhe) && (
+                        <span className="text-xs whitespace-normal text-muted-foreground">
+                          {l.subdivisao ? l.atividade : l.detalhe}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="max-w-[10rem] sm:max-w-md">
+                    {l.verificacao ? (
+                      <div className="flex flex-col items-start gap-1">
+                        <Badge>Verificada</Badge>
+                        {l.verificacao.observacao && (
+                          <span className="line-clamp-2 text-xs whitespace-normal text-muted-foreground">
+                            {l.verificacao.observacao}
+                          </span>
+                        )}
+                        {l.verificacao.fotos > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            {l.verificacao.fotos === 1 ? "1 foto" : `${numero(l.verificacao.fotos)} fotos`}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <Badge variant="secondary">Não verificada</Badge>
+                    )}
+                  </TableCell>
+                  {editavel && (
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          title={l.verificacao ? "Editar verificação" : "Registrar verificação"}
+                          aria-label={`${l.verificacao ? "Editar a verificação" : "Registrar a verificação"} de ${nomeAtividade(l)}`}
+                          onClick={() => setVerificar(l)}
+                        >
+                          <ClipboardCheck className="size-4" />
+                        </Button>
+                        {l.verificacao && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            title="Desfazer verificação"
+                            aria-label={`Desfazer a verificação de ${nomeAtividade(l)}`}
+                            onClick={() => setDesfazer(l)}
+                          >
+                            <Undo2 className="size-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Sheet open={!!verificar} onOpenChange={(aberto) => !aberto && setVerificar(null)}>
+        <SheetContent className="flex w-full flex-col p-0 sm:max-w-md">
+          <SheetHeader className="border-b">
+            <SheetTitle>Verificar atividade</SheetTitle>
+            <SheetDescription>{verificar && nomeAtividade(verificar)}</SheetDescription>
+          </SheetHeader>
+          {verificar && (
+            <FormularioVerificacao
+              key={chaveLinha(verificar)}
+              visitaId={visita.id}
+              registro={verificar.verificacao ?? undefined}
+              objeto="atividade"
+              placeholder="Manejo observado, problemas, evolução desde a última visita…"
+              salvarVerificacao={async (observacao) => {
+                const { data } = await fetchData<Envelope<{ id: string }>>(
+                  `/visitas/${visita.id}/atividades-verificadas`,
+                  {
+                    method: "PUT",
+                    body: { opcaoId: verificar.opcaoId, subdivisaoId: verificar.subdivisaoId, observacao },
+                  },
+                );
+                return ["atividadeVerificadaId", data.id];
+              }}
+              onFechar={() => setVerificar(null)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <ConfirmacaoDialog confirmacao={confirmacao} onFechar={() => setDesfazer(null)} />
+    </section>
   );
 }
 

@@ -229,6 +229,10 @@ export const VisitaAnexoSchema = registry.register(
         .uuid()
         .nullable()
         .openapi({ description: "Item fornecido que a foto mostra (acompanhamento na associação)" }),
+      atividadeVerificadaId: z
+        .uuid()
+        .nullable()
+        .openapi({ description: "Atividade verificada que a foto mostra (assistência técnica)" }),
       createdAt: z.string(),
     })
     .openapi({ description: "Foto ou documento da visita — o arquivo sai por GET .../arquivo" }),
@@ -246,6 +250,10 @@ export const AnexoFormSchema = z.object({
     .transform((v) => v || null),
   entregaId: z
     .uuid("Item verificado inválido")
+    .optional()
+    .transform((v) => v ?? null),
+  atividadeVerificadaId: z
+    .uuid("Atividade verificada inválida")
     .optional()
     .transform((v) => v ?? null),
 });
@@ -355,6 +363,66 @@ export const PutItemVerificadoSchema = z.object({
     .transform((v) => v || null),
 });
 
+// ─── Atividades verificadas (assistência técnica) ────────────────────────────
+
+const observacaoVerificacao = () =>
+  z
+    .string()
+    .trim()
+    .max(5000, "No máximo 5.000 caracteres")
+    .nullable()
+    .optional()
+    .transform((v) => v || null);
+
+export const AtividadeVerificadaSchema = registry.register(
+  "VisitaAtividadeVerificada",
+  z
+    .object({
+      id: z.uuid(),
+      visitaId: z.uuid(),
+      opcaoId: z.uuid(),
+      atividade: z.string(),
+      subdivisaoId: z.uuid().nullable().openapi({ description: "Null = a atividade inteira" }),
+      subdivisao: z.string().nullable(),
+      observacao: z.string().nullable(),
+      fotos: z.number().int().openapi({ description: "Fotos da visita ligadas a esta verificação" }),
+    })
+    .openapi({ description: "Atividade produtiva (ou subdivisão) conferida na assistência técnica" }),
+);
+
+export const AtividadesDaVisitaSchema = registry.register(
+  "VisitaAtividades",
+  z
+    .object({
+      diagnostico: z
+        .object({ visitaId: z.uuid(), data: z.string() })
+        .nullable()
+        .openapi({ description: "Diagnóstico da propriedade de onde vieram as atividades (o mais recente)" }),
+      linhas: z.array(
+        z.object({
+          opcaoId: z.uuid(),
+          atividade: z.string(),
+          detalhe: z.string().nullable().openapi({ description: 'Texto do "Outro" no diagnóstico' }),
+          subdivisaoId: z.uuid().nullable(),
+          subdivisao: z.string().nullable(),
+          verificacao: AtividadeVerificadaSchema.nullable(),
+        }),
+      ),
+    })
+    .openapi({
+      description:
+        "O que a assistência técnica confere: atividades do último diagnóstico (uma linha por subdivisão ativa) + o que já foi verificado",
+    }),
+);
+
+export const PutAtividadeVerificadaSchema = z.object({
+  opcaoId: z.uuid(),
+  subdivisaoId: z.uuid().nullable().optional().openapi({ description: "Omitido/null = a atividade inteira" }),
+  observacao: observacaoVerificacao(),
+});
+
+export const AtividadeVerificadaParamSchema = z.object({ id: z.uuid(), verificacaoId: z.uuid() });
+
 // ─── OpenAPI ─────────────────────────────────────────────────────────────────
 
 const TAG = ["Visitas"];
@@ -459,6 +527,10 @@ registry.registerPath({
               .uuid()
               .optional()
               .openapi({ description: "Item verificado nesta visita que a foto mostra" }),
+            atividadeVerificadaId: z
+              .uuid()
+              .optional()
+              .openapi({ description: "Atividade verificada nesta visita que a foto mostra" }),
           }),
         },
       },
@@ -547,5 +619,36 @@ registry.registerPath({
   security: SEGURANCA,
   summary: "Desfazer a verificação de um item (bloqueado se houver fotos dele na visita)",
   request: { params: ItemVerificadoParamSchema },
+  responses: { 204: semConteudo(), ...ERROS_LEITURA, ...ERROS.conflito },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/visitas/{id}/atividades",
+  tags: TAG,
+  security: SEGURANCA,
+  summary:
+    "Atividades da propriedade a conferir na assistência técnica (do último diagnóstico) e as já verificadas",
+  request: { params: VisitaIdParamSchema },
+  responses: { 200: ok(AtividadesDaVisitaSchema), ...ERROS_LEITURA, ...REGRA },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/visitas/{id}/atividades-verificadas",
+  tags: TAG,
+  security: SEGURANCA,
+  summary: "Registrar (ou atualizar) a verificação de uma atividade ou subdivisão",
+  request: { params: VisitaIdParamSchema, body: corpo(PutAtividadeVerificadaSchema) },
+  responses: { 200: ok(AtividadeVerificadaSchema), ...ERROS_ESCRITA, ...REGRA },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/visitas/{id}/atividades-verificadas/{verificacaoId}",
+  tags: TAG,
+  security: SEGURANCA,
+  summary: "Desfazer a verificação de uma atividade (bloqueado se houver fotos dela)",
+  request: { params: AtividadeVerificadaParamSchema },
   responses: { 204: semConteudo(), ...ERROS_LEITURA, ...ERROS.conflito },
 });

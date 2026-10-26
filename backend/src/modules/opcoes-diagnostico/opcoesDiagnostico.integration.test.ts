@@ -82,6 +82,7 @@ describe("CRUD", () => {
         permiteDetalhe: false,
         ordem: 1,
         ativo: true,
+        subdivisoes: 0,
       },
       meta: {},
       erros: [],
@@ -159,6 +160,7 @@ describe("CRUD", () => {
       permiteDetalhe: true,
       ordem: 99,
       ativo: false,
+      subdivisoes: 0,
     });
 
     const ativos = await json<Opcao[]>(

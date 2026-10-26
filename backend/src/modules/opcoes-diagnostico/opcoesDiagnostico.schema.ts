@@ -8,9 +8,11 @@ import {
   ERROS_ESCRITA,
   SEGURANCA,
   ok,
+  okLista,
   okPagina,
   criado,
   semConteudo,
+  erro,
   filtroTexto,
   paginacaoQuery,
   sortSchema,
@@ -35,6 +37,10 @@ export const OpcaoDiagnosticoSchema = registry.register(
       permiteDetalhe: z.boolean().openapi({ description: 'true no "Outro" — a resposta pede um texto' }),
       ordem: z.number().int(),
       ativo: z.boolean(),
+      subdivisoes: z
+        .number()
+        .int()
+        .openapi({ description: "Quantas subdivisões a opção tem (só atividade produtiva tem)" }),
     })
     .openapi({ description: "Opção de múltipla escolha dos diagnósticos (catálogo)" }),
 );
@@ -59,6 +65,32 @@ const camposOpcao = {
 
 export const CreateOpcaoDiagnosticoSchema = z.object(camposOpcao);
 export const UpdateOpcaoDiagnosticoSchema = z.object(camposOpcao).partial();
+
+// ─── Subdivisões (só de atividade produtiva) ─────────────────────────────────
+
+export const SubdivisaoAtividadeSchema = registry.register(
+  "SubdivisaoAtividade",
+  z
+    .object({
+      id: z.uuid(),
+      opcaoId: z.uuid(),
+      nome: z.string(),
+      ordem: z.number().int(),
+      ativo: z.boolean(),
+    })
+    .openapi({ description: "Subdivisão de uma atividade produtiva (ex.: Pecuária leiteira → Ordenha)" }),
+);
+
+export const SubdivisaoIdParamSchema = z.object({ id: z.uuid(), subdivisaoId: z.uuid() });
+
+const camposSubdivisao = {
+  nome: z.string().trim().min(1, "Informe o nome").max(200),
+  ordem: z.number().int().min(0).max(32767).optional(),
+  ativo: z.boolean().optional(),
+};
+
+export const CreateSubdivisaoSchema = z.object(camposSubdivisao);
+export const UpdateSubdivisaoSchema = z.object(camposSubdivisao).partial();
 
 // ─── OpenAPI ─────────────────────────────────────────────────────────────────
 
@@ -117,5 +149,50 @@ registry.registerPath({
   security: SEGURANCA,
   summary: "Excluir opção (bloqueado se marcada em diagnósticos ou usada como tema de evento — desative-a)",
   request: { params: OpcaoDiagnosticoIdParamSchema },
+  responses: { 204: semConteudo(), ...ERROS_LEITURA, ...ERROS.conflito },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/opcoes-diagnostico/{id}/subdivisoes",
+  tags: TAG,
+  security: SEGURANCA,
+  summary: "Subdivisões da atividade produtiva (ativas e inativas, na ordem)",
+  request: { params: OpcaoDiagnosticoIdParamSchema },
+  responses: { 200: okLista(SubdivisaoAtividadeSchema), ...ERROS_LEITURA },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/opcoes-diagnostico/{id}/subdivisoes",
+  tags: TAG,
+  security: SEGURANCA,
+  summary: "Criar subdivisão (só em opção do grupo atividade produtiva)",
+  request: { params: OpcaoDiagnosticoIdParamSchema, body: corpo(CreateSubdivisaoSchema) },
+  responses: {
+    201: criado(SubdivisaoAtividadeSchema),
+    ...ERROS_ESCRITA,
+    ...ERROS.conflito,
+    422: erro("A opção não é uma atividade produtiva"),
+  },
+});
+
+registry.registerPath({
+  method: "patch",
+  path: "/opcoes-diagnostico/{id}/subdivisoes/{subdivisaoId}",
+  tags: TAG,
+  security: SEGURANCA,
+  summary: "Alterar subdivisão",
+  request: { params: SubdivisaoIdParamSchema, body: corpo(UpdateSubdivisaoSchema) },
+  responses: { 200: ok(SubdivisaoAtividadeSchema), ...ERROS_ESCRITA, ...ERROS.conflito },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/opcoes-diagnostico/{id}/subdivisoes/{subdivisaoId}",
+  tags: TAG,
+  security: SEGURANCA,
+  summary: "Excluir subdivisão (bloqueado se já verificada em visita — desative-a)",
+  request: { params: SubdivisaoIdParamSchema },
   responses: { 204: semConteudo(), ...ERROS_LEITURA, ...ERROS.conflito },
 });

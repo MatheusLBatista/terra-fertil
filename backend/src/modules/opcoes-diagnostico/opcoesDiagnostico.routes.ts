@@ -13,4 +13,30 @@ router.post("/", requireAuth, requirePermission("create", "OpcaoDiagnostico"), c
 router.patch("/:id", requireAuth, requirePermission("update", "OpcaoDiagnostico"), controller.alterar);
 router.delete("/:id", requireAuth, requirePermission("delete", "OpcaoDiagnostico"), controller.excluir);
 
+// Subdivisões de atividade produtiva — fazem parte do catálogo (mesmas permissões)
+router.get(
+  "/:id/subdivisoes",
+  requireAuth,
+  requirePermission("read", "OpcaoDiagnostico"),
+  controller.listarSubdivisoes,
+);
+router.post(
+  "/:id/subdivisoes",
+  requireAuth,
+  requirePermission("update", "OpcaoDiagnostico"),
+  controller.inserirSubdivisao,
+);
+router.patch(
+  "/:id/subdivisoes/:subdivisaoId",
+  requireAuth,
+  requirePermission("update", "OpcaoDiagnostico"),
+  controller.alterarSubdivisao,
+);
+router.delete(
+  "/:id/subdivisoes/:subdivisaoId",
+  requireAuth,
+  requirePermission("update", "OpcaoDiagnostico"),
+  controller.excluirSubdivisao,
+);
+
 export default router;

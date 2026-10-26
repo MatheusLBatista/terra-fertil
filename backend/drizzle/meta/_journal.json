@@ -92,6 +92,13 @@
       "when": 1793041522605,
       "tag": "0012_acompanhamento_itens_verificados",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1793043425211,
+      "tag": "0013_assistencia_atividades_verificadas",
+      "breakpoints": true
     }
   ]
 }
