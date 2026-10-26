@@ -1673,7 +1673,7 @@ function FormularioDiagnostico({
 
         <fieldset className="grid gap-3">
           <legend className="mb-1 text-sm font-semibold">Solo</legend>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
             <div className="grid content-start gap-1.5">
               <Label htmlFor="diagnostico-analiseSoloRecente">Fez análise de solo recente?</Label>
               {selectResposta("analiseSoloRecente")}
@@ -1702,7 +1702,7 @@ function FormularioDiagnostico({
 
         <fieldset className="grid gap-3">
           <legend className="mb-1 text-sm font-semibold">Capacitação</legend>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
             <div className="grid content-start gap-1.5">
               <Label htmlFor="diagnostico-participouCursos">Já participou de cursos?</Label>
               {selectResposta("participouCursos")}
@@ -1717,7 +1717,7 @@ function FormularioDiagnostico({
 
         <fieldset className="grid gap-3">
           <legend className="mb-1 text-sm font-semibold">Organização e apoio</legend>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
             <div className="grid content-start gap-1.5">
               <Label htmlFor="diagnostico-possuiRegistroFormal">Possui registro formal?</Label>
               {selectSimNao("possuiRegistroFormal")}
@@ -1809,7 +1809,7 @@ function GrupoOpcoes({
 }) {
   return (
     <fieldset className="grid gap-2">
-      <legend className="mb-1 text-sm">{titulo}</legend>
+      <legend className="mb-1 text-xs">{titulo}</legend>
       {carregando ? (
         <Skeleton className="h-4 w-2/3" />
       ) : opcoes.length === 0 ? (
@@ -1829,7 +1829,7 @@ function GrupoOpcoes({
                     key={o.id}
                     className={o.permiteDetalhe && marcada ? "grid gap-1.5 sm:col-span-2" : undefined}
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-start gap-2">
                       <Checkbox
                         id={idCampo}
                         checked={marcada}
@@ -1837,7 +1837,7 @@ function GrupoOpcoes({
                           field.onChange(v ? [...field.value, o.id] : field.value.filter((x) => x !== o.id))
                         }
                       />
-                      <Label htmlFor={idCampo} className="font-normal">
+                      <Label htmlFor={idCampo} className="leading-4 font-normal">
                         {o.nome}
                       </Label>
                     </div>
