@@ -1,6 +1,6 @@
 import { pgTable, uuid, text, bigint, boolean, uniqueIndex, check } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { itemTipoEnum } from "./enums.ts";
+import { itemCategoriaEnum, itemTipoEnum } from "./enums.ts";
 import { auditColumns } from "./audit.ts";
 
 /** Catálogo global de máquinas, implementos e insumos — reaproveitado entre projetos. */
@@ -10,6 +10,8 @@ export const item = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     descricao: text("descricao").notNull(),
     tipo: itemTipoEnum("tipo").notNull(),
+    // Insumo, máquina, implemento ou equipamento — classifica a demanda da associação
+    categoria: itemCategoriaEnum("categoria").notNull(),
     unidade: text("unidade").notNull().default("un"),
     valorReferenciaCentavos: bigint("valor_referencia_centavos", { mode: "number" }),
     ativo: boolean("ativo").notNull().default(true),

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
 import { registry } from "../../lib/openapi/registry.ts";
+import { CATEGORIAS_ITEM } from "../itens/itens.schema.ts";
 import {
   ERROS,
   ERROS_LEITURA,
@@ -41,6 +42,7 @@ export const EntregaSchema = registry.register(
       associacaoSigla: z.string(),
       itemId: z.uuid(),
       itemDescricao: z.string(),
+      itemCategoria: z.enum(CATEGORIAS_ITEM),
       pedidoId: z.uuid().nullable(),
       pedidoNumero: z.string().nullable(),
       lote: z.string().nullable(),
@@ -65,6 +67,7 @@ export const ListEntregasQuerySchema = z.object({
   projetoId: z.uuid().optional(),
   associacaoId: z.uuid().optional(),
   itemId: z.uuid().optional(),
+  categoria: z.enum(CATEGORIAS_ITEM).optional().openapi({ description: "Categoria do item" }),
   pedidoId: z.uuid().optional(),
   situacao: z.enum(SITUACOES_ENTREGA).optional(),
   lote: filtroTexto("Lote (contém), ex.: “1ª Entrega de 2026”"),
@@ -158,7 +161,7 @@ registry.registerPath({
   path: "/entregas/{id}",
   tags: TAG,
   security: SEGURANCA,
-  summary: "Excluir a entrega",
+  summary: "Excluir a entrega (bloqueado se já conferida em visita de acompanhamento)",
   request: { params: EntregaIdParamSchema },
   responses: { 204: semConteudo(), ...ERROS_LEITURA, ...ERROS.conflito },
 });

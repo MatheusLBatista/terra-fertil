@@ -92,7 +92,7 @@ beforeAll(async () => {
     .returning({ id: associacao.id });
   [{ id: itemId }] = await db
     .insert(item)
-    .values({ descricao: `${PREFIXO_TESTE}Trator ${sufixo}`, tipo: "investimento" })
+    .values({ descricao: `${PREFIXO_TESTE}Trator ${sufixo}`, tipo: "investimento", categoria: "maquina" })
     .returning({ id: item.id });
 });
 

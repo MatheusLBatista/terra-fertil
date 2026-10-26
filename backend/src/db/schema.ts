@@ -42,6 +42,7 @@ export * from "./propriedade.ts";
 export * from "./visita.ts";
 export * from "./visitaEquipe.ts";
 export * from "./visitaAnexo.ts";
+export * from "./visitaItemVerificado.ts";
 export * from "./opcaoDiagnostico.ts";
 export * from "./diagnosticoAssociacao.ts";
 export * from "./diagnosticoPropriedade.ts";

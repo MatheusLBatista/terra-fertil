@@ -4069,11 +4069,12 @@ export interface paths {
                     /** @description Descrição (contém) */
                     busca?: string;
                     tipo?: "investimento" | "custeio";
+                    categoria?: "insumo" | "maquina" | "implemento" | "equipamento";
                     /** @description Filtra por status (true/false) */
                     ativo?: string;
                     limit?: number;
                     offset?: number | null;
-                    /** @description Ordenação no formato campo:asc|desc. Campos: descricao, tipo, createdAt */
+                    /** @description Ordenação no formato campo:asc|desc. Campos: descricao, tipo, categoria, createdAt */
                     sort?: string;
                 };
                 header?: never;
@@ -4139,6 +4140,8 @@ export interface paths {
                         descricao: string;
                         /** @enum {string} */
                         tipo: "investimento" | "custeio";
+                        /** @enum {string} */
+                        categoria: "insumo" | "maquina" | "implemento" | "equipamento";
                         unidade?: string;
                         /** @description Valor em centavos */
                         valorReferenciaCentavos?: number | null;
@@ -4346,6 +4349,8 @@ export interface paths {
                         descricao?: string;
                         /** @enum {string} */
                         tipo?: "investimento" | "custeio";
+                        /** @enum {string} */
+                        categoria?: "insumo" | "maquina" | "implemento" | "equipamento";
                         unidade?: string;
                         /** @description Valor em centavos */
                         valorReferenciaCentavos?: number | null;
@@ -7510,6 +7515,8 @@ export interface paths {
                     projetoId?: string;
                     associacaoId?: string;
                     itemId?: string;
+                    /** @description Categoria do item */
+                    categoria?: "insumo" | "maquina" | "implemento" | "equipamento";
                     pedidoId?: string;
                     situacao?: "demandado" | "aprovado" | "em_compra" | "comprado" | "entregue" | "cancelado";
                     /** @description Lote (contém), ex.: “1ª Entrega de 2026” */
@@ -7764,7 +7771,7 @@ export interface paths {
         };
         put?: never;
         post?: never;
-        /** Excluir a entrega */
+        /** Excluir a entrega (bloqueado se já conferida em visita de acompanhamento) */
         delete: {
             parameters: {
                 query?: never;
@@ -10381,6 +10388,11 @@ export interface paths {
                         /** Format: binary */
                         arquivo: string;
                         legenda?: string;
+                        /**
+                         * Format: uuid
+                         * @description Item verificado nesta visita que a foto mostra
+                         */
+                        entregaId?: string;
                     };
                 };
             };
@@ -10805,6 +10817,239 @@ export interface paths {
         };
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/visitas/{id}/itens-verificados": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Itens fornecidos conferidos no acompanhamento na associação */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lista */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["VisitaItemVerificado"][];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Regra de negócio violada (equipe, adesão, tipo da visita) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/visitas/{id}/itens-verificados/{entregaId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Registrar (ou atualizar) a verificação de um item entregue à associação da visita */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    entregaId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        observacao?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["VisitaItemVerificado"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Regra de negócio violada (equipe, adesão, tipo da visita) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Desfazer a verificação de um item (bloqueado se houver fotos dele na visita) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    entregaId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Removido com sucesso */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -13890,6 +14135,11 @@ export interface components {
             descricao: string;
             /** @enum {string} */
             tipo: "investimento" | "custeio";
+            /**
+             * @description Insumo, máquina, implemento ou equipamento
+             * @enum {string}
+             */
+            categoria: "insumo" | "maquina" | "implemento" | "equipamento";
             /** @example un */
             unidade: string;
             /** @description Valor de referência em centavos */
@@ -14059,6 +14309,8 @@ export interface components {
             /** Format: uuid */
             itemId: string;
             itemDescricao: string;
+            /** @enum {string} */
+            itemCategoria: "insumo" | "maquina" | "implemento" | "equipamento";
             /** Format: uuid */
             pedidoId: string | null;
             pedidoNumero: string | null;
@@ -14147,7 +14399,7 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
-        /** @description Ida a campo — inicial na associação; as demais na propriedade */
+        /** @description Ida a campo — inicial na associação; diagnóstico e assistência na propriedade; acompanhamento em qualquer um */
         Visita: {
             /** Format: uuid */
             id: string;
@@ -14160,14 +14412,14 @@ export interface components {
             situacao: "agendada" | "realizada" | "cancelada";
             /**
              * Format: uuid
-             * @description Só na visita inicial
+             * @description Visita inicial ou acompanhamento na associação
              */
             associacaoId: string | null;
-            /** @description Associação da visita inicial ou a que atende a propriedade */
+            /** @description Associação visitada ou a que atende a propriedade */
             associacaoSigla: string | null;
             /**
              * Format: uuid
-             * @description Demais tipos
+             * @description Diagnóstico, assistência ou acompanhamento na propriedade
              */
             propriedadeId: string | null;
             propriedadeNome: string | null;
@@ -14210,6 +14462,11 @@ export interface components {
             mimeType: string;
             tamanhoBytes: number;
             legenda: string | null;
+            /**
+             * Format: uuid
+             * @description Item fornecido que a foto mostra (acompanhamento na associação)
+             */
+            entregaId: string | null;
             createdAt: string;
         };
         DiagnosticoPropriedadeOpcao: {
@@ -14239,6 +14496,24 @@ export interface components {
             acessoMaquinario: "sim" | "nao" | "parcialmente" | "nao_sei" | null;
             comentarios: string | null;
             opcoes: components["schemas"]["DiagnosticoPropriedadeOpcao"][];
+        };
+        /** @description Item fornecido à associação e conferido no acompanhamento */
+        VisitaItemVerificado: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            visitaId: string;
+            /** Format: uuid */
+            entregaId: string;
+            itemDescricao: string;
+            /** @enum {string} */
+            itemCategoria: "insumo" | "maquina" | "implemento" | "equipamento";
+            quantidade: number;
+            lote: string | null;
+            dataEntrega: string | null;
+            observacao: string | null;
+            /** @description Fotos da visita ligadas a este item */
+            fotos: number;
         };
         /** @description Orientação técnica dada numa visita de assistência */
         Recomendacao: {

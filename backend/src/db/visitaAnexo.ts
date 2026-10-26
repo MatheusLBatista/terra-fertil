@@ -1,6 +1,7 @@
 import { pgTable, uuid, text, integer, index, check } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { visita } from "./visita.ts";
+import { entrega } from "./entrega.ts";
 import { anexoTipoEnum } from "./enums.ts";
 import { auditColumns } from "./audit.ts";
 
@@ -18,10 +19,13 @@ export const visitaAnexo = pgTable(
     mimeType: text("mime_type").notNull(),
     tamanhoBytes: integer("tamanho_bytes").notNull(),
     legenda: text("legenda"),
+    // Foto de um item verificado no acompanhamento da associação (a entrega conferida)
+    entregaId: uuid("entrega_id").references(() => entrega.id, { onDelete: "restrict" }),
     ...auditColumns,
   },
   (t) => [
     index("visita_anexos_visita_idx").on(t.visitaId),
+    index("visita_anexos_entrega_idx").on(t.entregaId),
     check("visita_anexos_tamanho_ck", sql`${t.tamanhoBytes} >= 0`),
   ],
 );

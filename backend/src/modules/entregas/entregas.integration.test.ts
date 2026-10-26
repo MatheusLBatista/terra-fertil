@@ -26,6 +26,7 @@ type Entrega = {
   associacaoSigla: string;
   itemId: string;
   itemDescricao: string;
+  itemCategoria: string;
   pedidoId: string | null;
   pedidoNumero: string | null;
   lote: string | null;
@@ -130,8 +131,13 @@ beforeAll(async () => {
   [{ id: itemId }, { id: itemInativo }] = await db
     .insert(item)
     .values([
-      { descricao: ITEM, tipo: "investimento" },
-      { descricao: `${PREFIXO_TESTE}Item antigo ${sufixo}`, tipo: "custeio", ativo: false },
+      { descricao: ITEM, tipo: "investimento", categoria: "maquina" },
+      {
+        descricao: `${PREFIXO_TESTE}Item antigo ${sufixo}`,
+        tipo: "custeio",
+        categoria: "insumo",
+        ativo: false,
+      },
     ])
     .returning({ id: item.id });
 
@@ -176,6 +182,7 @@ describe("criação", () => {
         associacaoSigla: SIGLA_A,
         itemId,
         itemDescricao: ITEM,
+        itemCategoria: "maquina",
         pedidoId: pedidoA,
         pedidoNumero: NUMERO_A,
         lote: LOTE,

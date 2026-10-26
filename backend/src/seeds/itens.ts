@@ -10,16 +10,24 @@ export const ITENS_SEED: NewItem[] = [
   {
     descricao: "Trator de pneu 4x4 60 cv plataformado",
     tipo: "investimento",
+    categoria: "maquina",
     valorReferenciaCentavos: 20_500_000,
   },
-  { descricao: "Trator plataformado 4x4 75 cv", tipo: "investimento" },
-  { descricao: "Grade aradora 12 discos", tipo: "investimento", valorReferenciaCentavos: 4_250_000 },
-  { descricao: "Grade aradora 14 discos", tipo: "investimento" },
-  { descricao: "Carreta basculante 5 toneladas", tipo: "investimento" },
-  { descricao: "Enxada rotativa/Encanteirador 1,2 m", tipo: "investimento" },
-  { descricao: "Distribuidor de corretivo e adubo", tipo: "investimento" },
-  { descricao: "Colhedora de Milho Grão Foguetinho", tipo: "investimento" },
-  { descricao: "Colhedora de Forragem Ensiladeira 1,2 m", tipo: "investimento" },
+  { descricao: "Trator plataformado 4x4 75 cv", tipo: "investimento", categoria: "maquina" },
+  {
+    descricao: "Grade aradora 12 discos",
+    tipo: "investimento",
+    categoria: "implemento",
+    valorReferenciaCentavos: 4_250_000,
+  },
+  { descricao: "Grade aradora 14 discos", tipo: "investimento", categoria: "implemento" },
+  { descricao: "Carreta basculante 5 toneladas", tipo: "investimento", categoria: "implemento" },
+  { descricao: "Enxada rotativa/Encanteirador 1,2 m", tipo: "investimento", categoria: "implemento" },
+  { descricao: "Distribuidor de corretivo e adubo", tipo: "investimento", categoria: "implemento" },
+  { descricao: "Colhedora de Milho Grão Foguetinho", tipo: "investimento", categoria: "maquina" },
+  { descricao: "Colhedora de Forragem Ensiladeira 1,2 m", tipo: "investimento", categoria: "maquina" },
+  // Insumo citado na reunião de 23/10 (demanda → fornecimento → acompanhamento)
+  { descricao: "Calcário dolomítico", tipo: "custeio", categoria: "insumo", unidade: "t" },
 ];
 
 export async function seedItens() {

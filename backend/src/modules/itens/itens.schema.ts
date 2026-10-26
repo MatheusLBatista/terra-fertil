@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
 import { registry } from "../../lib/openapi/registry.ts";
-import { itemTipoEnum } from "../../db/enums.ts";
+import { itemCategoriaEnum, itemTipoEnum } from "../../db/enums.ts";
 import {
   ERROS,
   ERROS_LEITURA,
@@ -18,9 +18,10 @@ import {
 
 extendZodWithOpenApi(z);
 
-export const SORT_ITENS = ["descricao", "tipo", "createdAt"] as const;
+export const SORT_ITENS = ["descricao", "tipo", "categoria", "createdAt"] as const;
 
 export const TIPOS_ITEM = itemTipoEnum.enumValues;
+export const CATEGORIAS_ITEM = itemCategoriaEnum.enumValues;
 
 const centavos = () => z.number().int().min(0).openapi({ description: "Valor em centavos" });
 
@@ -31,6 +32,9 @@ export const ItemSchema = registry.register(
       id: z.uuid(),
       descricao: z.string(),
       tipo: z.enum(TIPOS_ITEM),
+      categoria: z
+        .enum(CATEGORIAS_ITEM)
+        .openapi({ description: "Insumo, máquina, implemento ou equipamento" }),
       unidade: z.string().openapi({ example: "un" }),
       valorReferenciaCentavos: z
         .number()
@@ -49,6 +53,7 @@ export const ItemIdParamSchema = z.object({ id: z.uuid() });
 export const ListItensQuerySchema = z.object({
   busca: filtroTexto("Descrição (contém)"),
   tipo: z.enum(TIPOS_ITEM).optional(),
+  categoria: z.enum(CATEGORIAS_ITEM).optional(),
   ativo: z.stringbool().optional().openapi({ description: "Filtra por status (true/false)" }),
   ...paginacaoQuery,
   sort: sortSchema(SORT_ITENS),
@@ -57,6 +62,7 @@ export const ListItensQuerySchema = z.object({
 const camposItem = {
   descricao: z.string().trim().min(1, "Informe a descrição").max(300),
   tipo: z.enum(TIPOS_ITEM),
+  categoria: z.enum(CATEGORIAS_ITEM, { error: "Escolha a categoria" }),
   unidade: z.string().trim().min(1, "Informe a unidade").max(20).optional(),
   valorReferenciaCentavos: centavos().nullable().optional(),
   ativo: z.boolean().optional(),

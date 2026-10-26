@@ -1079,6 +1079,16 @@
               "custeio"
             ]
           },
+          "categoria": {
+            "type": "string",
+            "enum": [
+              "insumo",
+              "maquina",
+              "implemento",
+              "equipamento"
+            ],
+            "description": "Insumo, máquina, implemento ou equipamento"
+          },
           "unidade": {
             "type": "string",
             "example": "un"
@@ -1098,6 +1108,7 @@
           "id",
           "descricao",
           "tipo",
+          "categoria",
           "unidade",
           "valorReferenciaCentavos",
           "ativo"
@@ -1705,6 +1716,15 @@
           "itemDescricao": {
             "type": "string"
           },
+          "itemCategoria": {
+            "type": "string",
+            "enum": [
+              "insumo",
+              "maquina",
+              "implemento",
+              "equipamento"
+            ]
+          },
           "pedidoId": {
             "type": [
               "string",
@@ -1786,6 +1806,7 @@
           "associacaoSigla",
           "itemId",
           "itemDescricao",
+          "itemCategoria",
           "pedidoId",
           "pedidoNumero",
           "lote",
@@ -2104,14 +2125,14 @@
               "null"
             ],
             "format": "uuid",
-            "description": "Só na visita inicial"
+            "description": "Visita inicial ou acompanhamento na associação"
           },
           "associacaoSigla": {
             "type": [
               "string",
               "null"
             ],
-            "description": "Associação da visita inicial ou a que atende a propriedade"
+            "description": "Associação visitada ou a que atende a propriedade"
           },
           "propriedadeId": {
             "type": [
@@ -2119,7 +2140,7 @@
               "null"
             ],
             "format": "uuid",
-            "description": "Demais tipos"
+            "description": "Diagnóstico, assistência ou acompanhamento na propriedade"
           },
           "propriedadeNome": {
             "type": [
@@ -2204,7 +2225,7 @@
           "relato",
           "noticiaUrl"
         ],
-        "description": "Ida a campo — inicial na associação; as demais na propriedade"
+        "description": "Ida a campo — inicial na associação; diagnóstico e assistência na propriedade; acompanhamento em qualquer um"
       },
       "VisitaMembro": {
         "type": "object",
@@ -2273,6 +2294,14 @@
               "null"
             ]
           },
+          "entregaId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid",
+            "description": "Item fornecido que a foto mostra (acompanhamento na associação)"
+          },
           "createdAt": {
             "type": "string"
           }
@@ -2285,6 +2314,7 @@
           "mimeType",
           "tamanhoBytes",
           "legenda",
+          "entregaId",
           "createdAt"
         ],
         "description": "Foto ou documento da visita — o arquivo sai por GET .../arquivo"
@@ -2440,6 +2470,73 @@
           "opcoes"
         ],
         "description": "Questionário da visita de diagnóstico (1:1 com a visita)"
+      },
+      "VisitaItemVerificado": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "visitaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entregaId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "itemDescricao": {
+            "type": "string"
+          },
+          "itemCategoria": {
+            "type": "string",
+            "enum": [
+              "insumo",
+              "maquina",
+              "implemento",
+              "equipamento"
+            ]
+          },
+          "quantidade": {
+            "type": "integer"
+          },
+          "lote": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dataEntrega": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "observacao": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "fotos": {
+            "type": "integer",
+            "description": "Fotos da visita ligadas a este item"
+          }
+        },
+        "required": [
+          "id",
+          "visitaId",
+          "entregaId",
+          "itemDescricao",
+          "itemCategoria",
+          "quantidade",
+          "lote",
+          "dataEntrega",
+          "observacao",
+          "fotos"
+        ],
+        "description": "Item fornecido à associação e conferido no acompanhamento"
       },
       "Recomendacao": {
         "type": "object",
@@ -9058,6 +9155,20 @@
           {
             "schema": {
               "type": "string",
+              "enum": [
+                "insumo",
+                "maquina",
+                "implemento",
+                "equipamento"
+              ]
+            },
+            "required": false,
+            "name": "categoria",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "description": "Filtra por status (true/false)"
             },
             "required": false,
@@ -9093,10 +9204,10 @@
             "schema": {
               "type": "string",
               "pattern": "^[a-zA-Z]+:(asc|desc)$",
-              "description": "Ordenação no formato campo:asc|desc. Campos: descricao, tipo, createdAt"
+              "description": "Ordenação no formato campo:asc|desc. Campos: descricao, tipo, categoria, createdAt"
             },
             "required": false,
-            "description": "Ordenação no formato campo:asc|desc. Campos: descricao, tipo, createdAt",
+            "description": "Ordenação no formato campo:asc|desc. Campos: descricao, tipo, categoria, createdAt",
             "name": "sort",
             "in": "query"
           }
@@ -9194,6 +9305,15 @@
                       "custeio"
                     ]
                   },
+                  "categoria": {
+                    "type": "string",
+                    "enum": [
+                      "insumo",
+                      "maquina",
+                      "implemento",
+                      "equipamento"
+                    ]
+                  },
                   "unidade": {
                     "type": "string",
                     "minLength": 1,
@@ -9213,7 +9333,8 @@
                 },
                 "required": [
                   "descricao",
-                  "tipo"
+                  "tipo",
+                  "categoria"
                 ]
               }
             }
@@ -9415,6 +9536,15 @@
                     "enum": [
                       "investimento",
                       "custeio"
+                    ]
+                  },
+                  "categoria": {
+                    "type": "string",
+                    "enum": [
+                      "insumo",
+                      "maquina",
+                      "implemento",
+                      "equipamento"
                     ]
                   },
                   "unidade": {
@@ -14452,6 +14582,22 @@
           {
             "schema": {
               "type": "string",
+              "enum": [
+                "insumo",
+                "maquina",
+                "implemento",
+                "equipamento"
+              ],
+              "description": "Categoria do item"
+            },
+            "required": false,
+            "description": "Categoria do item",
+            "name": "categoria",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
               "format": "uuid"
             },
             "required": false,
@@ -15114,7 +15260,7 @@
             "sessionCookie": []
           }
         ],
-        "summary": "Excluir a entrega",
+        "summary": "Excluir a entrega (bloqueado se já conferida em visita de acompanhamento)",
         "parameters": [
           {
             "schema": {
@@ -18869,6 +19015,11 @@
                   },
                   "legenda": {
                     "type": "string"
+                  },
+                  "entregaId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Item verificado nesta visita que a foto mostra"
                   }
                 },
                 "required": [
@@ -19481,6 +19632,314 @@
           },
           "422": {
             "description": "Regra de negócio violada (equipe, adesão, tipo da visita)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/visitas/{id}/itens-verificados": {
+      "get": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Itens fornecidos conferidos no acompanhamento na associação",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/VisitaItemVerificado"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regra de negócio violada (equipe, adesão, tipo da visita)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/visitas/{id}/itens-verificados/{entregaId}": {
+      "put": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Registrar (ou atualizar) a verificação de um item entregue à associação da visita",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "entregaId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "observacao": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 5000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/VisitaItemVerificado"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Regra de negócio violada (equipe, adesão, tipo da visita)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Desfazer a verificação de um item (bloqueado se houver fotos dele na visita)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "entregaId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Removido com sucesso"
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
             "content": {
               "application/json": {
                 "schema": {

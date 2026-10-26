@@ -9,10 +9,11 @@ import type { Sort } from "../../lib/openapi/helpers.ts";
 const SORT_COLUMNS = {
   descricao: item.descricao,
   tipo: item.tipo,
+  categoria: item.categoria,
   createdAt: item.createdAt,
 } as const;
 
-type Filtros = { busca?: string; tipo?: Item["tipo"]; ativo?: boolean };
+type Filtros = { busca?: string; tipo?: Item["tipo"]; categoria?: Item["categoria"]; ativo?: boolean };
 type ListParams = Filtros & {
   limit: number;
   offset: number;
@@ -23,6 +24,7 @@ const colunas = {
   id: item.id,
   descricao: item.descricao,
   tipo: item.tipo,
+  categoria: item.categoria,
   unidade: item.unidade,
   valorReferenciaCentavos: item.valorReferenciaCentavos,
   ativo: item.ativo,
@@ -30,11 +32,12 @@ const colunas = {
 
 export type ItemRow = Pick<Item, keyof typeof colunas>;
 
-function where({ busca, tipo, ativo }: Filtros) {
+function where({ busca, tipo, categoria, ativo }: Filtros) {
   return and(
     isNull(item.deletedAt),
     busca ? ilike(item.descricao, `%${escaparLike(busca)}%`) : undefined,
     tipo ? eq(item.tipo, tipo) : undefined,
+    categoria ? eq(item.categoria, categoria) : undefined,
     ativo !== undefined ? eq(item.ativo, ativo) : undefined,
   );
 }

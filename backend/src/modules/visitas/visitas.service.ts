@@ -11,6 +11,7 @@ import {
   type UpdateVisitaSchema,
   type PutEquipeSchema,
   type PutDiagnosticoSchema,
+  type PutItemVerificadoSchema,
 } from "./visitas.schema.ts";
 
 type ListQuery = z.infer<typeof ListVisitasQuerySchema>;
@@ -165,9 +166,22 @@ export default class VisitasService {
     return this.repository.listarAnexos(id);
   }
 
-  async enviarAnexo(id: string, arquivo: ArquivoUpload, legenda: string | null) {
+  async enviarAnexo(
+    id: string,
+    arquivo: ArquivoUpload,
+    { legenda, entregaId }: { legenda: string | null; entregaId: string | null },
+  ) {
     const atual = await this.buscar(id);
     await garantirProjeto(atual.projetoId, { escrita: true });
+    // Foto de item: só de um item já conferido nesta visita
+    if (entregaId && !(await this.repository.itemVerificado(id, entregaId))) {
+      throw new AppError(
+        "Registre a verificação do item nesta visita antes de enviar fotos dele",
+        422,
+        undefined,
+        "ITEM_NAO_VERIFICADO",
+      );
+    }
     const pasta = `visitas/${id}`;
     const nome = nomeArquivo("anexo", arquivo.originalname);
     // Bucket privado: guardamos a KEY; o arquivo sai pelo GET .../arquivo (proxy)
@@ -180,6 +194,7 @@ export default class VisitasService {
       mimeType: arquivo.mimetype,
       tamanhoBytes: arquivo.buffer.length,
       legenda,
+      entregaId,
     });
   }
 
@@ -206,6 +221,76 @@ export default class VisitasService {
     const anexo = await this.repository.anexoPorId(id, anexoId);
     if (!anexo) throw new AppError("Anexo não encontrado", 404);
     return anexo;
+  }
+
+  // ─── Itens verificados (acompanhamento na associação) ─────────────────────
+
+  async listarItensVerificados(id: string) {
+    await this.visitaDeAcompanhamentoNaAssociacao(id);
+    return this.repository.listarItensVerificados(id);
+  }
+
+  /** Cria ou atualiza a verificação: a entrega precisa ser da associação e do projeto da visita, já entregue. */
+  async verificarItem(
+    id: string,
+    entregaId: string,
+    { observacao }: z.infer<typeof PutItemVerificadoSchema>,
+  ) {
+    const atual = await this.visitaDeAcompanhamentoNaAssociacao(id);
+    await garantirProjeto(atual.projetoId, { escrita: true });
+    const entrega = await this.repository.entregaPorId(entregaId);
+    if (!entrega) throw new AppError("Entrega não encontrada", 404);
+    if (entrega.associacaoId !== atual.associacaoId || entrega.projetoId !== atual.projetoId) {
+      throw new AppError(
+        `“${entrega.itemDescricao}” não foi destinado a esta associação neste projeto`,
+        422,
+        undefined,
+        "ENTREGA_INVALIDA",
+      );
+    }
+    if (entrega.situacao !== "entregue") {
+      throw new AppError(
+        `“${entrega.itemDescricao}” ainda não foi entregue — só o item fornecido é conferido`,
+        422,
+        undefined,
+        "ENTREGA_INVALIDA",
+      );
+    }
+
+    const existente = await this.repository.itemVerificado(id, entregaId);
+    if (existente) await this.repository.alterarItemVerificado(existente.id, observacao);
+    else await this.repository.inserirItemVerificado({ visitaId: id, entregaId, observacao });
+    const [verificado] = await this.repository.listarItensVerificados(id, entregaId);
+    return verificado;
+  }
+
+  async desfazerVerificacao(id: string, entregaId: string) {
+    const atual = await this.visitaDeAcompanhamentoNaAssociacao(id);
+    await garantirProjeto(atual.projetoId, { escrita: true });
+    const [verificado] = await this.repository.listarItensVerificados(id, entregaId);
+    if (!verificado) throw new AppError("Item não verificado nesta visita", 404);
+    if (verificado.fotos > 0) {
+      throw new AppError(
+        "O item tem fotos nesta visita — exclua as fotos antes de desfazer a verificação",
+        409,
+        undefined,
+        "ITEM_COM_FOTOS",
+      );
+    }
+    await this.repository.excluirItemVerificado(verificado.id);
+  }
+
+  private async visitaDeAcompanhamentoNaAssociacao(id: string) {
+    const atual = await this.buscar(id);
+    if (atual.tipo !== "acompanhamento" || !atual.associacaoId) {
+      throw new AppError(
+        "Itens verificados só existem no acompanhamento feito na associação",
+        422,
+        undefined,
+        "TIPO_VISITA_INVALIDO",
+      );
+    }
+    return { ...atual, associacaoId: atual.associacaoId };
   }
 
   // ─── Diagnóstico da propriedade ───────────────────────────────────────────
@@ -312,13 +397,15 @@ export default class VisitasService {
   /**
    * Alvo conforme o tipo (o zod já garantiu qual dos dois veio): a associação —
    * ou a que atende a propriedade — precisa de adesão ATIVA ao projeto da visita.
-   * Devolve o `propriedadeId` (null na visita inicial).
+   * Devolve o `propriedadeId` (null na visita na associação: inicial ou acompanhamento).
    */
   private async garantirAlvo(
     data: Pick<CreateData, "projetoId" | "tipo" | "associacaoId" | "propriedadeId">,
   ) {
-    if (data.tipo === "inicial_associacao") {
-      if (!data.associacaoId) throw new AppError("Informe a associação da visita inicial", 400);
+    const naAssociacao =
+      data.tipo === "inicial_associacao" || (data.tipo === "acompanhamento" && !!data.associacaoId);
+    if (naAssociacao) {
+      if (!data.associacaoId) throw new AppError("Informe a associação da visita", 400);
       const associacao = await garantirAssociacao(data.associacaoId);
       if (!(await this.repository.adesaoAtiva(data.projetoId, associacao.id))) {
         throw new AppError("A associação não participa deste projeto", 422, undefined, "SEM_ADESAO");

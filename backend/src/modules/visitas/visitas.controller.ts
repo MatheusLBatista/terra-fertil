@@ -13,6 +13,8 @@ import {
   AnexoIdParamSchema,
   AnexoFormSchema,
   PutDiagnosticoSchema,
+  ItemVerificadoParamSchema,
+  PutItemVerificadoSchema,
 } from "./visitas.schema.ts";
 
 /** Valida params + corpo JSON juntos (as issues dos dois saem no mesmo 400). */
@@ -95,12 +97,10 @@ export default class VisitasController {
     const campos = await c.req.parseBody();
     const form = AnexoFormSchema.safeParse({
       legenda: typeof campos.legenda === "string" ? campos.legenda : undefined,
+      entregaId: typeof campos.entregaId === "string" && campos.entregaId ? campos.entregaId : undefined,
     });
     if (!form.success) return respostaValidacao(c, form.error.issues);
-    return c.json(
-      successResponse(await this.service.enviarAnexo(params.data.id, arquivo, form.data.legenda)),
-      201,
-    );
+    return c.json(successResponse(await this.service.enviarAnexo(params.data.id, arquivo, form.data)), 201);
   };
 
   baixarAnexo = async (c: AppContext) => {
@@ -129,5 +129,26 @@ export default class VisitasController {
     const r = await parsear(c, VisitaIdParamSchema, PutDiagnosticoSchema);
     if ("erro" in r) return r.erro;
     return c.json(successResponse(await this.service.salvarDiagnostico(r.params.id, r.body)));
+  };
+
+  // ─── Itens verificados ────────────────────────────────────────────────────
+
+  listarItensVerificados = async (c: AppContext) => {
+    const params = VisitaIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    return c.json(successResponse(await this.service.listarItensVerificados(params.data.id)));
+  };
+
+  verificarItem = async (c: AppContext) => {
+    const r = await parsear(c, ItemVerificadoParamSchema, PutItemVerificadoSchema);
+    if ("erro" in r) return r.erro;
+    return c.json(successResponse(await this.service.verificarItem(r.params.id, r.params.entregaId, r.body)));
+  };
+
+  desfazerVerificacao = async (c: AppContext) => {
+    const params = ItemVerificadoParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    await this.service.desfazerVerificacao(params.data.id, params.data.entregaId);
+    return c.body(null, 204);
   };
 }

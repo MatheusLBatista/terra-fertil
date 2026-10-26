@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
 import { registry } from "../../lib/openapi/registry.ts";
+import { CATEGORIAS_ITEM } from "../itens/itens.schema.ts";
 import {
   ERROS,
   ERROS_LEITURA,
@@ -63,12 +64,18 @@ export const VisitaSchema = registry.register(
       projetoSigla: z.string(),
       tipo: z.enum(TIPOS_VISITA),
       situacao: z.enum(SITUACOES_VISITA),
-      associacaoId: z.uuid().nullable().openapi({ description: "Só na visita inicial" }),
+      associacaoId: z
+        .uuid()
+        .nullable()
+        .openapi({ description: "Visita inicial ou acompanhamento na associação" }),
       associacaoSigla: z
         .string()
         .nullable()
-        .openapi({ description: "Associação da visita inicial ou a que atende a propriedade" }),
-      propriedadeId: z.uuid().nullable().openapi({ description: "Demais tipos" }),
+        .openapi({ description: "Associação visitada ou a que atende a propriedade" }),
+      propriedadeId: z
+        .uuid()
+        .nullable()
+        .openapi({ description: "Diagnóstico, assistência ou acompanhamento na propriedade" }),
       propriedadeNome: z.string().nullable(),
       produtorNome: z.string().nullable(),
       visitaAnteriorId: z.uuid().nullable().openapi({ description: "Acompanhamento → visita de origem" }),
@@ -81,7 +88,10 @@ export const VisitaSchema = registry.register(
       relato: z.string().nullable(),
       noticiaUrl: z.string().nullable(),
     })
-    .openapi({ description: "Ida a campo — inicial na associação; as demais na propriedade" }),
+    .openapi({
+      description:
+        "Ida a campo — inicial na associação; diagnóstico e assistência na propriedade; acompanhamento em qualquer um",
+    }),
 );
 
 export const VisitaIdParamSchema = z.object({ id: z.uuid() });
@@ -136,12 +146,26 @@ export const CreateVisitaSchema = z
     message: "A visita inicial é na associação: informe a associação (e não a propriedade)",
     path: ["associacaoId"],
   })
-  .refine((v) => v.tipo === "inicial_associacao" || (!!v.propriedadeId && !v.associacaoId), {
-    message: "Esta visita é na propriedade: informe a propriedade (e não a associação)",
+  .refine(
+    (v) =>
+      v.tipo === "inicial_associacao" ||
+      v.tipo === "acompanhamento" ||
+      (!!v.propriedadeId && !v.associacaoId),
+    {
+      message: "Esta visita é na propriedade: informe a propriedade (e não a associação)",
+      path: ["propriedadeId"],
+    },
+  )
+  .refine((v) => v.tipo !== "acompanhamento" || !!v.associacaoId !== !!v.propriedadeId, {
+    message: "O acompanhamento é na associação ou na propriedade: informe uma das duas",
     path: ["propriedadeId"],
   })
   .refine((v) => !v.visitaAnteriorId || v.tipo === "acompanhamento", {
     message: "Só a visita de acompanhamento aponta uma visita anterior",
+    path: ["visitaAnteriorId"],
+  })
+  .refine((v) => !v.visitaAnteriorId || !!v.propriedadeId, {
+    message: "A visita anterior só se aplica ao acompanhamento na propriedade",
     path: ["visitaAnteriorId"],
   })
   .refine((v) => !v.realizadaEm || v.situacao === "realizada", {
@@ -201,6 +225,10 @@ export const VisitaAnexoSchema = registry.register(
       mimeType: z.string(),
       tamanhoBytes: z.number().int(),
       legenda: z.string().nullable(),
+      entregaId: z
+        .uuid()
+        .nullable()
+        .openapi({ description: "Item fornecido que a foto mostra (acompanhamento na associação)" }),
       createdAt: z.string(),
     })
     .openapi({ description: "Foto ou documento da visita — o arquivo sai por GET .../arquivo" }),
@@ -216,6 +244,10 @@ export const AnexoFormSchema = z.object({
     .max(500)
     .optional()
     .transform((v) => v || null),
+  entregaId: z
+    .uuid("Item verificado inválido")
+    .optional()
+    .transform((v) => v ?? null),
 });
 
 // ─── Diagnóstico da propriedade ──────────────────────────────────────────────
@@ -290,6 +322,38 @@ export const PutDiagnosticoSchema = z
     message: "Opção marcada mais de uma vez",
     path: ["opcoes"],
   });
+
+// ─── Itens verificados (acompanhamento na associação) ────────────────────────
+
+export const ItemVerificadoSchema = registry.register(
+  "VisitaItemVerificado",
+  z
+    .object({
+      id: z.uuid(),
+      visitaId: z.uuid(),
+      entregaId: z.uuid(),
+      itemDescricao: z.string(),
+      itemCategoria: z.enum(CATEGORIAS_ITEM),
+      quantidade: z.number().int(),
+      lote: z.string().nullable(),
+      dataEntrega: z.string().nullable(),
+      observacao: z.string().nullable(),
+      fotos: z.number().int().openapi({ description: "Fotos da visita ligadas a este item" }),
+    })
+    .openapi({ description: "Item fornecido à associação e conferido no acompanhamento" }),
+);
+
+export const ItemVerificadoParamSchema = z.object({ id: z.uuid(), entregaId: z.uuid() });
+
+export const PutItemVerificadoSchema = z.object({
+  observacao: z
+    .string()
+    .trim()
+    .max(5000, "No máximo 5.000 caracteres")
+    .nullable()
+    .optional()
+    .transform((v) => v || null),
+});
 
 // ─── OpenAPI ─────────────────────────────────────────────────────────────────
 
@@ -391,6 +455,10 @@ registry.registerPath({
           schema: z.object({
             arquivo: z.string().openapi({ type: "string", format: "binary" }),
             legenda: z.string().optional(),
+            entregaId: z
+              .uuid()
+              .optional()
+              .openapi({ description: "Item verificado nesta visita que a foto mostra" }),
           }),
         },
       },
@@ -450,4 +518,34 @@ registry.registerPath({
   summary: "Preencher/atualizar o diagnóstico da propriedade com as opções marcadas",
   request: { params: VisitaIdParamSchema, body: corpo(PutDiagnosticoSchema) },
   responses: { 200: ok(DiagnosticoPropriedadeSchema), ...ERROS_ESCRITA, ...ERROS.conflito, ...REGRA },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/visitas/{id}/itens-verificados",
+  tags: TAG,
+  security: SEGURANCA,
+  summary: "Itens fornecidos conferidos no acompanhamento na associação",
+  request: { params: VisitaIdParamSchema },
+  responses: { 200: okLista(ItemVerificadoSchema), ...ERROS_LEITURA, ...REGRA },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/visitas/{id}/itens-verificados/{entregaId}",
+  tags: TAG,
+  security: SEGURANCA,
+  summary: "Registrar (ou atualizar) a verificação de um item entregue à associação da visita",
+  request: { params: ItemVerificadoParamSchema, body: corpo(PutItemVerificadoSchema) },
+  responses: { 200: ok(ItemVerificadoSchema), ...ERROS_ESCRITA, ...REGRA },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/visitas/{id}/itens-verificados/{entregaId}",
+  tags: TAG,
+  security: SEGURANCA,
+  summary: "Desfazer a verificação de um item (bloqueado se houver fotos dele na visita)",
+  request: { params: ItemVerificadoParamSchema },
+  responses: { 204: semConteudo(), ...ERROS_LEITURA, ...ERROS.conflito },
 });

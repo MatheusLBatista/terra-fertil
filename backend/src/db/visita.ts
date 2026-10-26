@@ -18,7 +18,8 @@ import { visitaTipoEnum, visitaSituacaoEnum } from "./enums.ts";
 import { auditColumns } from "./audit.ts";
 
 /**
- * Toda ida a campo. A visita inicial é na associação; as demais, na propriedade.
+ * Toda ida a campo. A visita inicial é na associação; diagnóstico e assistência, na
+ * propriedade; o acompanhamento, em qualquer um dos dois.
  * Conta para as metas do `projetoId`. O `id` pode ser gerado no app (offline).
  */
 export const visita = pgTable(
@@ -48,9 +49,13 @@ export const visita = pgTable(
     ...auditColumns,
   },
   (t) => [
-    // Exatamente um alvo; a inicial é na associação, as demais na propriedade
+    // Exatamente um alvo; a inicial é na associação, diagnóstico e assistência na propriedade
+    // e o acompanhamento em qualquer um dos dois (na associação confere os itens fornecidos)
     check("visitas_alvo_ck", sql`num_nonnulls(${t.associacaoId}, ${t.propriedadeId}) = 1`),
-    check("visitas_tipo_alvo_ck", sql`(${t.tipo} = 'inicial_associacao') = (${t.associacaoId} is not null)`),
+    check(
+      "visitas_tipo_alvo_ck",
+      sql`${t.tipo} = 'acompanhamento' or (${t.tipo} = 'inicial_associacao') = (${t.associacaoId} is not null)`,
+    ),
     check("visitas_realizada_ck", sql`(${t.situacao} = 'realizada') = (${t.realizadaEm} is not null)`),
     check("visitas_coordenadas_ck", sql`num_nonnulls(${t.latitude}, ${t.longitude}) in (0, 2)`),
     // Apuração de meta: where projeto_id = $1 and tipo = … (cobre também a FK de projeto)

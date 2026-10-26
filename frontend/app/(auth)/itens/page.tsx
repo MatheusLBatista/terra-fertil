@@ -44,6 +44,7 @@ import { aplicarErrosDaApi } from "@/lib/erros-form";
 import { moeda, numero } from "@/lib/formato";
 import { centavosDeTexto, textoDeCentavos } from "@/lib/dinheiro";
 import { usePapel } from "@/lib/papeis";
+import { CATEGORIAS_ITEM, rotuloCategoriaItem } from "@/lib/itens";
 import { PAGE_SIZES } from "@/lib/pageSizes";
 import type { Envelope } from "@/types/envelope";
 import type { components } from "@/types/api";
@@ -63,6 +64,7 @@ const rotuloTipo = (t: Tipo) => TIPOS.find((x) => x.valor === t)?.rotulo ?? t;
 const schema = z.object({
   descricao: z.string().trim().min(1, "Informe a descrição").max(300, "No máximo 300 caracteres"),
   tipo: z.enum(["investimento", "custeio"], { error: "Escolha o tipo" }),
+  categoria: z.enum(["insumo", "maquina", "implemento", "equipamento"], { error: "Escolha a categoria" }),
   unidade: z.string().trim().min(1, "Informe a unidade").max(20, "No máximo 20 caracteres"),
   valorReferenciaCentavos: z
     .string()
@@ -86,6 +88,7 @@ export default function ItensPage() {
   const { page, setPage, limit, setLimit, offset } = usePagination();
   const [termo, setTermo] = useQueryState("busca", parseAsString.withDefault(""));
   const [tipo, setTipo] = useQueryState("tipo", parseAsString.withDefault(""));
+  const [categoria, setCategoria] = useQueryState("categoria", parseAsString.withDefault(""));
   const [ativo, setAtivo] = useQueryState("ativo", parseAsString.withDefault(""));
   const [sort, setSort] = useQueryState("sort", parseAsString.withDefault(SORT_PADRAO));
   const { busca, setBusca } = useBuscaDebounce(termo, setTermo, setPage);
@@ -101,10 +104,10 @@ export default function ItensPage() {
   const tabelaRef = useRef<HTMLTableElement>(null);
 
   const itens = useQuery({
-    queryKey: ["itens", { termo, tipo, ativo, sort, page, limit }],
+    queryKey: ["itens", { termo, tipo, categoria, ativo, sort, page, limit }],
     queryFn: ({ signal }) =>
       fetchData<Envelope<Item[], MetaPaginacao>>("/itens", {
-        query: { limit, offset, sort, busca: termo, tipo, ativo },
+        query: { limit, offset, sort, busca: termo, tipo, categoria, ativo },
         signal,
       }),
   });
@@ -130,6 +133,11 @@ export default function ItensPage() {
         header: "Descrição",
         meta: { className: "whitespace-normal" },
         cell: ({ row }) => <span className="font-medium">{row.original.descricao}</span>,
+      },
+      {
+        accessorKey: "categoria",
+        header: "Categoria",
+        cell: ({ row }) => rotuloCategoriaItem(row.original.categoria),
       },
       {
         accessorKey: "tipo",
@@ -263,6 +271,22 @@ export default function ItensPage() {
         </NativeSelect>
         <NativeSelect
           className="h-9 w-full sm:w-64"
+          aria-label="Filtrar por categoria"
+          value={categoria}
+          onChange={(e) => {
+            void setCategoria(e.target.value || null);
+            void setPage(1);
+          }}
+        >
+          <NativeSelectOption value="">Todas as categorias</NativeSelectOption>
+          {CATEGORIAS_ITEM.map((c) => (
+            <NativeSelectOption key={c.valor} value={c.valor}>
+              {c.rotulo}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+        <NativeSelect
+          className="h-9 w-full sm:w-64"
           aria-label="Filtrar por situação"
           value={ativo}
           onChange={(e) => {
@@ -274,7 +298,7 @@ export default function ItensPage() {
           <NativeSelectOption value="true">Só ativos</NativeSelectOption>
           <NativeSelectOption value="false">Só inativos</NativeSelectOption>
         </NativeSelect>
-        {(termo || tipo || ativo) && (
+        {(termo || tipo || categoria || ativo) && (
           <Button
             variant="ghost"
             size="sm"
@@ -282,6 +306,7 @@ export default function ItensPage() {
               setBusca("");
               void setTermo(null);
               void setTipo(null);
+              void setCategoria(null);
               void setAtivo(null);
               void setPage(1);
             }}
@@ -472,6 +497,7 @@ function FormularioItem({ registro, onFechar }: { registro?: Item; onFechar: () 
     defaultValues: {
       descricao: registro?.descricao ?? "",
       tipo: registro?.tipo ?? "investimento",
+      categoria: registro?.categoria ?? "maquina",
       unidade: registro?.unidade ?? "un",
       valorReferenciaCentavos: textoDeCentavos(registro?.valorReferenciaCentavos),
       ativo: registro?.ativo ?? true,
@@ -544,6 +570,17 @@ function FormularioItem({ registro, onFechar }: { registro?: Item; onFechar: () 
 
         <div className="grid grid-cols-2 gap-3">
           <div className="grid gap-1.5">
+            <Label htmlFor="item-categoria">Categoria</Label>
+            <NativeSelect className="w-full" {...campo("categoria")} {...register("categoria")}>
+              {CATEGORIAS_ITEM.map((c) => (
+                <NativeSelectOption key={c.valor} value={c.valor}>
+                  {c.rotulo}
+                </NativeSelectOption>
+              ))}
+            </NativeSelect>
+            {erro("categoria")}
+          </div>
+          <div className="grid gap-1.5">
             <Label htmlFor="item-tipo">Tipo</Label>
             <NativeSelect className="w-full" {...campo("tipo")} {...register("tipo")}>
               {TIPOS.map((t) => (
@@ -554,11 +591,12 @@ function FormularioItem({ registro, onFechar }: { registro?: Item; onFechar: () 
             </NativeSelect>
             {erro("tipo")}
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="item-unidade">Unidade</Label>
-            <Input placeholder="un, t, kg…" maxLength={20} {...campo("unidade")} {...register("unidade")} />
-            {erro("unidade")}
-          </div>
+        </div>
+
+        <div className="grid gap-1.5">
+          <Label htmlFor="item-unidade">Unidade</Label>
+          <Input placeholder="un, t, kg…" maxLength={20} {...campo("unidade")} {...register("unidade")} />
+          {erro("unidade")}
         </div>
 
         <div className="grid gap-1.5">

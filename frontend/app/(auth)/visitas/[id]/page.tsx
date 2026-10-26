@@ -12,9 +12,11 @@ import {
   ClipboardCheck,
   Download,
   FileText,
+  PackageCheck,
   Pencil,
   Plus,
   Trash2,
+  Undo2,
   Upload,
   Users,
 } from "lucide-react";
@@ -45,6 +47,7 @@ import { ehSemPermissao, fetchData, mensagemDeErro, type ErroApi } from "@/lib/f
 import { aplicarErrosDaApi } from "@/lib/erros-form";
 import { dataCalendario, dataHora, numero } from "@/lib/formato";
 import { usePapel } from "@/lib/papeis";
+import { rotuloCategoriaItem } from "@/lib/itens";
 import type { Envelope } from "@/types/envelope";
 import type { components } from "@/types/api";
 
@@ -55,6 +58,8 @@ type Membro = components["schemas"]["MembroEquipe"];
 type Diagnostico = components["schemas"]["DiagnosticoPropriedade"];
 type OpcaoDiagnostico = components["schemas"]["OpcaoDiagnostico"];
 type Recomendacao = components["schemas"]["Recomendacao"];
+type Entrega = components["schemas"]["Entrega"];
+type ItemVerificado = components["schemas"]["VisitaItemVerificado"];
 type MetaPaginacao = components["schemas"]["MetaPaginacao"];
 type TipoVisita = Visita["tipo"];
 type Categoria = Recomendacao["categoria"];
@@ -71,6 +76,8 @@ const MAX_ARQUIVO = 20 * 1024 * 1024;
  * pode ir em HEIC, que a API recusa e o Chrome não mostra na prévia.
  */
 const TIPOS_ANEXO = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
+/** Fotos de item verificado: só as imagens da lista acima. */
+const TIPOS_FOTO = TIPOS_ANEXO.filter((t) => t.startsWith("image/"));
 /** HEIC vindo do computador (o Chrome às vezes nem informa o tipo — por isso a extensão). */
 const ehHeic = (f: File) => /^image\/hei[cf]/.test(f.type) || /\.hei[cf]$/i.test(f.name);
 
@@ -128,6 +135,13 @@ function tamanho(bytes: number) {
 const simNao = (v: boolean | null) => (v === null ? "—" : v ? "Sim" : "Não");
 const urlArquivo = (visitaId: string, anexoId: string) =>
   `${env.API_URL}/visitas/${visitaId}/anexos/${anexoId}/arquivo`;
+/** Acompanhamento na associação: confere os itens fornecidos (reunião de 23/10). */
+const conferaItens = (v: Visita) => v.tipo === "acompanhamento" && !!v.associacaoId;
+const consultaItensVerificados = (visitaId: string) => ({
+  queryKey: ["visitas", visitaId, "itens-verificados"],
+  queryFn: ({ signal }: { signal?: AbortSignal }) =>
+    fetchData<Envelope<ItemVerificado[]>>(`/visitas/${visitaId}/itens-verificados`, { signal }),
+});
 
 export default function VisitaDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -159,7 +173,7 @@ export default function VisitaDetalhePage({ params }: { params: Promise<{ id: st
 
   const onde =
     v &&
-    (v.tipo === "inicial_associacao"
+    (v.associacaoId
       ? (v.associacaoSigla ?? "—")
       : `${[v.produtorNome, v.propriedadeNome].filter(Boolean).join(" — ")}${v.associacaoSigla ? ` (${v.associacaoSigla})` : ""}`);
 
@@ -271,7 +285,8 @@ export default function VisitaDetalhePage({ params }: { params: Promise<{ id: st
       {v && (
         <>
           <EquipeVisita visita={v} editavel={podeEditarCampo} />
-          <Anexos visitaId={v.id} editavel={podeEditarCampo} />
+          {conferaItens(v) && <ItensVerificados visita={v} editavel={podeEditarCampo} />}
+          <Anexos visitaId={v.id} editavel={podeEditarCampo} comItens={conferaItens(v)} />
           {v.tipo === "diagnostico_propriedade" && (
             <DiagnosticoSecao visitaId={v.id} editavel={podeEditarCampo} />
           )}
@@ -537,10 +552,22 @@ function FormularioEquipe({
 
 // ─── Fotos e documentos ────────────────────────────────────────────────────
 
-function Anexos({ visitaId, editavel }: { visitaId: string; editavel: boolean }) {
+function Anexos({
+  visitaId,
+  editavel,
+  comItens,
+}: {
+  visitaId: string;
+  editavel: boolean;
+  /** Acompanhamento na associação: mostra de qual item verificado é cada foto. */
+  comItens: boolean;
+}) {
   const queryClient = useQueryClient();
   const [enviarAberto, setEnviarAberto] = useState(false);
   const [excluir, setExcluir] = useState<VisitaAnexo | null>(null);
+  const itens = useQuery({ ...consultaItensVerificados(visitaId), enabled: comItens });
+  const nomeItem = (entregaId: string | null) =>
+    entregaId ? itens.data?.data.find((i) => i.entregaId === entregaId)?.itemDescricao : undefined;
 
   const anexos = useQuery({
     queryKey: ["visitas", visitaId, "anexos"],
@@ -554,6 +581,7 @@ function Anexos({ visitaId, editavel }: { visitaId: string; editavel: boolean })
       toast.success("Arquivo excluído.");
       setExcluir(null);
       queryClient.invalidateQueries({ queryKey: ["visitas", visitaId, "anexos"] });
+      queryClient.invalidateQueries({ queryKey: ["visitas", visitaId, "itens-verificados"] });
     },
     onError: (erro) => toast.error(mensagemDeErro(erro, "Não foi possível excluir o arquivo.")),
   });
@@ -622,6 +650,9 @@ function Anexos({ visitaId, editavel }: { visitaId: string; editavel: boolean })
                 )}
                 <div className="flex flex-1 flex-col gap-1 p-3 text-sm">
                   <span className="line-clamp-2 font-medium">{nome}</span>
+                  {nomeItem(a.entregaId) && (
+                    <span className="line-clamp-2 text-xs">Item verificado: {nomeItem(a.entregaId)}</span>
+                  )}
                   <span className="truncate text-xs text-muted-foreground">
                     {a.tipo === "foto" ? "Foto" : a.tipo === "audio" ? "Áudio" : "Documento"} ·{" "}
                     {tamanho(a.tamanhoBytes)}
@@ -788,6 +819,352 @@ function FormularioAnexo({ visitaId, onFechar }: { visitaId: string; onFechar: (
             </>
           ) : (
             "Enviar"
+          )}
+        </Button>
+      </SheetFooter>
+    </form>
+  );
+}
+
+// ─── Itens verificados (acompanhamento na associação) ──────────────────────
+
+function ItensVerificados({ visita, editavel }: { visita: Visita; editavel: boolean }) {
+  const queryClient = useQueryClient();
+  const [verificar, setVerificar] = useState<Entrega | null>(null);
+  const [desfazer, setDesfazer] = useState<Entrega | null>(null);
+
+  // Itens fornecidos (entregues) à associação neste projeto — os que a visita pode conferir
+  const fornecidos = useQuery({
+    queryKey: [
+      "entregas",
+      { associacaoId: visita.associacaoId, projetoId: visita.projetoId, situacao: "entregue", limit: LIMITE },
+    ],
+    queryFn: ({ signal }) =>
+      fetchData<Envelope<Entrega[], MetaPaginacao>>("/entregas", {
+        query: {
+          associacaoId: visita.associacaoId,
+          projetoId: visita.projetoId,
+          situacao: "entregue",
+          limit: LIMITE,
+          sort: "dataEntrega:desc",
+        },
+        signal,
+      }),
+  });
+  const verificados = useQuery(consultaItensVerificados(visita.id));
+  const linhas = fornecidos.data?.data ?? [];
+  const verificacao = (entregaId: string) => verificados.data?.data.find((i) => i.entregaId === entregaId);
+  const conferidos = verificados.data?.data.length ?? 0;
+  const carregando = fornecidos.isPending || verificados.isPending;
+  const erro = fornecidos.isError ? fornecidos : verificados.isError ? verificados : null;
+  const colunas = editavel ? 4 : 3;
+
+  const desfazerMutation = useMutation({
+    mutationFn: () =>
+      fetchData(`/visitas/${visita.id}/itens-verificados/${desfazer!.id}`, { method: "DELETE" }),
+    onSuccess: () => {
+      toast.success("Verificação desfeita.");
+      setDesfazer(null);
+      queryClient.invalidateQueries({ queryKey: ["visitas", visita.id, "itens-verificados"] });
+    },
+    onError: (e) => toast.error(mensagemDeErro(e, "Não foi possível desfazer a verificação.")),
+  });
+
+  const confirmacao: Confirmacao | null = desfazer
+    ? {
+        titulo: `Desfazer a verificação de “${desfazer.itemDescricao}”?`,
+        descricao:
+          "A observação registrada nesta visita é descartada. Se houver fotos do item, exclua-as antes em Fotos e documentos.",
+        textoConfirmar: "Desfazer",
+        destrutivo: true,
+        pendente: desfazerMutation.isPending,
+        onConfirmar: () => desfazerMutation.mutate(),
+      }
+    : null;
+
+  return (
+    <section aria-labelledby="itens-verificados-titulo" className="space-y-3">
+      <Cabecalho
+        id="itens-verificados-titulo"
+        titulo="Itens verificados"
+        descricao={
+          linhas.length > 0
+            ? `Itens fornecidos à associação neste projeto — ${conferidos} de ${linhas.length} conferido(s) nesta visita.`
+            : "Itens fornecidos à associação neste projeto — registre o que foi visto, com observações e fotos."
+        }
+      />
+      <div className="border" aria-busy={carregando}>
+        <Table aria-label="Itens fornecidos à associação">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Item</TableHead>
+              <TableHead className="hidden sm:table-cell">Entregue em</TableHead>
+              <TableHead>Verificação</TableHead>
+              {editavel && <TableHead className="w-24 text-right">Ações</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {carregando ? (
+              <TableRow>
+                <TableCell colSpan={colunas}>
+                  <span role="status" className="sr-only">
+                    Carregando…
+                  </span>
+                  <Skeleton className="h-4 w-full" />
+                </TableCell>
+              </TableRow>
+            ) : erro ? (
+              <TableRow>
+                <TableCell colSpan={colunas} className="py-6 text-center text-muted-foreground">
+                  {ehSemPermissao(erro.error) ? (
+                    "Você não tem permissão para ver isto."
+                  ) : (
+                    <>
+                      Erro ao carregar os itens.{" "}
+                      <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => {
+                          void fornecidos.refetch();
+                          void verificados.refetch();
+                        }}
+                      >
+                        Tentar novamente
+                      </Button>
+                    </>
+                  )}
+                </TableCell>
+              </TableRow>
+            ) : linhas.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={colunas} className="py-6 text-center text-muted-foreground">
+                  Nenhum item foi entregue a esta associação neste projeto
+                </TableCell>
+              </TableRow>
+            ) : (
+              linhas.map((e) => {
+                const v = verificacao(e.id);
+                return (
+                  <TableRow key={e.id}>
+                    <TableCell className="max-w-[12rem] sm:max-w-md">
+                      <div className="flex flex-col">
+                        <span className="line-clamp-2 whitespace-normal">{e.itemDescricao}</span>
+                        <span className="text-xs whitespace-normal text-muted-foreground">
+                          {rotuloCategoriaItem(e.itemCategoria)} · Qtd. {numero(e.quantidade)}
+                          {e.lote && ` · ${e.lote}`}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden tabular-nums sm:table-cell">
+                      {dataCalendario(e.dataEntrega)}
+                    </TableCell>
+                    <TableCell className="max-w-[10rem] sm:max-w-xs">
+                      {v ? (
+                        <div className="flex flex-col items-start gap-1">
+                          <Badge>Verificado</Badge>
+                          {v.observacao && (
+                            <span className="line-clamp-2 text-xs whitespace-normal text-muted-foreground">
+                              {v.observacao}
+                            </span>
+                          )}
+                          {v.fotos > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              {v.fotos === 1 ? "1 foto" : `${numero(v.fotos)} fotos`}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <Badge variant="secondary">Não verificado</Badge>
+                      )}
+                    </TableCell>
+                    {editavel && (
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            title={v ? "Editar verificação" : "Registrar verificação"}
+                            aria-label={`${v ? "Editar a verificação" : "Registrar a verificação"} de ${e.itemDescricao}`}
+                            onClick={() => setVerificar(e)}
+                          >
+                            <PackageCheck className="size-4" />
+                          </Button>
+                          {v && (
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              title="Desfazer verificação"
+                              aria-label={`Desfazer a verificação de ${e.itemDescricao}`}
+                              onClick={() => setDesfazer(e)}
+                            >
+                              <Undo2 className="size-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      <Sheet open={!!verificar} onOpenChange={(aberto) => !aberto && setVerificar(null)}>
+        <SheetContent className="flex w-full flex-col p-0 sm:max-w-md">
+          <SheetHeader className="border-b">
+            <SheetTitle>Verificar item</SheetTitle>
+            <SheetDescription>
+              {verificar &&
+                `${verificar.itemDescricao} — ${rotuloCategoriaItem(verificar.itemCategoria)}, qtd. ${numero(verificar.quantidade)}.`}
+            </SheetDescription>
+          </SheetHeader>
+          {verificar && (
+            <FormularioVerificacao
+              key={verificar.id}
+              visitaId={visita.id}
+              entrega={verificar}
+              registro={verificacao(verificar.id)}
+              onFechar={() => setVerificar(null)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <ConfirmacaoDialog confirmacao={confirmacao} onFechar={() => setDesfazer(null)} />
+    </section>
+  );
+}
+
+function FormularioVerificacao({
+  visitaId,
+  entrega,
+  registro,
+  onFechar,
+}: {
+  visitaId: string;
+  entrega: Entrega;
+  registro?: ItemVerificado;
+  onFechar: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [observacao, setObservacao] = useState(registro?.observacao ?? "");
+  const [fotos, setFotos] = useState<File[]>([]);
+  const [tentou, setTentou] = useState(false);
+  const [errosApi, setErrosApi] = useState<string[]>([]);
+
+  const erroFotos = fotos.some(ehHeic)
+    ? "Foto em HEIC (formato do iPhone) não é aceita. Converta para JPEG — enviando pelo próprio iPhone, a conversão é automática."
+    : fotos.some((f) => !TIPOS_FOTO.includes(f.type))
+      ? "Envie fotos em JPEG, PNG, WebP ou GIF"
+      : fotos.some((f) => f.size > MAX_ARQUIVO)
+        ? "Cada foto pode ter até 20 MB"
+        : null;
+  const erroObservacao = observacao.length > 5000 ? "No máximo 5.000 caracteres" : null;
+  const mostrarErroFotos = tentou && erroFotos;
+  const mostrarErroObservacao = tentou && erroObservacao;
+
+  const salvar = useMutation({
+    mutationFn: async () => {
+      await fetchData(`/visitas/${visitaId}/itens-verificados/${entrega.id}`, {
+        method: "PUT",
+        body: { observacao: observacao.trim() || null },
+      });
+      // A verificação precisa existir antes das fotos (a API recusa foto de item não verificado)
+      for (const foto of fotos) {
+        const formData = new FormData();
+        formData.append("arquivo", foto);
+        formData.append("entregaId", entrega.id);
+        await fetchData(`/visitas/${visitaId}/anexos`, { method: "POST", formData });
+      }
+    },
+    onSuccess: () => {
+      toast.success(fotos.length > 0 ? "Verificação e fotos salvas." : "Verificação salva.");
+      onFechar();
+    },
+    onError: (erro) =>
+      erroNoBloco(
+        erro,
+        fotos.length > 0
+          ? "A verificação foi salva, mas nem todas as fotos foram enviadas."
+          : "Não foi possível salvar a verificação.",
+        setErrosApi,
+      ),
+    // Sucesso ou falha no meio das fotos: o que chegou à API aparece na tela
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ["visitas", visitaId, "itens-verificados"] });
+      queryClient.invalidateQueries({ queryKey: ["visitas", visitaId, "anexos"] });
+    },
+  });
+
+  return (
+    <form
+      className="flex flex-1 flex-col overflow-hidden"
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        setTentou(true);
+        setErrosApi([]);
+        if (!erroFotos && !erroObservacao) salvar.mutate();
+      }}
+    >
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+        <ErrosApi erros={errosApi} />
+        <div className="grid gap-1.5">
+          <Label htmlFor="verificacao-observacao">Observações (opcional)</Label>
+          <Textarea
+            id="verificacao-observacao"
+            rows={5}
+            placeholder="Estado do item, uso pela associação, problemas encontrados…"
+            value={observacao}
+            aria-invalid={!!mostrarErroObservacao}
+            aria-describedby={mostrarErroObservacao ? "verificacao-observacao-erro" : undefined}
+            onChange={(e) => setObservacao(e.target.value)}
+          />
+          {mostrarErroObservacao && (
+            <p id="verificacao-observacao-erro" role="alert" className="text-xs text-destructive">
+              {erroObservacao}
+            </p>
+          )}
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="verificacao-fotos">Fotos do item (opcional)</Label>
+          <Input
+            id="verificacao-fotos"
+            type="file"
+            multiple
+            accept={TIPOS_FOTO.join(",")}
+            aria-invalid={!!mostrarErroFotos}
+            aria-describedby={mostrarErroFotos ? "verificacao-fotos-erro" : "verificacao-fotos-dica"}
+            onChange={(e) => setFotos(Array.from(e.target.files ?? []))}
+          />
+          {mostrarErroFotos ? (
+            <p id="verificacao-fotos-erro" role="alert" className="text-xs text-destructive">
+              {erroFotos}
+            </p>
+          ) : (
+            <p id="verificacao-fotos-dica" className="text-xs text-muted-foreground">
+              {registro?.fotos
+                ? `Já há ${registro.fotos === 1 ? "1 foto" : `${numero(registro.fotos)} fotos`} deste item; as novas se somam a elas.`
+                : "Até 20 MB cada. As fotos também aparecem em Fotos e documentos."}
+            </p>
+          )}
+        </div>
+      </div>
+      <SheetFooter className="flex-row justify-end gap-2 border-t">
+        <Button type="button" variant="outline" onClick={onFechar}>
+          Cancelar
+        </Button>
+        <Button type="submit" disabled={salvar.isPending}>
+          {salvar.isPending ? (
+            <>
+              <Spinner /> Salvando…
+            </>
+          ) : registro ? (
+            "Salvar"
+          ) : (
+            "Registrar verificação"
           )}
         </Button>
       </SheetFooter>

@@ -30,6 +30,7 @@ export const TABELAS_DOMINIO: string[] = [
   "visitas",
   "visita_equipe",
   "visita_anexos",
+  "visita_itens_verificados",
   "opcoes_diagnostico",
   "diagnosticos_associacao",
   "diagnosticos_propriedade",

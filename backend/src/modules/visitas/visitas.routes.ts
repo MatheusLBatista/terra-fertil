@@ -32,6 +32,10 @@ router.post("/:id/anexos", ...editar, limiteUpload, controller.enviarAnexo);
 router.get("/:id/anexos/:anexoId/arquivo", ...ler, controller.baixarAnexo);
 router.delete("/:id/anexos/:anexoId", ...editar, controller.excluirAnexo);
 
+router.get("/:id/itens-verificados", ...ler, controller.listarItensVerificados);
+router.put("/:id/itens-verificados/:entregaId", ...editar, controller.verificarItem);
+router.delete("/:id/itens-verificados/:entregaId", ...editar, controller.desfazerVerificacao);
+
 router.get("/:id/diagnostico", ...ler, controller.diagnostico);
 router.put("/:id/diagnostico", ...editar, controller.salvarDiagnostico);
 

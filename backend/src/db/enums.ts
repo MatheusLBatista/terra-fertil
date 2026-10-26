@@ -79,6 +79,8 @@ export const recomendacaoSituacaoEnum = pgEnum("recomendacao_situacao", [
 
 export const itemTipoEnum = pgEnum("item_tipo", ["investimento", "custeio"]);
 
+export const itemCategoriaEnum = pgEnum("item_categoria", ["insumo", "maquina", "implemento", "equipamento"]);
+
 export const pedidoSituacaoEnum = pgEnum("pedido_situacao", [
   "aberto",
   "em_compra",

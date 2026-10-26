@@ -80,9 +80,9 @@ const rotuloSituacao = (s: SituacaoVisita) => SITUACOES.find((x) => x.valor === 
 const varianteSituacao = (s: SituacaoVisita) =>
   s === "realizada" ? "default" : s === "cancelada" ? "destructive" : "secondary";
 
-/** Onde a visita aconteceu: a associação (inicial) ou produtor — propriedade. */
+/** Onde a visita aconteceu: a associação (inicial ou acompanhamento) ou produtor — propriedade. */
 function ondeVisita(v: Visita) {
-  if (v.tipo === "inicial_associacao") return v.associacaoSigla ?? "—";
+  if (v.associacaoId) return v.associacaoSigla ?? "—";
   return [v.produtorNome, v.propriedadeNome].filter(Boolean).join(" — ") || "—";
 }
 
@@ -106,6 +106,10 @@ const consultaEquipe = (projetoId: string) => ({
     fetchData<Envelope<Membro[]>>(`/projetos/${projetoId}/equipe`, { signal }),
 });
 
+/** A visita é na associação: a inicial sempre; o acompanhamento quando o local escolhido é ela. */
+const naAssociacao = (v: { tipo: TipoVisita; local: "associacao" | "propriedade" }) =>
+  v.tipo === "inicial_associacao" || (v.tipo === "acompanhamento" && v.local === "associacao");
+
 const coordenada = (min: number, max: number, rotulo: string) =>
   z
     .string()
@@ -117,6 +121,8 @@ const schema = z
   .object({
     projetoId: z.string().min(1, "Escolha o projeto"),
     tipo: z.enum(["inicial_associacao", "diagnostico_propriedade", "assistencia_tecnica", "acompanhamento"]),
+    /** Só o acompanhamento escolhe: na associação (confere itens fornecidos) ou na propriedade. */
+    local: z.enum(["associacao", "propriedade"]),
     associacaoId: z.string(),
     propriedadeId: z.string(),
     visitaAnteriorId: z.string(),
@@ -137,11 +143,11 @@ const schema = z
         ]),
       ),
   })
-  .refine((v) => v.tipo !== "inicial_associacao" || v.associacaoId, {
+  .refine((v) => !naAssociacao(v) || v.associacaoId, {
     message: "Escolha a associação",
     path: ["associacaoId"],
   })
-  .refine((v) => v.tipo === "inicial_associacao" || v.propriedadeId, {
+  .refine((v) => naAssociacao(v) || v.propriedadeId, {
     message: "Escolha a propriedade",
     path: ["propriedadeId"],
   })
@@ -276,7 +282,7 @@ export default function VisitasPage() {
               <span className="truncate font-medium" title={ondeVisita(v)}>
                 {ondeVisita(v)}
               </span>
-              {v.tipo !== "inicial_associacao" && v.associacaoSigla && (
+              {v.propriedadeId && v.associacaoSigla && (
                 <span className="truncate text-xs text-muted-foreground">{v.associacaoSigla}</span>
               )}
             </div>
@@ -741,6 +747,7 @@ function FormularioVisita({
   const valoresIniciais: FormValues = {
     projetoId: projetoPadrao,
     tipo: registro?.tipo ?? (propriedadeInicial ? "assistencia_tecnica" : "inicial_associacao"),
+    local: registro ? (registro.associacaoId ? "associacao" : "propriedade") : "associacao",
     associacaoId: registro?.associacaoId ?? "",
     propriedadeId: registro?.propriedadeId ?? propriedadeInicial ?? "",
     visitaAnteriorId: registro?.visitaAnteriorId ?? "",
@@ -790,11 +797,11 @@ function CamposVisita({
     getValues,
     formState: { errors },
   } = form;
-  const [projetoId, tipo, situacao, propriedadeId] = useWatch({
+  const [projetoId, tipo, local, situacao, propriedadeId] = useWatch({
     control,
-    name: ["projetoId", "tipo", "situacao", "propriedadeId"],
+    name: ["projetoId", "tipo", "local", "situacao", "propriedadeId"],
   });
-  const naAssociacao = tipo === "inicial_associacao";
+  const ehNaAssociacao = naAssociacao({ tipo, local });
 
   const equipe = useQuery({ ...consultaEquipe(projetoId), enabled: !!projetoId });
   const opcoesTecnico = useMemo(() => {
@@ -816,7 +823,7 @@ function CamposVisita({
         query: { projetoId, limit: LIMITE_OPCOES },
         signal,
       }),
-    enabled: !registro && naAssociacao && !!projetoId,
+    enabled: !registro && ehNaAssociacao && !!projetoId,
   });
   const opcoesAssociacao = useMemo(
     () =>
@@ -831,7 +838,7 @@ function CamposVisita({
         query: { limit: LIMITE_OPCOES },
         signal,
       }),
-    enabled: !registro && !naAssociacao,
+    enabled: !registro && !ehNaAssociacao,
   });
   const opcoesPropriedade = useMemo(
     () =>
@@ -843,7 +850,7 @@ function CamposVisita({
   );
 
   // Acompanhamento aponta uma assistência técnica ou um diagnóstico na mesma propriedade e projeto
-  const buscarAnteriores = tipo === "acompanhamento" && !!propriedadeId && !!projetoId;
+  const buscarAnteriores = tipo === "acompanhamento" && !ehNaAssociacao && !!propriedadeId && !!projetoId;
   const consultaAnteriores = (tipoOrigem: TipoVisita) => ({
     queryKey: ["visitas", { projetoId, propriedadeId, tipo: tipoOrigem, limit: LIMITE_OPCOES }],
     queryFn: ({ signal }: { signal?: AbortSignal }) =>
@@ -871,7 +878,8 @@ function CamposVisita({
         realizadaEm:
           d.situacao === "realizada" && d.realizadaEm ? new Date(d.realizadaEm).toISOString() : undefined,
         tecnicoId: d.tecnicoId,
-        visitaAnteriorId: d.tipo === "acompanhamento" ? d.visitaAnteriorId || null : undefined,
+        visitaAnteriorId:
+          d.tipo === "acompanhamento" && !naAssociacao(d) ? d.visitaAnteriorId || null : undefined,
         relato: d.relato || null,
         latitude: d.latitude,
         longitude: d.longitude,
@@ -883,8 +891,8 @@ function CamposVisita({
         body: {
           projetoId: d.projetoId,
           tipo: d.tipo,
-          associacaoId: d.tipo === "inicial_associacao" ? d.associacaoId : undefined,
-          propriedadeId: d.tipo !== "inicial_associacao" ? d.propriedadeId : undefined,
+          associacaoId: naAssociacao(d) ? d.associacaoId : undefined,
+          propriedadeId: naAssociacao(d) ? undefined : d.propriedadeId,
           ...editaveis,
         },
       });
@@ -949,9 +957,7 @@ function CamposVisita({
               <dt className="text-xs text-muted-foreground">Onde</dt>
               <dd>
                 {ondeVisita(registro)}
-                {registro.tipo !== "inicial_associacao" &&
-                  registro.associacaoSigla &&
-                  ` (${registro.associacaoSigla})`}
+                {registro.propriedadeId && registro.associacaoSigla && ` (${registro.associacaoSigla})`}
               </dd>
             </div>
           </dl>
@@ -1006,7 +1012,26 @@ function CamposVisita({
               </NativeSelect>
             </div>
 
-            {naAssociacao ? (
+            {tipo === "acompanhamento" && (
+              <div className="grid gap-1.5">
+                <Label htmlFor="visita-local">Onde</Label>
+                <NativeSelect
+                  className="w-full"
+                  {...aria("local")}
+                  aria-describedby="visita-local-dica"
+                  {...register("local", { onChange: () => setValue("visitaAnteriorId", "") })}
+                >
+                  <NativeSelectOption value="associacao">Na associação</NativeSelectOption>
+                  <NativeSelectOption value="propriedade">Na propriedade</NativeSelectOption>
+                </NativeSelect>
+                <p id="visita-local-dica" className="text-xs text-muted-foreground">
+                  Na associação, confere os itens fornecidos (com observações e fotos); na propriedade, as
+                  recomendações dadas ao produtor.
+                </p>
+              </div>
+            )}
+
+            {ehNaAssociacao ? (
               <div className="grid gap-1.5">
                 <Label htmlFor="visita-associacaoId">Associação</Label>
                 <Controller
@@ -1056,7 +1081,7 @@ function CamposVisita({
           </>
         )}
 
-        {tipo === "acompanhamento" && (
+        {tipo === "acompanhamento" && !ehNaAssociacao && (
           <div className="grid gap-1.5">
             <Label htmlFor="visita-visitaAnteriorId">Visita anterior (opcional)</Label>
             <Controller

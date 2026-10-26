@@ -70,6 +70,14 @@ export default class EntregasService {
   async excluir(id: string) {
     const atual = await this.listarPorId(id);
     await garantirProjeto(atual.projetoId, { escrita: true });
+    if ((await this.repository.contarVerificacoes(id)) > 0) {
+      throw new AppError(
+        "A entrega já foi conferida em visita de acompanhamento — cancele-a em vez de excluir",
+        409,
+        undefined,
+        "ENTREGA_VERIFICADA",
+      );
+    }
     const excluida = await this.repository.excluir(id);
     if (!excluida) throw new AppError("Entrega não encontrada", 404);
   }

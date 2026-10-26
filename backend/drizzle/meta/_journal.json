@@ -85,6 +85,13 @@
       "when": 1792607008250,
       "tag": "0011_producoes",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1793041522605,
+      "tag": "0012_acompanhamento_itens_verificados",
+      "breakpoints": true
     }
   ]
 }

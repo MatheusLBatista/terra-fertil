@@ -5,6 +5,8 @@ import { associacao } from "../../db/associacao.ts";
 import { item } from "../../db/item.ts";
 import { pedidoCompra } from "../../db/pedidoCompra.ts";
 import { projetoAssociacao } from "../../db/projetoAssociacao.ts";
+import { visitaItemVerificado } from "../../db/visitaItemVerificado.ts";
+import { visita } from "../../db/visita.ts";
 import { camposParaAtualizar } from "../../lib/update.ts";
 import type { Escopo } from "../../lib/escopo.ts";
 import type { Sort } from "../../lib/openapi/helpers.ts";
@@ -21,6 +23,7 @@ type Filtros = {
   projetoId?: string;
   associacaoId?: string;
   itemId?: string;
+  categoria?: (typeof item.categoria.enumValues)[number];
   pedidoId?: string;
   situacao?: (typeof entrega.situacao.enumValues)[number];
   lote?: string;
@@ -41,6 +44,7 @@ const colunas = {
   associacaoSigla: associacao.sigla,
   itemId: entrega.itemId,
   itemDescricao: item.descricao,
+  itemCategoria: item.categoria,
   pedidoId: entrega.pedidoId,
   pedidoNumero: pedidoCompra.numero,
   lote: entrega.lote,
@@ -64,7 +68,17 @@ function base(tx: DbOrTx) {
     .leftJoin(pedidoCompra, eq(pedidoCompra.id, entrega.pedidoId));
 }
 
-function where({ projetoId, associacaoId, itemId, pedidoId, situacao, lote, busca, escopo }: Filtros) {
+function where({
+  projetoId,
+  associacaoId,
+  itemId,
+  categoria,
+  pedidoId,
+  situacao,
+  lote,
+  busca,
+  escopo,
+}: Filtros) {
   const termo = busca ? `%${escaparLike(busca)}%` : undefined;
   return and(
     isNull(entrega.deletedAt),
@@ -72,6 +86,7 @@ function where({ projetoId, associacaoId, itemId, pedidoId, situacao, lote, busc
     projetoId ? eq(entrega.projetoId, projetoId) : undefined,
     associacaoId ? eq(entrega.associacaoId, associacaoId) : undefined,
     itemId ? eq(entrega.itemId, itemId) : undefined,
+    categoria ? eq(item.categoria, categoria) : undefined,
     pedidoId ? eq(entrega.pedidoId, pedidoId) : undefined,
     situacao ? eq(entrega.situacao, situacao) : undefined,
     lote ? ilike(entrega.lote, `%${escaparLike(lote)}%`) : undefined,
@@ -189,6 +204,22 @@ export default class EntregasRepository {
       .where(and(eq(entrega.id, id), isNull(entrega.deletedAt)))
       .returning({ id: entrega.id });
     return row as { id: string } | undefined;
+  }
+
+  /** Verificações vivas da entrega em visitas vivas (acompanhamento na associação). */
+  async contarVerificacoes(id: string, tx: DbOrTx = db): Promise<number> {
+    const [row] = await tx
+      .select({ total: sql<number>`cast(count(*) as int)` })
+      .from(visitaItemVerificado)
+      .innerJoin(visita, eq(visita.id, visitaItemVerificado.visitaId))
+      .where(
+        and(
+          eq(visitaItemVerificado.entregaId, id),
+          isNull(visitaItemVerificado.deletedAt),
+          isNull(visita.deletedAt),
+        ),
+      );
+    return row?.total ?? 0;
   }
 
   async excluir(id: string, tx: DbOrTx = db): Promise<{ id: string } | undefined> {

@@ -58,6 +58,7 @@ import { dataCalendario, moeda, numero } from "@/lib/formato";
 import { centavosDeTexto, textoDeCentavos } from "@/lib/dinheiro";
 import { env } from "@/lib/env";
 import { usePapel } from "@/lib/papeis";
+import { CATEGORIAS_ITEM, rotuloCategoriaItem } from "@/lib/itens";
 import { PAGE_SIZES } from "@/lib/pageSizes";
 import type { Envelope } from "@/types/envelope";
 import type { components } from "@/types/api";
@@ -139,6 +140,7 @@ export default function EntregasPage() {
   const [situacao, setSituacao] = useQueryState("situacao", parseAsString.withDefault(""));
   const [associacaoId, setAssociacaoId] = useQueryState("associacaoId", parseAsString.withDefault(""));
   const [itemId, setItemId] = useQueryState("itemId", parseAsString.withDefault(""));
+  const [categoria, setCategoria] = useQueryState("categoria", parseAsString.withDefault(""));
   const [pedidoId, setPedidoId] = useQueryState("pedidoId", parseAsString.withDefault(""));
   // Sem `sort` na URL vale a ordem da API (as mais recentes primeiro).
   const [sort, setSort] = useQueryState("sort", parseAsString.withDefault(""));
@@ -161,7 +163,7 @@ export default function EntregasPage() {
   const entregas = useQuery({
     queryKey: [
       "entregas",
-      { termo, lote, projetoId, situacao, associacaoId, itemId, pedidoId, sort, page, limit },
+      { termo, lote, projetoId, situacao, associacaoId, itemId, categoria, pedidoId, sort, page, limit },
     ],
     queryFn: ({ signal }) =>
       fetchData<Envelope<Entrega[], MetaPaginacao>>("/entregas", {
@@ -175,6 +177,7 @@ export default function EntregasPage() {
           situacao,
           associacaoId,
           itemId,
+          categoria,
           pedidoId,
         },
         signal,
@@ -272,7 +275,7 @@ export default function EntregasPage() {
             <span className="line-clamp-2 break-words">{row.original.itemDescricao}</span>
             <span className="text-xs text-muted-foreground">
               <span className="md:hidden">{row.original.associacaoSigla} · </span>
-              Qtd. {numero(row.original.quantidade)}
+              {rotuloCategoriaItem(row.original.itemCategoria)} · Qtd. {numero(row.original.quantidade)}
             </span>
             {/* No celular a coluna Situação some: o selo vem aqui */}
             <Badge variant={varianteSituacao(row.original.situacao)} className="mt-1 md:hidden">
@@ -436,7 +439,8 @@ export default function EntregasPage() {
   const confirmacaoExcluir: Confirmacao | null = excluir
     ? {
         titulo: `Excluir a entrega de “${excluir.itemDescricao}” para ${excluir.associacaoSigla}?`,
-        descricao: "A entrega some das listagens e dos totais do pedido, mas continua no histórico.",
+        descricao:
+          "A entrega some das listagens e dos totais do pedido, mas continua no histórico. Entrega já conferida em visita de acompanhamento não pode ser excluída — cancele-a.",
         textoConfirmar: "Excluir",
         destrutivo: true,
         pendente: excluirMutation.isPending,
@@ -457,7 +461,8 @@ export default function EntregasPage() {
       }
     : null;
 
-  const filtrosAtivos = termo || lote || projetoId || situacao || associacaoId || itemId || pedidoId;
+  const filtrosAtivos =
+    termo || lote || projetoId || situacao || associacaoId || itemId || categoria || pedidoId;
 
   return (
     <PageLayout
@@ -521,6 +526,22 @@ export default function EntregasPage() {
             void setPage(1);
           }}
         />
+        <NativeSelect
+          className="h-9 w-full sm:w-64"
+          aria-label="Filtrar por categoria do item"
+          value={categoria}
+          onChange={(e) => {
+            void setCategoria(e.target.value || null);
+            void setPage(1);
+          }}
+        >
+          <NativeSelectOption value="">Todas as categorias</NativeSelectOption>
+          {CATEGORIAS_ITEM.map((c) => (
+            <NativeSelectOption key={c.valor} value={c.valor}>
+              {c.rotulo}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
         <Seletor
           className="h-9 w-full sm:w-64"
           aria-label="Filtrar por item"
@@ -570,6 +591,7 @@ export default function EntregasPage() {
               void setSituacao(null);
               void setAssociacaoId(null);
               void setItemId(null);
+              void setCategoria(null);
               void setPedidoId(null);
               void setPage(1);
             }}

@@ -59,14 +59,16 @@ describe("gates", () => {
   });
 
   it("POST com usuario@example.com (só lê) → 403; GET → 200", async () => {
-    expect((await criar(usuario, { descricao: TRATOR, tipo: "investimento" })).status).toBe(403);
+    expect(
+      (await criar(usuario, { descricao: TRATOR, tipo: "investimento", categoria: "maquina" })).status,
+    ).toBe(403);
     expect((await app.request("/itens", comCookie(usuario))).status).toBe(200);
   });
 });
 
 describe("CRUD", () => {
   it("POST cria com os padrões (201)", async () => {
-    const res = await criar(gestor, { descricao: TRATOR, tipo: "investimento" });
+    const res = await criar(gestor, { descricao: TRATOR, tipo: "investimento", categoria: "maquina" });
     expect(res.status).toBe(201);
     const corpo = await json<Item>(res);
     expect(corpo).toEqual({
@@ -74,6 +76,7 @@ describe("CRUD", () => {
         id: expect.any(String),
         descricao: TRATOR,
         tipo: "investimento",
+        categoria: "maquina",
         unidade: "un",
         valorReferenciaCentavos: null,
         ativo: true,
@@ -85,7 +88,12 @@ describe("CRUD", () => {
 
     gradeId = (
       await json<Item>(
-        await criar(gestor, { descricao: GRADE, tipo: "investimento", valorReferenciaCentavos: 2_500_000 }),
+        await criar(gestor, {
+          descricao: GRADE,
+          tipo: "investimento",
+          categoria: "maquina",
+          valorReferenciaCentavos: 2_500_000,
+        }),
       )
     ).data.id;
     calcarioId = (
@@ -93,6 +101,7 @@ describe("CRUD", () => {
         await criar(gestor, {
           descricao: CALCARIO,
           tipo: "custeio",
+          categoria: "insumo",
           unidade: "t",
           valorReferenciaCentavos: 18_000,
         }),
@@ -101,19 +110,35 @@ describe("CRUD", () => {
   });
 
   it("valor negativo ou fracionário → 400; tipo inválido → 400", async () => {
-    const negativo = await criar(gestor, { descricao: "X", tipo: "custeio", valorReferenciaCentavos: -1 });
+    const negativo = await criar(gestor, {
+      descricao: "X",
+      tipo: "custeio",
+      categoria: "insumo",
+      valorReferenciaCentavos: -1,
+    });
     expect(negativo.status).toBe(400);
     expect(Object.keys((await json<unknown>(negativo)).meta.campos as object)).toEqual([
       "valorReferenciaCentavos",
     ]);
     expect(
-      (await criar(gestor, { descricao: "X", tipo: "custeio", valorReferenciaCentavos: 10.5 })).status,
+      (
+        await criar(gestor, {
+          descricao: "X",
+          tipo: "custeio",
+          categoria: "insumo",
+          valorReferenciaCentavos: 10.5,
+        })
+      ).status,
     ).toBe(400);
     expect((await criar(gestor, { descricao: "X", tipo: "outro" })).status).toBe(400);
   });
 
   it("POST com a mesma descrição em outra caixa → 409", async () => {
-    const res = await criar(gestor, { descricao: TRATOR.toUpperCase(), tipo: "custeio" });
+    const res = await criar(gestor, {
+      descricao: TRATOR.toUpperCase(),
+      tipo: "custeio",
+      categoria: "insumo",
+    });
     expect(res.status).toBe(409);
     expect(await json(res)).toEqual({
       data: [],
@@ -157,6 +182,7 @@ describe("CRUD", () => {
       id: gradeId,
       descricao: GRADE,
       tipo: "investimento",
+      categoria: "maquina",
       unidade: "un",
       valorReferenciaCentavos: null,
       ativo: false,
@@ -209,7 +235,9 @@ describe("exclusão", () => {
     const [linha] = await db.select({ deletedAt: item.deletedAt }).from(item).where(eq(item.id, gradeId));
     expect(linha.deletedAt).toEqual(expect.any(Date));
 
-    expect((await criar(gestor, { descricao: GRADE, tipo: "investimento" })).status).toBe(201);
+    expect(
+      (await criar(gestor, { descricao: GRADE, tipo: "investimento", categoria: "maquina" })).status,
+    ).toBe(201);
   });
 
   it("trigger registrou INSERT, UPDATE e DELETE com o gestor", async () => {

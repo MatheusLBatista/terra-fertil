@@ -4,6 +4,9 @@ import { db, escaparLike, type DbOrTx } from "../../db/index.ts";
 import { visita, type NewVisita } from "../../db/visita.ts";
 import { visitaEquipe } from "../../db/visitaEquipe.ts";
 import { visitaAnexo, type NewVisitaAnexo } from "../../db/visitaAnexo.ts";
+import { visitaItemVerificado } from "../../db/visitaItemVerificado.ts";
+import { entrega } from "../../db/entrega.ts";
+import { item } from "../../db/item.ts";
 import { diagnosticoPropriedade, type NewDiagnosticoPropriedade } from "../../db/diagnosticoPropriedade.ts";
 import { diagnosticoOpcao } from "../../db/diagnosticoOpcao.ts";
 import { opcaoDiagnostico } from "../../db/opcaoDiagnostico.ts";
@@ -83,6 +86,7 @@ const colunasAnexo = {
   mimeType: visitaAnexo.mimeType,
   tamanhoBytes: visitaAnexo.tamanhoBytes,
   legenda: visitaAnexo.legenda,
+  entregaId: visitaAnexo.entregaId,
   createdAt: visitaAnexo.createdAt,
 };
 
@@ -215,6 +219,7 @@ export default class VisitasRepository {
       + (select count(*) from analises_solo where visita_id = ${id} and deleted_at is null)
       + (select count(*) from visitas where visita_anterior_id = ${id} and deleted_at is null)
       + (select count(*) from diagnosticos_associacao where visita_id = ${id} and deleted_at is null)
+      + (select count(*) from visita_itens_verificados where visita_id = ${id} and deleted_at is null)
         as total`,
       )
       .then((r) => r.rows);
@@ -339,6 +344,92 @@ export default class VisitasRepository {
       .set({ deletedAt: new Date() })
       .where(and(eq(visitaAnexo.id, anexoId), isNull(visitaAnexo.deletedAt)))
       .returning({ id: visitaAnexo.id });
+    return row;
+  }
+
+  // ─── Itens verificados ────────────────────────────────────────────────────
+
+  /** Itens conferidos na visita, com os dados da entrega e quantas fotos da visita mostram cada um. */
+  async listarItensVerificados(visitaId: string, entregaId?: string, tx: DbOrTx = db) {
+    const fotos = sql<number>`cast((
+      select count(*) from ${visitaAnexo}
+      where ${visitaAnexo.visitaId} = ${visitaItemVerificado.visitaId}
+        and ${visitaAnexo.entregaId} = ${visitaItemVerificado.entregaId}
+        and ${visitaAnexo.deletedAt} is null
+    ) as int)`;
+    return tx
+      .select({
+        id: visitaItemVerificado.id,
+        visitaId: visitaItemVerificado.visitaId,
+        entregaId: visitaItemVerificado.entregaId,
+        itemDescricao: item.descricao,
+        itemCategoria: item.categoria,
+        quantidade: entrega.quantidade,
+        lote: entrega.lote,
+        dataEntrega: entrega.dataEntrega,
+        observacao: visitaItemVerificado.observacao,
+        fotos,
+      })
+      .from(visitaItemVerificado)
+      .innerJoin(entrega, eq(entrega.id, visitaItemVerificado.entregaId))
+      .innerJoin(item, eq(item.id, entrega.itemId))
+      .where(
+        and(
+          eq(visitaItemVerificado.visitaId, visitaId),
+          entregaId ? eq(visitaItemVerificado.entregaId, entregaId) : undefined,
+          isNull(visitaItemVerificado.deletedAt),
+        ),
+      )
+      .orderBy(asc(item.descricao), asc(visitaItemVerificado.id));
+  }
+
+  async itemVerificado(visitaId: string, entregaId: string, tx: DbOrTx = db) {
+    const [row] = await tx
+      .select({ id: visitaItemVerificado.id })
+      .from(visitaItemVerificado)
+      .where(
+        and(
+          eq(visitaItemVerificado.visitaId, visitaId),
+          eq(visitaItemVerificado.entregaId, entregaId),
+          isNull(visitaItemVerificado.deletedAt),
+        ),
+      )
+      .limit(1);
+    return row;
+  }
+
+  async inserirItemVerificado(
+    data: { visitaId: string; entregaId: string; observacao: string | null },
+    tx: DbOrTx = db,
+  ) {
+    await tx.insert(visitaItemVerificado).values(data);
+  }
+
+  async alterarItemVerificado(id: string, observacao: string | null, tx: DbOrTx = db) {
+    await tx.update(visitaItemVerificado).set({ observacao }).where(eq(visitaItemVerificado.id, id));
+  }
+
+  async excluirItemVerificado(id: string, tx: DbOrTx = db) {
+    await tx
+      .update(visitaItemVerificado)
+      .set({ deletedAt: new Date() })
+      .where(and(eq(visitaItemVerificado.id, id), isNull(visitaItemVerificado.deletedAt)));
+  }
+
+  /** Entrega viva (de qualquer projeto — o service compara com a visita). */
+  async entregaPorId(entregaId: string, tx: DbOrTx = db) {
+    const [row] = await tx
+      .select({
+        id: entrega.id,
+        projetoId: entrega.projetoId,
+        associacaoId: entrega.associacaoId,
+        situacao: entrega.situacao,
+        itemDescricao: item.descricao,
+      })
+      .from(entrega)
+      .innerJoin(item, eq(item.id, entrega.itemId))
+      .where(and(eq(entrega.id, entregaId), isNull(entrega.deletedAt)))
+      .limit(1);
     return row;
   }
 
