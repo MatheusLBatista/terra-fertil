@@ -75,8 +75,9 @@ export function ConfirmacaoDialog({ confirmacao, onFechar }: ConfirmacaoDialogPr
         }}
       >
         <AlertDialogHeader>
-          <AlertDialogTitle>{confirmacao?.titulo}</AlertDialogTitle>
-          <AlertDialogDescription>{confirmacao?.descricao}</AlertDialogDescription>
+          {/* Nome de arquivo sem espaços não quebra e alarga o grid para fora da caixa. */}
+          <AlertDialogTitle className="wrap-anywhere">{confirmacao?.titulo}</AlertDialogTitle>
+          <AlertDialogDescription className="wrap-anywhere">{confirmacao?.descricao}</AlertDialogDescription>
         </AlertDialogHeader>
         {confirmacao?.children}
         <AlertDialogFooter>
