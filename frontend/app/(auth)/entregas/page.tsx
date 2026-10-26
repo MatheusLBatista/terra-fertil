@@ -59,6 +59,7 @@ import { centavosDeTexto, textoDeCentavos } from "@/lib/dinheiro";
 import { env } from "@/lib/env";
 import { usePapel } from "@/lib/papeis";
 import { CATEGORIAS_ITEM, rotuloCategoriaItem } from "@/lib/itens";
+import { IconeAssinar, PainelAssinatura } from "@/components/assinatura";
 import { PAGE_SIZES } from "@/lib/pageSizes";
 import type { Envelope } from "@/types/envelope";
 import type { components } from "@/types/api";
@@ -156,6 +157,7 @@ export default function EntregasPage() {
   const [editar, setEditar] = useState<Entrega | null>(null);
   const [excluir, setExcluir] = useState<Entrega | null>(null);
   const [removerTermo, setRemoverTermo] = useState<Entrega | null>(null);
+  const [assinatura, setAssinatura] = useState<Entrega | null>(null);
   const tabelaRef = useRef<HTMLTableElement>(null);
   const arquivoRef = useRef<HTMLInputElement>(null);
   const alvoTermoRef = useRef<Entrega | null>(null);
@@ -342,27 +344,41 @@ export default function EntregasPage() {
         header: "Termo de uso",
         enableSorting: false,
         meta: { className: "hidden md:table-cell" },
-        cell: ({ row }) =>
-          row.original.temTermoUso ? (
-            <a
-              href={`${env.API_URL}/entregas/${row.original.id}/termo-uso`}
-              target="_blank"
-              rel="noopener"
-              className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
-              aria-label={`Baixar o termo de uso de ${row.original.itemDescricao} (${row.original.associacaoSigla})`}
-            >
-              <Download className="size-4" /> Baixar
-            </a>
-          ) : (
-            <span className="text-muted-foreground">—</span>
-          ),
+        cell: ({ row }) => (
+          <div className="flex flex-col items-start gap-1">
+            {row.original.temTermoUso ? (
+              <a
+                href={`${env.API_URL}/entregas/${row.original.id}/termo-uso`}
+                target="_blank"
+                rel="noopener"
+                className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
+                aria-label={`Baixar o termo de uso de ${row.original.itemDescricao} (${row.original.associacaoSigla})`}
+              >
+                <Download className="size-4" /> Baixar
+              </a>
+            ) : (
+              !row.original.temAssinatura && <span className="text-muted-foreground">—</span>
+            )}
+            {row.original.temAssinatura && (
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0"
+                aria-label={`Ver a assinatura do termo de uso de ${row.original.itemDescricao} (${row.original.associacaoSigla})`}
+                onClick={() => setAssinatura(row.original)}
+              >
+                <IconeAssinar className="size-4" /> Assinado
+              </Button>
+            )}
+          </div>
+        ),
       },
       ...(podeEditarCampo
         ? [
             {
               id: "acoes",
               header: "Ações",
-              meta: { className: "w-36 text-right" },
+              meta: { className: "w-44 text-right" },
               cell: ({ row }) => {
                 const nome = `${row.original.itemDescricao} (${row.original.associacaoSigla})`;
                 return (
@@ -376,19 +392,37 @@ export default function EntregasPage() {
                     >
                       <Pencil className="size-4" />
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      title={row.original.temTermoUso ? "Substituir termo de uso" : "Enviar termo de uso"}
-                      aria-label={`${row.original.temTermoUso ? "Substituir" : "Enviar"} o termo de uso de ${nome}`}
-                      onClick={() => {
-                        alvoTermoRef.current = row.original;
-                        arquivoRef.current?.click();
-                      }}
-                    >
-                      <Upload className="size-4" />
-                    </Button>
-                    {row.original.temTermoUso && (
+                    {(row.original.situacao === "entregue" || row.original.temAssinatura) && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        title={
+                          row.original.temAssinatura
+                            ? "Assinatura do termo de uso"
+                            : "Colher assinatura do termo de uso"
+                        }
+                        aria-label={`${row.original.temAssinatura ? "Ver a assinatura" : "Colher a assinatura"} do termo de uso de ${nome}`}
+                        onClick={() => setAssinatura(row.original)}
+                      >
+                        <IconeAssinar className="size-4" />
+                      </Button>
+                    )}
+                    {/* Termo assinado não troca de arquivo (a API recusa): a assinatura vale para ele */}
+                    {!row.original.temAssinatura && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        title={row.original.temTermoUso ? "Substituir termo de uso" : "Enviar termo de uso"}
+                        aria-label={`${row.original.temTermoUso ? "Substituir" : "Enviar"} o termo de uso de ${nome}`}
+                        onClick={() => {
+                          alvoTermoRef.current = row.original;
+                          arquivoRef.current?.click();
+                        }}
+                      >
+                        <Upload className="size-4" />
+                      </Button>
+                    )}
+                    {row.original.temTermoUso && !row.original.temAssinatura && (
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -789,6 +823,25 @@ export default function EntregasPage() {
         </SheetContent>
       </Sheet>
 
+      <Sheet open={assinatura !== null} onOpenChange={(aberto) => !aberto && setAssinatura(null)}>
+        <SheetContent className="flex w-full flex-col p-0 sm:max-w-lg">
+          <SheetHeader className="border-b">
+            <SheetTitle>Assinatura do termo de uso</SheetTitle>
+            <SheetDescription>
+              {assinatura && `${assinatura.itemDescricao} para ${assinatura.associacaoSigla}.`}
+            </SheetDescription>
+          </SheetHeader>
+          {assinatura && (
+            <AssinaturaTermo
+              key={assinatura.id}
+              entrega={assinatura}
+              editavel={podeEditarCampo}
+              onFechar={() => setAssinatura(null)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
+
       <ConfirmacaoDialog confirmacao={confirmacaoExcluir} onFechar={() => setExcluir(null)} />
       <ConfirmacaoDialog confirmacao={confirmacaoTermo} onFechar={() => setRemoverTermo(null)} />
     </PageLayout>
@@ -1144,5 +1197,30 @@ function FormularioEntrega({ registro, onFechar }: { registro?: Entrega; onFecha
         </Button>
       </SheetFooter>
     </form>
+  );
+}
+
+/** Assinatura do termo de uso, pela associação (presidente, vice ou outro representante). */
+function AssinaturaTermo({
+  entrega,
+  editavel,
+  onFechar,
+}: {
+  entrega: Entrega;
+  editavel: boolean;
+  onFechar: () => void;
+}) {
+  return (
+    <PainelAssinatura
+      base={`/entregas/${entrega.id}`}
+      queryKey={["entregas", entrega.id, "assinatura"]}
+      invalidar={[["entregas"]]}
+      editavel={editavel}
+      papeis={["presidente", "vice_presidente", "outro"]}
+      aviso={`Ao assinar, o representante da associação confirma o recebimento de ${entrega.quantidade} × ${entrega.itemDescricao} e o termo de uso.`}
+      avisoRemover="O termo de uso volta a poder ser trocado e a entrega a mudar de situação; depois, colha a assinatura de novo. A remoção fica no histórico."
+      avisoTravado="Termo assinado: o arquivo não pode ser trocado nem a entrega sair de “Entregue” sem remover a assinatura."
+      onFechar={onFechar}
+    />
   );
 }

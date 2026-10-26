@@ -72,3 +72,6 @@ export * from "./lancamentoFinanceiro.ts";
 // Produção técnica
 export * from "./producao.ts";
 export * from "./producaoAutor.ts";
+
+// Assinaturas
+export * from "./assinatura.ts";

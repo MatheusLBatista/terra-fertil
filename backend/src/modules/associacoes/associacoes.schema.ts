@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
 import { registry } from "../../lib/openapi/registry.ts";
+import { registrarRotasAssinatura } from "../assinaturas/assinaturas.schema.ts";
 import {
   ERROS,
   ERROS_LEITURA,
@@ -171,6 +172,9 @@ export const DocumentoSchema = registry.register(
     projetoSigla: z.string().nullable(),
     situacao: z.enum(SITUACOES_DOCUMENTO),
     temArquivo: z.boolean(),
+    temAssinatura: z
+      .boolean()
+      .openapi({ description: "Assinado (GET /associacoes/{id}/documentos/{documentoId}/assinatura)" }),
     nomeArquivo: z.string().nullable(),
     mimeType: z.string().nullable(),
     tamanhoBytes: z.number().int().nullable(),
@@ -451,3 +455,10 @@ registry.registerPath({
   request: { params: AssociacaoIdParamSchema, body: corpo(PutDiagnosticoSchema) },
   responses: { 200: ok(DiagnosticoAssociacaoSchema), ...ERROS_ESCRITA, 422: ERROS.valorInvalido[422] },
 });
+
+registrarRotasAssinatura(
+  "/associacoes/{id}/documentos/{documentoId}",
+  TAG,
+  DocumentoIdParamSchema,
+  "Documento sem arquivo ou papel de proprietário (o documento é assinado pela associação)",
+);

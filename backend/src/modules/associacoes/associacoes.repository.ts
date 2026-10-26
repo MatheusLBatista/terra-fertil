@@ -84,6 +84,11 @@ const colunasDocumento = {
   tamanhoBytes: associacaoDocumento.tamanhoBytes,
   validade: associacaoDocumento.validade,
   observacao: associacaoDocumento.observacao,
+  // Tabela qualificada à mão: dentro da subquery um "id" solto seria o da assinatura
+  temAssinatura: sql<boolean>`exists (
+    select 1 from assinaturas a
+    where a.associacao_documento_id = associacao_documentos.id and a.deleted_at is null
+  )`,
 };
 
 const colunasDiagnostico = {

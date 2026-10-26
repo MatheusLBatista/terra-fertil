@@ -5,6 +5,8 @@ import { escopoAtual, garantirAssociacao, garantirProjeto, noEscopo } from "../.
 import { downloadFromS3, nomeArquivo, uploadToS3, type ArquivoUpload } from "../../lib/storage/upload.ts";
 import PessoasService from "../pessoas/pessoas.service.ts";
 import AssociacoesRepository from "./associacoes.repository.ts";
+import AssinaturasService from "../assinaturas/assinaturas.service.ts";
+import type { AssinaturaFormSchema } from "../assinaturas/assinaturas.schema.ts";
 import type {
   ListAssociacoesQuerySchema,
   CreateAssociacaoSchema,
@@ -23,6 +25,7 @@ const PAPEL_CONTATO = "produtor";
 
 export default class AssociacoesService {
   private repository = new AssociacoesRepository();
+  private assinaturas = new AssinaturasService();
   private pessoas = new PessoasService();
 
   async listar(query: ListQuery) {
@@ -231,6 +234,14 @@ export default class AssociacoesService {
   /** Grava o arquivo no Garage (privado) e marca o documento como recebido, se estava pendente. */
   async enviarArquivo(associacaoId: string, documentoId: string, arquivo: ArquivoUpload) {
     const atual = await this.documentoAcessivel(associacaoId, documentoId, { escrita: true });
+    if (atual.temAssinatura) {
+      throw new AppError(
+        "O documento está assinado — remova a assinatura antes de trocar o arquivo",
+        409,
+        undefined,
+        "DOCUMENTO_ASSINADO",
+      );
+    }
     const nome = nomeArquivo("documento", arquivo.originalname, "pdf");
     const pasta = `associacoes/${associacaoId}/documentos`;
     await uploadToS3(pasta, nome, arquivo.buffer, arquivo.mimetype);
@@ -248,6 +259,54 @@ export default class AssociacoesService {
     const doc = await this.documentoAcessivel(associacaoId, documentoId);
     if (!doc.arquivoKey) throw new AppError("Este documento ainda não tem arquivo", 404);
     return { ...(await downloadFromS3(doc.arquivoKey)), nomeArquivo: doc.nomeArquivo ?? undefined };
+  }
+
+  // ─── Assinatura do documento (pela associação) ────────────────────────────
+
+  async assinatura(associacaoId: string, documentoId: string) {
+    await this.documentoAcessivel(associacaoId, documentoId);
+    return this.assinaturas.doAlvo({ associacaoDocumentoId: documentoId });
+  }
+
+  async assinar(
+    associacaoId: string,
+    documentoId: string,
+    dados: z.infer<typeof AssinaturaFormSchema>,
+    imagem: ArquivoUpload,
+  ) {
+    const doc = await this.documentoAcessivel(associacaoId, documentoId, { escrita: true });
+    if (!doc.arquivoKey) {
+      throw new AppError(
+        "Envie o arquivo do documento antes de colher a assinatura",
+        422,
+        undefined,
+        "DOCUMENTO_SEM_ARQUIVO",
+      );
+    }
+    if (dados.papel === "proprietario") {
+      throw new AppError(
+        "O documento é assinado pela associação (presidente, vice ou outro representante)",
+        422,
+        undefined,
+        "PAPEL_INVALIDO",
+      );
+    }
+    return this.assinaturas.registrar(
+      { associacaoDocumentoId: documentoId },
+      `associacoes/${associacaoId}/documentos/assinaturas`,
+      dados,
+      imagem,
+    );
+  }
+
+  async imagemAssinatura(associacaoId: string, documentoId: string) {
+    await this.documentoAcessivel(associacaoId, documentoId);
+    return this.assinaturas.imagem({ associacaoDocumentoId: documentoId });
+  }
+
+  async removerAssinatura(associacaoId: string, documentoId: string) {
+    await this.documentoAcessivel(associacaoId, documentoId, { escrita: true });
+    await this.assinaturas.remover({ associacaoDocumentoId: documentoId });
   }
 
   /** Documento visível: associação no escopo e, se for por projeto, projeto no escopo. */

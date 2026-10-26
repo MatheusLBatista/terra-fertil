@@ -2,6 +2,7 @@ import { z } from "zod";
 import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
 import { registry } from "../../lib/openapi/registry.ts";
 import { CATEGORIAS_ITEM } from "../itens/itens.schema.ts";
+import { registrarRotasAssinatura } from "../assinaturas/assinaturas.schema.ts";
 import {
   ERROS,
   ERROS_LEITURA,
@@ -57,6 +58,9 @@ export const EntregaSchema = registry.register(
       temTermoUso: z
         .boolean()
         .openapi({ description: "Há termo de uso anexado (baixe em GET /entregas/{id}/termo-uso)" }),
+      temAssinatura: z
+        .boolean()
+        .openapi({ description: "O termo de uso foi assinado (GET /entregas/{id}/assinatura)" }),
     })
     .openapi({ description: "Destinação de um item a uma associação — de demanda até a entrega" }),
 );
@@ -219,3 +223,10 @@ registry.registerPath({
   request: { params: EntregaIdParamSchema },
   responses: { 204: semConteudo(), ...ERROS_LEITURA, ...ERROS.conflito },
 });
+
+registrarRotasAssinatura(
+  "/entregas/{id}",
+  TAG,
+  EntregaIdParamSchema,
+  "Entrega ainda não entregue ou papel de proprietário (o termo é assinado pela associação)",
+);

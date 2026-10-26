@@ -3,6 +3,7 @@ import { lerJson, type AppContext } from "../../lib/hono.ts";
 import { respostaValidacao } from "../../lib/zod.ts";
 import { lerDocumento, respostaDeStream } from "../../lib/storage/upload.ts";
 import AssociacoesService from "./associacoes.service.ts";
+import { lerFormAssinatura } from "../assinaturas/assinaturas.controller.ts";
 import {
   ListAssociacoesQuerySchema,
   AssociacaoIdParamSchema,
@@ -140,6 +141,38 @@ export default class AssociacoesController {
     if (!params.success) return respostaValidacao(c, params.error.issues);
     const { nomeArquivo, ...obj } = await this.service.baixarArquivo(params.data.id, params.data.documentoId);
     return respostaDeStream(obj, { cacheControl: "private, no-store", nomeArquivo });
+  };
+
+  // ─── Assinatura do documento ──────────────────────────────────────────────
+
+  assinatura = async (c: AppContext) => {
+    const params = DocumentoIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    return c.json(successResponse(await this.service.assinatura(params.data.id, params.data.documentoId)));
+  };
+
+  assinar = async (c: AppContext) => {
+    const params = DocumentoIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    const form = await lerFormAssinatura(c);
+    if ("erro" in form) return form.erro;
+    const { id, documentoId } = params.data;
+    return c.json(successResponse(await this.service.assinar(id, documentoId, form.dados, form.imagem)), 201);
+  };
+
+  imagemAssinatura = async (c: AppContext) => {
+    const params = DocumentoIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    return respostaDeStream(await this.service.imagemAssinatura(params.data.id, params.data.documentoId), {
+      cacheControl: "private, no-store",
+    });
+  };
+
+  removerAssinatura = async (c: AppContext) => {
+    const params = DocumentoIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    await this.service.removerAssinatura(params.data.id, params.data.documentoId);
+    return c.body(null, 204);
   };
 
   // ─── Diagnóstico ──────────────────────────────────────────────────────────

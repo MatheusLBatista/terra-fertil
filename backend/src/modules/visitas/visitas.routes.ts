@@ -5,6 +5,7 @@ import { MAX_UPLOAD_BYTES } from "../../lib/storage/upload.ts";
 import { requireAuth } from "../../middlewares/requireAuth.ts";
 import { requirePermission } from "../../middlewares/requirePermission.ts";
 import VisitasController from "./visitas.controller.ts";
+import { limiteAssinatura } from "../assinaturas/assinaturas.controller.ts";
 
 const router = createRouter();
 const controller = new VisitasController();
@@ -39,6 +40,11 @@ router.delete("/:id/itens-verificados/:entregaId", ...editar, controller.desfaze
 router.get("/:id/atividades", ...ler, controller.atividades);
 router.put("/:id/atividades-verificadas", ...editar, controller.verificarAtividade);
 router.delete("/:id/atividades-verificadas/:verificacaoId", ...editar, controller.desfazerAtividade);
+
+router.get("/:id/assinatura", ...ler, controller.assinatura);
+router.post("/:id/assinatura", ...editar, limiteAssinatura, controller.assinar);
+router.get("/:id/assinatura/imagem", ...ler, controller.imagemAssinatura);
+router.delete("/:id/assinatura", ...editar, controller.removerAssinatura);
 
 router.get("/:id/diagnostico", ...ler, controller.diagnostico);
 router.put("/:id/diagnostico", ...editar, controller.salvarDiagnostico);

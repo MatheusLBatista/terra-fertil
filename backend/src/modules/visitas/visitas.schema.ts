@@ -2,6 +2,7 @@ import { z } from "zod";
 import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
 import { registry } from "../../lib/openapi/registry.ts";
 import { CATEGORIAS_ITEM } from "../itens/itens.schema.ts";
+import { registrarRotasAssinatura } from "../assinaturas/assinaturas.schema.ts";
 import {
   ERROS,
   ERROS_LEITURA,
@@ -652,3 +653,10 @@ registry.registerPath({
   request: { params: AtividadeVerificadaParamSchema },
   responses: { 204: semConteudo(), ...ERROS_LEITURA, ...ERROS.conflito },
 });
+
+registrarRotasAssinatura(
+  "/visitas/{id}",
+  TAG,
+  VisitaIdParamSchema,
+  "Visita que não se assina, papel errado (presidente/vice no acompanhamento; proprietário na assistência) ou nada verificado",
+);

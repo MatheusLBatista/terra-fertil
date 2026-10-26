@@ -48,6 +48,13 @@ import { aplicarErrosDaApi } from "@/lib/erros-form";
 import { dataCalendario, dataHora, numero } from "@/lib/formato";
 import { usePapel } from "@/lib/papeis";
 import { rotuloCategoriaItem } from "@/lib/itens";
+import {
+  CartaoAssinatura,
+  FormularioAssinatura,
+  IconeAssinar,
+  useAssinatura,
+  type PapelAssinante,
+} from "@/components/assinatura";
 import type { Envelope } from "@/types/envelope";
 import type { components } from "@/types/api";
 
@@ -162,6 +169,10 @@ export default function VisitaDetalhePage({ params }: { params: Promise<{ id: st
     queryFn: ({ signal }) => fetchData<Envelope<Visita>>(`/visitas/${id}`, { signal }),
   });
   const v = visita.data?.data;
+  const assinavel = !!v && (conferaItens(v) || (v.tipo === "assistencia_tecnica" && !!v.propriedadeId));
+  const assinatura = useAssinatura(`/visitas/${id}`, ["visitas", id, "assinatura"], assinavel);
+  // Assinada, o que foi verificado (e as fotos disso) fica travado — a API recusa com 409
+  const assinada = !!assinatura.data?.data;
 
   if (visita.isError) {
     return (
@@ -295,13 +306,15 @@ export default function VisitaDetalhePage({ params }: { params: Promise<{ id: st
       {v && (
         <>
           <EquipeVisita visita={v} editavel={podeEditarCampo} />
-          {conferaItens(v) && <ItensVerificados visita={v} editavel={podeEditarCampo} />}
+          {conferaItens(v) && <ItensVerificados visita={v} editavel={podeEditarCampo && !assinada} />}
           {v.tipo === "assistencia_tecnica" && v.propriedadeId && (
-            <AtividadesVerificadas visita={v} editavel={podeEditarCampo} />
+            <AtividadesVerificadas visita={v} editavel={podeEditarCampo && !assinada} />
           )}
+          {assinavel && <AssinaturaVisita visita={v} editavel={podeEditarCampo} />}
           <Anexos
             visitaId={v.id}
             editavel={podeEditarCampo}
+            assinada={assinada}
             comItens={conferaItens(v)}
             comAtividades={v.tipo === "assistencia_tecnica" && !!v.propriedadeId}
           />
@@ -575,9 +588,12 @@ function Anexos({
   editavel,
   comItens,
   comAtividades,
+  assinada,
 }: {
   visitaId: string;
   editavel: boolean;
+  /** Visita assinada: as fotos de item/atividade verificada não podem ser excluídas. */
+  assinada: boolean;
   /** Acompanhamento na associação: mostra de qual item verificado é cada foto. */
   comItens: boolean;
   /** Assistência técnica: mostra de qual atividade verificada é cada foto. */
@@ -698,7 +714,7 @@ function Anexos({
                   >
                     <Download className="size-4" /> Baixar
                   </Button>
-                  {editavel && (
+                  {editavel && !(assinada && (a.entregaId || a.atividadeVerificadaId)) && (
                     <Button
                       variant="ghost"
                       size="icon-sm"
@@ -1421,6 +1437,115 @@ function AtividadesVerificadas({ visita, editavel }: { visita: Visita; editavel:
       </Sheet>
 
       <ConfirmacaoDialog confirmacao={confirmacao} onFechar={() => setDesfazer(null)} />
+    </section>
+  );
+}
+
+// ─── Assinatura da visita ──────────────────────────────────────────────────
+
+function AssinaturaVisita({ visita, editavel }: { visita: Visita; editavel: boolean }) {
+  const [colher, setColher] = useState(false);
+  const base = `/visitas/${visita.id}`;
+  const chave = ["visitas", visita.id, "assinatura"];
+  const assinatura = useAssinatura(base, chave);
+  const acompanhamento = visita.tipo === "acompanhamento";
+
+  // Assina só quem tem o que confirmar: a API recusa visita sem nada verificado
+  const itens = useQuery({ ...consultaItensVerificados(visita.id), enabled: acompanhamento });
+  const atividades = useQuery({ ...consultaAtividades(visita.id), enabled: !acompanhamento });
+  const verificados = acompanhamento
+    ? (itens.data?.data.length ?? 0)
+    : (atividades.data?.data.linhas.filter((l) => l.verificacao).length ?? 0);
+  const papeis: PapelAssinante[] = acompanhamento ? ["presidente", "vice_presidente"] : ["proprietario"];
+  const quem = acompanhamento ? "o presidente ou o vice-presidente da associação" : "o proprietário";
+  const oQue = acompanhamento ? "itens verificados" : "atividades verificadas";
+  // "o item verificado" / "os 3 itens verificados"
+  const contagem =
+    verificados === 1
+      ? acompanhamento
+        ? "o item verificado"
+        : "a atividade verificada"
+      : `${acompanhamento ? "os" : "as"} ${verificados} ${oQue}`;
+  const dado = assinatura.data?.data;
+
+  return (
+    <section aria-labelledby="assinatura-titulo" className="space-y-3">
+      <Cabecalho
+        id="assinatura-titulo"
+        titulo="Assinatura"
+        descricao={`Assinada por ${quem}, confirma ${acompanhamento ? "os" : "as"} ${oQue} desta visita.`}
+        acao={
+          editavel &&
+          !dado &&
+          !assinatura.isPending && (
+            <Button onClick={() => setColher(true)} disabled={verificados === 0}>
+              <IconeAssinar className="size-4" /> Colher assinatura
+            </Button>
+          )
+        }
+      />
+      {assinatura.isPending ? (
+        <Skeleton className="h-28 w-full" />
+      ) : assinatura.isError ? (
+        <p className="border py-6 text-center text-sm text-muted-foreground">
+          {ehSemPermissao(assinatura.error) ? (
+            "Você não tem permissão para ver isto."
+          ) : (
+            <>
+              Erro ao carregar a assinatura.{" "}
+              <Button variant="link" size="sm" onClick={() => assinatura.refetch()}>
+                Tentar novamente
+              </Button>
+            </>
+          )}
+        </p>
+      ) : dado ? (
+        <CartaoAssinatura
+          base={base}
+          queryKey={chave}
+          assinatura={dado}
+          editavel={editavel}
+          avisoRemover={`${acompanhamento ? "Os" : "As"} ${oQue} voltam a poder ser ${acompanhamento ? "alterados" : "alteradas"}; depois, colha a assinatura de novo. A remoção fica no histórico.`}
+        />
+      ) : (
+        <p className="border py-6 text-center text-sm whitespace-normal text-muted-foreground">
+          {verificados === 0
+            ? `Ainda não assinada — registre ao menos ${acompanhamento ? "um item verificado" : "uma atividade verificada"} antes de colher a assinatura.`
+            : "Ainda não assinada."}
+        </p>
+      )}
+      {dado && editavel && (
+        <p className="text-xs text-muted-foreground">
+          Visita assinada:{" "}
+          {acompanhamento
+            ? "os itens verificados e as fotos deles ficam travados"
+            : "as atividades verificadas e as fotos delas ficam travadas"}
+          . Para alterar, remova a assinatura.
+        </p>
+      )}
+
+      <Sheet open={colher} onOpenChange={setColher}>
+        <SheetContent className="flex w-full flex-col p-0 sm:max-w-lg">
+          <SheetHeader className="border-b">
+            <SheetTitle>Colher assinatura</SheetTitle>
+            <SheetDescription>
+              {acompanhamento
+                ? visita.associacaoSigla
+                : [visita.produtorNome, visita.propriedadeNome].filter(Boolean).join(" — ")}
+            </SheetDescription>
+          </SheetHeader>
+          {colher && (
+            <FormularioAssinatura
+              base={base}
+              queryKey={chave}
+              papeis={papeis}
+              nomeSugerido={acompanhamento ? null : visita.produtorNome}
+              aviso={`Ao assinar, ${quem} confirma ${contagem} desta visita. Depois de assinada, a verificação não pode mais ser alterada sem remover a assinatura.`}
+              onFechar={() => setColher(false)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </section>
   );
 }

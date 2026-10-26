@@ -57,6 +57,10 @@ const colunas = {
   numeroSerie: entrega.numeroSerie,
   observacao: entrega.observacao,
   temTermoUso: sql<boolean>`${entrega.termoUsoKey} is not null`,
+  // Tabela qualificada à mão: dentro da subquery um "id" solto seria o da assinatura
+  temAssinatura: sql<boolean>`exists (
+    select 1 from assinaturas a where a.entrega_id = entregas.id and a.deleted_at is null
+  )`,
 };
 
 function base(tx: DbOrTx) {

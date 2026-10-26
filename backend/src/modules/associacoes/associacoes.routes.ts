@@ -5,6 +5,7 @@ import { MAX_UPLOAD_BYTES } from "../../lib/storage/upload.ts";
 import { requireAuth } from "../../middlewares/requireAuth.ts";
 import { requirePermission } from "../../middlewares/requirePermission.ts";
 import AssociacoesController from "./associacoes.controller.ts";
+import { limiteAssinatura } from "../assinaturas/assinaturas.controller.ts";
 
 const router = createRouter();
 const controller = new AssociacoesController();
@@ -34,6 +35,10 @@ router.patch("/:id/documentos/:documentoId", ...editar, controller.alterarDocume
 router.delete("/:id/documentos/:documentoId", ...editar, controller.excluirDocumento);
 router.put("/:id/documentos/:documentoId/arquivo", ...editar, limiteUpload, controller.enviarArquivo);
 router.get("/:id/documentos/:documentoId/arquivo", ...ler, controller.baixarArquivo);
+router.get("/:id/documentos/:documentoId/assinatura", ...ler, controller.assinatura);
+router.post("/:id/documentos/:documentoId/assinatura", ...editar, limiteAssinatura, controller.assinar);
+router.get("/:id/documentos/:documentoId/assinatura/imagem", ...ler, controller.imagemAssinatura);
+router.delete("/:id/documentos/:documentoId/assinatura", ...editar, controller.removerAssinatura);
 
 router.get("/:id/diagnostico", ...ler, controller.diagnostico);
 router.put("/:id/diagnostico", ...editar, controller.salvarDiagnostico);

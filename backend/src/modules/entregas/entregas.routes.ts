@@ -4,6 +4,7 @@ import { requireAuth } from "../../middlewares/requireAuth.ts";
 import { requirePermission } from "../../middlewares/requirePermission.ts";
 import { MAX_UPLOAD_BYTES } from "../../lib/storage/upload.ts";
 import EntregasController from "./entregas.controller.ts";
+import { limiteAssinatura } from "../assinaturas/assinaturas.controller.ts";
 
 const router = createRouter();
 const controller = new EntregasController();
@@ -30,6 +31,28 @@ router.delete(
   requireAuth,
   requirePermission("update", "Entrega"),
   controller.removerTermoUso,
+);
+
+// Assinatura do termo de uso (pela associação, na entrega)
+router.get("/:id/assinatura", requireAuth, requirePermission("read", "Entrega"), controller.assinatura);
+router.post(
+  "/:id/assinatura",
+  requireAuth,
+  requirePermission("update", "Entrega"),
+  limiteAssinatura,
+  controller.assinar,
+);
+router.get(
+  "/:id/assinatura/imagem",
+  requireAuth,
+  requirePermission("read", "Entrega"),
+  controller.imagemAssinatura,
+);
+router.delete(
+  "/:id/assinatura",
+  requireAuth,
+  requirePermission("update", "Entrega"),
+  controller.removerAssinatura,
 );
 
 export default router;

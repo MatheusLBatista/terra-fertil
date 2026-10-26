@@ -224,6 +224,7 @@ export default class VisitasRepository {
       + (select count(*) from diagnosticos_associacao where visita_id = ${id} and deleted_at is null)
       + (select count(*) from visita_itens_verificados where visita_id = ${id} and deleted_at is null)
       + (select count(*) from visita_atividades_verificadas where visita_id = ${id} and deleted_at is null)
+      + (select count(*) from assinaturas where visita_id = ${id} and deleted_at is null)
         as total`,
       )
       .then((r) => r.rows);

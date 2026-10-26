@@ -31,6 +31,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SeletorPessoa, type Pessoa } from "@/components/seletor-pessoa";
 import { ConfirmacaoDialog, type Confirmacao } from "@/components/confirmacao-dialog";
+import { IconeAssinar, PainelAssinatura } from "@/components/assinatura";
 import { useProjetos } from "@/hooks/use-projetos";
 import { ehSemPermissao, fetchData, mensagemDeErro, type ErroApi } from "@/lib/fetchData";
 import { aplicarErrosDaApi } from "@/lib/erros-form";
@@ -752,6 +753,7 @@ function Documentos({ associacaoId, editavel }: { associacaoId: string; editavel
   const [registrar, setRegistrar] = useState<{ tipoInicial: string } | null>(null);
   const [editar, setEditar] = useState<Documento | null>(null);
   const [excluir, setExcluir] = useState<Documento | null>(null);
+  const [assinatura, setAssinatura] = useState<Documento | null>(null);
   const inputArquivo = useRef<HTMLInputElement>(null);
   const alvoUpload = useRef<string | null>(null);
 
@@ -889,7 +891,7 @@ function Documentos({ associacaoId, editavel }: { associacaoId: string; editavel
               <TableHead>Situação</TableHead>
               <TableHead className="hidden lg:table-cell">Validade</TableHead>
               <TableHead className="hidden md:table-cell">Arquivo</TableHead>
-              <TableHead className="w-28 text-right">Ações</TableHead>
+              <TableHead className="w-36 text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -975,6 +977,17 @@ function Documentos({ associacaoId, editavel }: { associacaoId: string; editavel
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
+                      {d?.temAssinatura && (
+                        <Button
+                          variant="link"
+                          size="sm"
+                          className="flex h-auto p-0"
+                          aria-label={`Ver a assinatura de ${rotulo}`}
+                          onClick={() => setAssinatura(d)}
+                        >
+                          <IconeAssinar className="size-3.5" /> Assinado
+                        </Button>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-1">
@@ -997,6 +1010,17 @@ function Documentos({ associacaoId, editavel }: { associacaoId: string; editavel
                             <Download className="size-4" />
                           </Button>
                         )}
+                        {d?.temArquivo && (editavel || d.temAssinatura) && (
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            title={d.temAssinatura ? "Assinatura" : "Colher assinatura"}
+                            aria-label={`${d.temAssinatura ? "Ver a assinatura" : "Colher a assinatura"} de ${rotulo}`}
+                            onClick={() => setAssinatura(d)}
+                          >
+                            <IconeAssinar className="size-4" />
+                          </Button>
+                        )}
                         {editavel && !d && (
                           <Button
                             variant="ghost"
@@ -1010,16 +1034,19 @@ function Documentos({ associacaoId, editavel }: { associacaoId: string; editavel
                         )}
                         {editavel && d && (
                           <>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              title={d.temArquivo ? "Substituir arquivo" : "Enviar arquivo"}
-                              aria-label={`${d.temArquivo ? "Substituir o arquivo de" : "Enviar arquivo de"} ${rotulo}`}
-                              disabled={enviar.isPending}
-                              onClick={() => escolherArquivo(d.id)}
-                            >
-                              {enviando ? <Spinner /> : <Upload className="size-4" />}
-                            </Button>
+                            {/* Documento assinado não troca de arquivo (a API recusa) */}
+                            {!d.temAssinatura && (
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                title={d.temArquivo ? "Substituir arquivo" : "Enviar arquivo"}
+                                aria-label={`${d.temArquivo ? "Substituir o arquivo de" : "Enviar arquivo de"} ${rotulo}`}
+                                disabled={enviar.isPending}
+                                onClick={() => escolherArquivo(d.id)}
+                              >
+                                {enviando ? <Spinner /> : <Upload className="size-4" />}
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon-sm"
@@ -1090,6 +1117,32 @@ function Documentos({ associacaoId, editavel }: { associacaoId: string; editavel
               tipos={listaTipos}
               registro={editar}
               onFechar={() => setEditar(null)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <Sheet open={assinatura !== null} onOpenChange={(aberto) => !aberto && setAssinatura(null)}>
+        <SheetContent className="flex w-full flex-col p-0 sm:max-w-lg">
+          <SheetHeader className="border-b">
+            <SheetTitle>
+              Assinatura — {assinatura?.tipoDocumento}
+              {assinatura?.projetoSigla && ` (${assinatura.projetoSigla})`}
+            </SheetTitle>
+            <SheetDescription>{assinatura?.nomeArquivo}</SheetDescription>
+          </SheetHeader>
+          {assinatura && (
+            <PainelAssinatura
+              key={assinatura.id}
+              base={`/associacoes/${associacaoId}/documentos/${assinatura.id}`}
+              queryKey={[...chave, assinatura.id, "assinatura"]}
+              invalidar={[chave]}
+              editavel={editavel}
+              papeis={["presidente", "vice_presidente", "outro"]}
+              aviso={`Ao assinar, o representante da associação confirma o documento “${assinatura.tipoDocumento}” no arquivo enviado (${assinatura.nomeArquivo ?? "sem nome"}).`}
+              avisoRemover="O arquivo do documento volta a poder ser trocado; depois, colha a assinatura de novo. A remoção fica no histórico."
+              avisoTravado="Documento assinado: o arquivo não pode ser trocado sem remover a assinatura. Uma nova versão do documento precisa de nova assinatura."
+              onFechar={() => setAssinatura(null)}
             />
           )}
         </SheetContent>

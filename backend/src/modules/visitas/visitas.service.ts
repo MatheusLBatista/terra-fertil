@@ -4,6 +4,8 @@ import { AppError } from "../../lib/appError.ts";
 import { escopoAtual, garantirAssociacao, garantirProjeto, garantirPropriedade } from "../../lib/escopo.ts";
 import { downloadFromS3, nomeArquivo, uploadToS3, type ArquivoUpload } from "../../lib/storage/upload.ts";
 import VisitasRepository from "./visitas.repository.ts";
+import AssinaturasService from "../assinaturas/assinaturas.service.ts";
+import type { AssinaturaFormSchema } from "../assinaturas/assinaturas.schema.ts";
 import {
   GRUPOS_DIAGNOSTICO_PROPRIEDADE,
   type ListVisitasQuerySchema,
@@ -26,6 +28,7 @@ const nomeParaDownload = (nome: string) => nome.replace(/[^\x20-\x7e]|["\\]/g, "
 
 export default class VisitasService {
   private repository = new VisitasRepository();
+  private assinaturas = new AssinaturasService();
 
   async listar(query: ListQuery) {
     if (query.projetoId) await garantirProjeto(query.projetoId);
@@ -178,6 +181,7 @@ export default class VisitasService {
   ) {
     const atual = await this.buscar(id);
     await garantirProjeto(atual.projetoId, { escrita: true });
+    if (entregaId || atividadeVerificadaId) await this.garantirNaoAssinada(id);
     // Foto de item: só de um item já conferido nesta visita
     if (entregaId && !(await this.repository.itemVerificado(id, entregaId))) {
       throw new AppError(
@@ -229,7 +233,9 @@ export default class VisitasService {
   async excluirAnexo(id: string, anexoId: string) {
     const atual = await this.buscar(id);
     await garantirProjeto(atual.projetoId, { escrita: true });
-    await this.buscarAnexo(id, anexoId);
+    const anexo = await this.buscarAnexo(id, anexoId);
+    // Foto de item/atividade faz parte do que foi assinado
+    if (anexo.entregaId || anexo.atividadeVerificadaId) await this.garantirNaoAssinada(id);
     const excluido = await this.repository.excluirAnexo(anexoId);
     if (!excluido) throw new AppError("Anexo não encontrado", 404);
   }
@@ -255,6 +261,7 @@ export default class VisitasService {
   ) {
     const atual = await this.visitaDeAcompanhamentoNaAssociacao(id);
     await garantirProjeto(atual.projetoId, { escrita: true });
+    await this.garantirNaoAssinada(id);
     const entrega = await this.repository.entregaPorId(entregaId);
     if (!entrega) throw new AppError("Entrega não encontrada", 404);
     if (entrega.associacaoId !== atual.associacaoId || entrega.projetoId !== atual.projetoId) {
@@ -284,6 +291,7 @@ export default class VisitasService {
   async desfazerVerificacao(id: string, entregaId: string) {
     const atual = await this.visitaDeAcompanhamentoNaAssociacao(id);
     await garantirProjeto(atual.projetoId, { escrita: true });
+    await this.garantirNaoAssinada(id);
     const [verificado] = await this.repository.listarItensVerificados(id, entregaId);
     if (!verificado) throw new AppError("Item não verificado nesta visita", 404);
     if (verificado.fotos > 0) {
@@ -369,6 +377,7 @@ export default class VisitasService {
   ) {
     const atual = await this.visitaDeAssistencia(id);
     await garantirProjeto(atual.projetoId, { escrita: true });
+    await this.garantirNaoAssinada(id);
     if (subdivisaoId) {
       const subdivisao = await this.repository.subdivisaoPorId(subdivisaoId);
       if (!subdivisao || subdivisao.opcaoId !== opcaoId) {
@@ -406,6 +415,7 @@ export default class VisitasService {
   async desfazerAtividade(id: string, verificacaoId: string) {
     const atual = await this.visitaDeAssistencia(id);
     await garantirProjeto(atual.projetoId, { escrita: true });
+    await this.garantirNaoAssinada(id);
     const [verificada] = await this.repository.listarAtividadesVerificadas(id, verificacaoId);
     if (!verificada) throw new AppError("Atividade não verificada nesta visita", 404);
     if (verificada.fotos > 0) {
@@ -430,6 +440,82 @@ export default class VisitasService {
       );
     }
     return { ...atual, propriedadeId: atual.propriedadeId };
+  }
+
+  // ─── Assinatura (presidente/vice no acompanhamento; proprietário na assistência) ─
+
+  async assinatura(id: string) {
+    await this.visitaAssinavel(id);
+    return this.assinaturas.doAlvo({ visitaId: id });
+  }
+
+  async assinar(id: string, dados: z.infer<typeof AssinaturaFormSchema>, imagem: ArquivoUpload) {
+    const atual = await this.visitaAssinavel(id);
+    await garantirProjeto(atual.projetoId, { escrita: true });
+    const papeis = atual.tipo === "acompanhamento" ? ["presidente", "vice_presidente"] : ["proprietario"];
+    if (!papeis.includes(dados.papel)) {
+      throw new AppError(
+        atual.tipo === "acompanhamento"
+          ? "No acompanhamento assina o presidente ou o vice-presidente da associação"
+          : "Na assistência técnica assina o proprietário",
+        422,
+        undefined,
+        "PAPEL_INVALIDO",
+      );
+    }
+    const verificados =
+      atual.tipo === "acompanhamento"
+        ? await this.repository.listarItensVerificados(id)
+        : await this.repository.listarAtividadesVerificadas(id);
+    if (verificados.length === 0) {
+      throw new AppError(
+        atual.tipo === "acompanhamento"
+          ? "Verifique ao menos um item antes de colher a assinatura"
+          : "Verifique ao menos uma atividade antes de colher a assinatura",
+        422,
+        undefined,
+        "SEM_VERIFICACAO",
+      );
+    }
+    return this.assinaturas.registrar({ visitaId: id }, `visitas/${id}/assinatura`, dados, imagem);
+  }
+
+  async imagemAssinatura(id: string) {
+    await this.visitaAssinavel(id);
+    return this.assinaturas.imagem({ visitaId: id });
+  }
+
+  async removerAssinatura(id: string) {
+    const atual = await this.visitaAssinavel(id);
+    await garantirProjeto(atual.projetoId, { escrita: true });
+    await this.assinaturas.remover({ visitaId: id });
+  }
+
+  /** Acompanhamento na associação ou assistência técnica — as visitas que se assinam. */
+  private async visitaAssinavel(id: string) {
+    const atual = await this.buscar(id);
+    const naAssociacao = atual.tipo === "acompanhamento" && !!atual.associacaoId;
+    if (!naAssociacao && atual.tipo !== "assistencia_tecnica") {
+      throw new AppError(
+        "Só o acompanhamento na associação e a assistência técnica são assinados",
+        422,
+        undefined,
+        "TIPO_VISITA_INVALIDO",
+      );
+    }
+    return atual;
+  }
+
+  /** Depois de assinada, o que foi verificado (e as fotos disso) fica travado. */
+  private async garantirNaoAssinada(id: string) {
+    if (await this.assinaturas.doAlvo({ visitaId: id })) {
+      throw new AppError(
+        "A visita já foi assinada — remova a assinatura para alterar o que foi verificado",
+        409,
+        undefined,
+        "VISITA_ASSINADA",
+      );
+    }
   }
 
   // ─── Diagnóstico da propriedade ───────────────────────────────────────────

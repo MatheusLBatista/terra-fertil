@@ -34,6 +34,7 @@ type Entrega = {
   situacao: string;
   dataEntrega: string | null;
   temTermoUso: boolean;
+  temAssinatura: boolean;
 };
 
 const sufixo = randomUUID().slice(0, 8);
@@ -195,6 +196,7 @@ describe("criação", () => {
         numeroSerie: null,
         observacao: null,
         temTermoUso: false,
+        temAssinatura: false,
       },
       meta: {},
       erros: [],

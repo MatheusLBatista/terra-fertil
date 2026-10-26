@@ -4,6 +4,7 @@ import { lerJson, type AppContext } from "../../lib/hono.ts";
 import { respostaValidacao } from "../../lib/zod.ts";
 import { lerDocumento, respostaDeStream } from "../../lib/storage/upload.ts";
 import VisitasService from "./visitas.service.ts";
+import { lerFormAssinatura } from "../assinaturas/assinaturas.controller.ts";
 import {
   ListVisitasQuerySchema,
   VisitaIdParamSchema,
@@ -176,6 +177,36 @@ export default class VisitasController {
     const params = AtividadeVerificadaParamSchema.safeParse(c.req.param());
     if (!params.success) return respostaValidacao(c, params.error.issues);
     await this.service.desfazerAtividade(params.data.id, params.data.verificacaoId);
+    return c.body(null, 204);
+  };
+
+  // ─── Assinatura ───────────────────────────────────────────────────────────
+
+  assinatura = async (c: AppContext) => {
+    const params = VisitaIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    return c.json(successResponse(await this.service.assinatura(params.data.id)));
+  };
+
+  assinar = async (c: AppContext) => {
+    const params = VisitaIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    const form = await lerFormAssinatura(c);
+    if ("erro" in form) return form.erro;
+    return c.json(successResponse(await this.service.assinar(params.data.id, form.dados, form.imagem)), 201);
+  };
+
+  imagemAssinatura = async (c: AppContext) => {
+    const params = VisitaIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    const obj = await this.service.imagemAssinatura(params.data.id);
+    return respostaDeStream(obj, { cacheControl: "private, no-store" });
+  };
+
+  removerAssinatura = async (c: AppContext) => {
+    const params = VisitaIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    await this.service.removerAssinatura(params.data.id);
     return c.body(null, 204);
   };
 }

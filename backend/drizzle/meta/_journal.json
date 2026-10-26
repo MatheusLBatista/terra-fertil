@@ -99,6 +99,13 @@
       "when": 1793043425211,
       "tag": "0013_assistencia_atividades_verificadas",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1793045641768,
+      "tag": "0014_assinaturas",
+      "breakpoints": true
     }
   ]
 }

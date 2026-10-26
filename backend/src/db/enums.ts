@@ -75,6 +75,15 @@ export const recomendacaoSituacaoEnum = pgEnum("recomendacao_situacao", [
   "nao_adotada",
 ]);
 
+// ─── Assinaturas ─────────────────────────────────────────────────────────────
+
+export const assinantePapelEnum = pgEnum("assinante_papel", [
+  "presidente",
+  "vice_presidente",
+  "proprietario",
+  "outro",
+]);
+
 // ─── Equipamentos ────────────────────────────────────────────────────────────
 
 export const itemTipoEnum = pgEnum("item_tipo", ["investimento", "custeio"]);
