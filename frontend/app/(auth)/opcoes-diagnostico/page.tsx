@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,7 +15,7 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table";
 import { toast } from "react-toastify";
-import { ArrowDown, ArrowUp, ArrowUpDown, ListTree, Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, ListTree, Pencil, Plus, Trash2, X } from "lucide-react";
 
 import { PageLayout } from "@/components/page-layout";
 import {
@@ -827,30 +827,15 @@ function EditorSubdivisoes({ opcao }: { opcao: OpcaoDiagnostico }) {
       ) : (
         <ul className="divide-y border" aria-label={`Subdivisões de ${opcao.nome}`}>
           {linhas.map((s) => (
-            <li key={s.id} className="flex items-center gap-3 px-3 py-2">
-              <Checkbox
-                id={`subdivisao-${s.id}`}
-                checked={s.ativo}
-                disabled={alternar.isPending}
-                onCheckedChange={() => alternar.mutate(s)}
-              />
-              <Label
-                htmlFor={`subdivisao-${s.id}`}
-                className={`flex-1 leading-4 font-normal ${s.ativo ? "" : "text-muted-foreground line-through"}`}
-              >
-                {s.nome}
-                <span className="sr-only">{s.ativo ? " (ativa)" : " (inativa)"}</span>
-              </Label>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                title="Excluir"
-                aria-label={`Excluir a subdivisão ${s.nome}`}
-                onClick={() => setExcluir(s)}
-              >
-                <Trash2 className="size-4 text-destructive" />
-              </Button>
-            </li>
+            <LinhaSubdivisao
+              key={s.id}
+              opcaoId={opcao.id}
+              subdivisao={s}
+              alternando={alternar.isPending}
+              onAlternar={() => alternar.mutate(s)}
+              onExcluir={() => setExcluir(s)}
+              onSalvo={() => void atualizar()}
+            />
           ))}
         </ul>
       )}
@@ -862,5 +847,166 @@ function EditorSubdivisoes({ opcao }: { opcao: OpcaoDiagnostico }) {
 
       <ConfirmacaoDialog confirmacao={confirmacao} onFechar={() => setExcluir(null)} />
     </div>
+  );
+}
+
+/** Uma subdivisão: ativa/inativa, renomear na própria linha (Enter salva, Esc cancela) e excluir. */
+function LinhaSubdivisao({
+  opcaoId,
+  subdivisao,
+  alternando,
+  onAlternar,
+  onExcluir,
+  onSalvo,
+}: {
+  opcaoId: string;
+  subdivisao: Subdivisao;
+  alternando: boolean;
+  onAlternar: () => void;
+  onExcluir: () => void;
+  onSalvo: () => void;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [nome, setNome] = useState(subdivisao.nome);
+  const [erro, setErro] = useState<string | null>(null);
+  const editarRef = useRef<HTMLButtonElement>(null);
+  const voltarFoco = useRef(false);
+  const idCampo = `subdivisao-${subdivisao.id}-nome`;
+
+  // Ao sair da edição o foco volta ao lápis — depois do render que o recoloca na tela
+  useEffect(() => {
+    if (editando || !voltarFoco.current) return;
+    voltarFoco.current = false;
+    editarRef.current?.focus();
+  }, [editando]);
+
+  const fechar = () => {
+    voltarFoco.current = true;
+    setEditando(false);
+    setErro(null);
+  };
+
+  const renomear = useMutation({
+    mutationFn: () =>
+      fetchData(`/opcoes-diagnostico/${opcaoId}/subdivisoes/${subdivisao.id}`, {
+        method: "PATCH",
+        body: { nome: nome.trim() },
+      }),
+    onSuccess: () => {
+      toast.success("Subdivisão renomeada.");
+      onSalvo();
+      fechar();
+    },
+    onError: (e) => setErro(mensagemDeErro(e, "Não foi possível renomear a subdivisão.")),
+  });
+
+  const salvar = () => {
+    const texto = nome.trim();
+    if (!texto) return setErro("Informe o nome");
+    if (texto.length > 200) return setErro("No máximo 200 caracteres");
+    if (texto === subdivisao.nome) return fechar();
+    setErro(null);
+    renomear.mutate();
+  };
+
+  if (editando) {
+    return (
+      <li className="grid gap-1.5 px-3 py-2">
+        <Label htmlFor={idCampo} className="sr-only">
+          Novo nome de {subdivisao.nome}
+        </Label>
+        <div className="flex items-center gap-1">
+          <Input
+            id={idCampo}
+            autoFocus
+            maxLength={200}
+            value={nome}
+            aria-invalid={!!erro}
+            aria-describedby={erro ? `${idCampo}-erro` : undefined}
+            onChange={(e) => setNome(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                salvar();
+              } else if (e.key === "Escape") {
+                // Esc fecha só a edição, não o painel lateral
+                e.preventDefault();
+                e.stopPropagation();
+                setNome(subdivisao.nome);
+                fechar();
+              }
+            }}
+          />
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            title="Salvar"
+            aria-label="Salvar o nome"
+            disabled={renomear.isPending}
+            onClick={salvar}
+          >
+            {renomear.isPending ? <Spinner /> : <Check className="size-4" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            title="Cancelar"
+            aria-label="Cancelar a edição"
+            disabled={renomear.isPending}
+            onClick={() => {
+              setNome(subdivisao.nome);
+              fechar();
+            }}
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
+        {erro && (
+          <p id={`${idCampo}-erro`} role="alert" className="text-xs text-destructive">
+            {erro}
+          </p>
+        )}
+      </li>
+    );
+  }
+
+  return (
+    <li className="flex items-center gap-3 px-3 py-2">
+      <Checkbox
+        id={`subdivisao-${subdivisao.id}`}
+        checked={subdivisao.ativo}
+        disabled={alternando}
+        onCheckedChange={onAlternar}
+      />
+      <Label
+        htmlFor={`subdivisao-${subdivisao.id}`}
+        className={`flex-1 leading-4 font-normal ${subdivisao.ativo ? "" : "text-muted-foreground line-through"}`}
+      >
+        {subdivisao.nome}
+        <span className="sr-only">{subdivisao.ativo ? " (ativa)" : " (inativa)"}</span>
+      </Label>
+      <Button
+        ref={editarRef}
+        variant="ghost"
+        size="icon-sm"
+        title="Renomear"
+        aria-label={`Renomear a subdivisão ${subdivisao.nome}`}
+        onClick={() => {
+          setNome(subdivisao.nome);
+          setEditando(true);
+        }}
+      >
+        <Pencil className="size-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        title="Excluir"
+        aria-label={`Excluir a subdivisão ${subdivisao.nome}`}
+        onClick={onExcluir}
+      >
+        <Trash2 className="size-4 text-destructive" />
+      </Button>
+    </li>
   );
 }
