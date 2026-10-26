@@ -65,6 +65,14 @@ type Resposta = NonNullable<Diagnostico["analiseSoloRecente"]>;
 const LIMITE = 200;
 /** Mesmo teto do backend (MAX_UPLOAD_BYTES). */
 const MAX_ARQUIVO = 20 * 1024 * 1024;
+/**
+ * Os tipos que a API aceita (DOC_MIME_TYPES). Listar explicitamente, sem HEIC, faz o
+ * Safari do iPhone converter a foto para JPEG na hora de escolher — com `image/*` ela
+ * pode ir em HEIC, que a API recusa e o Chrome não mostra na prévia.
+ */
+const TIPOS_ANEXO = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
+/** HEIC vindo do computador (o Chrome às vezes nem informa o tipo — por isso a extensão). */
+const ehHeic = (f: File) => /^image\/hei[cf]/.test(f.type) || /\.hei[cf]$/i.test(f.name);
 
 const TIPOS: Record<TipoVisita, string> = {
   inicial_associacao: "Visita inicial na associação",
@@ -705,11 +713,13 @@ function FormularioAnexo({ visitaId, onFechar }: { visitaId: string; onFechar: (
 
   const erroArquivo = !arquivo
     ? "Escolha o arquivo"
-    : !(arquivo.type.startsWith("image/") || arquivo.type === "application/pdf")
-      ? "Envie uma imagem ou um PDF"
-      : arquivo.size > MAX_ARQUIVO
-        ? "O arquivo passa de 20 MB"
-        : null;
+    : ehHeic(arquivo)
+      ? "Foto em HEIC (formato do iPhone) não é aceita. Converta para JPEG — enviando pelo próprio iPhone, a conversão é automática."
+      : !TIPOS_ANEXO.includes(arquivo.type)
+        ? "Envie uma imagem (JPEG, PNG, WebP ou GIF) ou um PDF"
+        : arquivo.size > MAX_ARQUIVO
+          ? "O arquivo passa de 20 MB"
+          : null;
   const mostrarErro = tentou && erroArquivo;
 
   const enviar = useMutation({
@@ -745,7 +755,7 @@ function FormularioAnexo({ visitaId, onFechar }: { visitaId: string; onFechar: (
           <Input
             id="anexo-arquivo"
             type="file"
-            accept="image/*,application/pdf"
+            accept={TIPOS_ANEXO.join(",")}
             aria-invalid={!!mostrarErro}
             aria-describedby={mostrarErro ? "anexo-arquivo-erro" : undefined}
             onChange={(e) => setArquivo(e.target.files?.[0] ?? null)}
