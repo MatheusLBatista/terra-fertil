@@ -64,3 +64,15 @@ export function telefone(valor?: string | null) {
   if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
   return valor;
 }
+
+const DIA_ISO = new Intl.DateTimeFormat("en-CA", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  timeZone: env.TIMEZONE,
+});
+
+/** Hoje como data de calendário ("2026-10-26") no fuso do painel — para a API comparar prazos. */
+export function hojeISO() {
+  return DIA_ISO.format(new Date());
+}

@@ -12987,6 +12987,160 @@ export interface paths {
         };
         trace?: never;
     };
+    "/dashboard/gestao": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dashboard de gestão do projeto */
+        get: {
+            parameters: {
+                query: {
+                    projetoId: string;
+                    /** @description Data de hoje no fuso de quem consulta (YYYY-MM-DD); padrão: a do servidor */
+                    hoje?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["DashboardGestao"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/dashboard/tecnico": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dashboard do técnico (as visitas dele) */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Data de hoje no fuso de quem consulta (YYYY-MM-DD); padrão: a do servidor */
+                    hoje?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sucesso */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["DashboardTecnico"];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Dados inválidos */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/estados": {
         parameters: {
             query?: never;
@@ -16132,6 +16286,122 @@ export interface components {
              * @description Visita de acompanhamento que conferiu a adoção
              */
             verificadaEmVisitaId: string | null;
+        };
+        VisitaResumo: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            tipo: "inicial_associacao" | "diagnostico_propriedade" | "assistencia_tecnica" | "acompanhamento";
+            data: string;
+            /** @description Sigla da associação ou produtor — propriedade */
+            onde: string;
+            projetoSigla: string;
+            tecnicoNome: string;
+        };
+        /** @description Visão de gestão de um projeto: números, funil das entregas e pendências */
+        DashboardGestao: {
+            indicadores: {
+                /** @description Realizadas no mês de `hoje` */
+                visitasMes: number;
+                visitasMesAnterior: number;
+                entregasEntregues: number;
+                /** @description Todas as não canceladas */
+                entregasDemandadas: number;
+                /** @description Com visita inicial realizada */
+                associacoesVisitadas: number;
+                /** @description Com adesão ativa ao projeto */
+                associacoes: number;
+                liberadoCentavos: number;
+                gastoCentavos: number;
+            };
+            funil: {
+                situacoes: {
+                    /** @enum {string} */
+                    situacao: "demandado" | "aprovado" | "em_compra" | "comprado" | "entregue" | "cancelado";
+                    total: number;
+                }[];
+                /** @description Entregues com o termo de uso assinado */
+                termoAssinado: number;
+            };
+            pendencias: {
+                /** @description Pendentes, rejeitados ou com validade nos próximos 30 dias */
+                documentos: {
+                    total: number;
+                    itens: {
+                        /** Format: uuid */
+                        id: string;
+                        /** Format: uuid */
+                        associacaoId: string;
+                        associacaoSigla: string;
+                        tipoDocumento: string;
+                        situacao: string;
+                        validade: string | null;
+                    }[];
+                };
+                entregasSemAssinatura: {
+                    total: number;
+                    itens: {
+                        /** Format: uuid */
+                        id: string;
+                        itemDescricao: string;
+                        associacaoSigla: string;
+                        dataEntrega: string | null;
+                    }[];
+                };
+                /** @description Acompanhamentos na associação e assistências realizados sem assinatura */
+                visitasSemAssinatura: {
+                    total: number;
+                    itens: components["schemas"]["VisitaResumo"][];
+                };
+                recomendacoesVencidas: {
+                    total: number;
+                    itens: {
+                        /** Format: uuid */
+                        id: string;
+                        descricao: string;
+                        prazo: string;
+                        /** Format: uuid */
+                        visitaId: string;
+                        onde: string;
+                    }[];
+                };
+            };
+        };
+        /** @description Visão do técnico: só as visitas em que ele é o responsável ou está na equipe */
+        DashboardTecnico: {
+            realizadasMes: number;
+            proximas: {
+                total: number;
+                itens: components["schemas"]["VisitaResumo"][];
+            };
+            /** @description Agendadas com a data já passada */
+            atrasadas: {
+                total: number;
+                itens: components["schemas"]["VisitaResumo"][];
+            };
+            /** @description Realizadas sem relato, sem foto ou (as que se assinam) sem assinatura */
+            paraFechar: {
+                total: number;
+                itens: (components["schemas"]["VisitaResumo"] & {
+                    faltaRelato: boolean;
+                    faltaFoto: boolean;
+                    faltaAssinatura: boolean;
+                })[];
+            };
+            /** @description Dadas nas minhas visitas, ainda abertas, com prazo nos próximos 15 dias */
+            recomendacoes: {
+                total: number;
+                itens: {
+                    /** Format: uuid */
+                    id: string;
+                    descricao: string;
+                    prazo: string;
+                    vencida: boolean;
+                    /** Format: uuid */
+                    visitaId: string;
+                    onde: string;
+                }[];
+            };
         };
         /** @description Unidade federativa (dados do IBGE) */
         Estado: {

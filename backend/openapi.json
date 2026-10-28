@@ -2869,6 +2869,450 @@
         ],
         "description": "Orientação técnica dada numa visita de assistência"
       },
+      "VisitaResumo": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "inicial_associacao",
+              "diagnostico_propriedade",
+              "assistencia_tecnica",
+              "acompanhamento"
+            ]
+          },
+          "data": {
+            "type": "string"
+          },
+          "onde": {
+            "type": "string",
+            "description": "Sigla da associação ou produtor — propriedade"
+          },
+          "projetoSigla": {
+            "type": "string"
+          },
+          "tecnicoNome": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "tipo",
+          "data",
+          "onde",
+          "projetoSigla",
+          "tecnicoNome"
+        ]
+      },
+      "DashboardGestao": {
+        "type": "object",
+        "properties": {
+          "indicadores": {
+            "type": "object",
+            "properties": {
+              "visitasMes": {
+                "type": "integer",
+                "description": "Realizadas no mês de `hoje`"
+              },
+              "visitasMesAnterior": {
+                "type": "integer"
+              },
+              "entregasEntregues": {
+                "type": "integer"
+              },
+              "entregasDemandadas": {
+                "type": "integer",
+                "description": "Todas as não canceladas"
+              },
+              "associacoesVisitadas": {
+                "type": "integer",
+                "description": "Com visita inicial realizada"
+              },
+              "associacoes": {
+                "type": "integer",
+                "description": "Com adesão ativa ao projeto"
+              },
+              "liberadoCentavos": {
+                "type": "integer"
+              },
+              "gastoCentavos": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "visitasMes",
+              "visitasMesAnterior",
+              "entregasEntregues",
+              "entregasDemandadas",
+              "associacoesVisitadas",
+              "associacoes",
+              "liberadoCentavos",
+              "gastoCentavos"
+            ]
+          },
+          "funil": {
+            "type": "object",
+            "properties": {
+              "situacoes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "situacao": {
+                      "type": "string",
+                      "enum": [
+                        "demandado",
+                        "aprovado",
+                        "em_compra",
+                        "comprado",
+                        "entregue",
+                        "cancelado"
+                      ]
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "situacao",
+                    "total"
+                  ]
+                }
+              },
+              "termoAssinado": {
+                "type": "integer",
+                "description": "Entregues com o termo de uso assinado"
+              }
+            },
+            "required": [
+              "situacoes",
+              "termoAssinado"
+            ]
+          },
+          "pendencias": {
+            "type": "object",
+            "properties": {
+              "documentos": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "integer"
+                  },
+                  "itens": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "associacaoId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "associacaoSigla": {
+                          "type": "string"
+                        },
+                        "tipoDocumento": {
+                          "type": "string"
+                        },
+                        "situacao": {
+                          "type": "string"
+                        },
+                        "validade": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "associacaoId",
+                        "associacaoSigla",
+                        "tipoDocumento",
+                        "situacao",
+                        "validade"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "total",
+                  "itens"
+                ],
+                "description": "Pendentes, rejeitados ou com validade nos próximos 30 dias"
+              },
+              "entregasSemAssinatura": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "integer"
+                  },
+                  "itens": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "itemDescricao": {
+                          "type": "string"
+                        },
+                        "associacaoSigla": {
+                          "type": "string"
+                        },
+                        "dataEntrega": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "itemDescricao",
+                        "associacaoSigla",
+                        "dataEntrega"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "total",
+                  "itens"
+                ]
+              },
+              "visitasSemAssinatura": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "integer"
+                  },
+                  "itens": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/VisitaResumo"
+                    }
+                  }
+                },
+                "required": [
+                  "total",
+                  "itens"
+                ],
+                "description": "Acompanhamentos na associação e assistências realizados sem assinatura"
+              },
+              "recomendacoesVencidas": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "integer"
+                  },
+                  "itens": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "descricao": {
+                          "type": "string"
+                        },
+                        "prazo": {
+                          "type": "string"
+                        },
+                        "visitaId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "onde": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "descricao",
+                        "prazo",
+                        "visitaId",
+                        "onde"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "total",
+                  "itens"
+                ]
+              }
+            },
+            "required": [
+              "documentos",
+              "entregasSemAssinatura",
+              "visitasSemAssinatura",
+              "recomendacoesVencidas"
+            ]
+          }
+        },
+        "required": [
+          "indicadores",
+          "funil",
+          "pendencias"
+        ],
+        "description": "Visão de gestão de um projeto: números, funil das entregas e pendências"
+      },
+      "DashboardTecnico": {
+        "type": "object",
+        "properties": {
+          "realizadasMes": {
+            "type": "integer"
+          },
+          "proximas": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "itens": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/VisitaResumo"
+                }
+              }
+            },
+            "required": [
+              "total",
+              "itens"
+            ]
+          },
+          "atrasadas": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "itens": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/VisitaResumo"
+                }
+              }
+            },
+            "required": [
+              "total",
+              "itens"
+            ],
+            "description": "Agendadas com a data já passada"
+          },
+          "paraFechar": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "itens": {
+                "type": "array",
+                "items": {
+                  "allOf": [
+                    {
+                      "$ref": "#/components/schemas/VisitaResumo"
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "faltaRelato": {
+                          "type": "boolean"
+                        },
+                        "faltaFoto": {
+                          "type": "boolean"
+                        },
+                        "faltaAssinatura": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "faltaRelato",
+                        "faltaFoto",
+                        "faltaAssinatura"
+                      ]
+                    }
+                  ]
+                }
+              }
+            },
+            "required": [
+              "total",
+              "itens"
+            ],
+            "description": "Realizadas sem relato, sem foto ou (as que se assinam) sem assinatura"
+          },
+          "recomendacoes": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer"
+              },
+              "itens": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "descricao": {
+                      "type": "string"
+                    },
+                    "prazo": {
+                      "type": "string"
+                    },
+                    "vencida": {
+                      "type": "boolean"
+                    },
+                    "visitaId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "onde": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "descricao",
+                    "prazo",
+                    "vencida",
+                    "visitaId",
+                    "onde"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "total",
+              "itens"
+            ],
+            "description": "Dadas nas minhas visitas, ainda abertas, com prazo nos próximos 15 dias"
+          }
+        },
+        "required": [
+          "realizadasMes",
+          "proximas",
+          "atrasadas",
+          "paraFechar",
+          "recomendacoes"
+        ],
+        "description": "Visão do técnico: só as visitas em que ele é o responsável ou está na equipe"
+      },
       "Estado": {
         "type": "object",
         "properties": {
@@ -22879,6 +23323,201 @@
           },
           "409": {
             "description": "Conflito — registro já existe, é referenciado por outro ou viola uma regra de negócio",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard/gestao": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Dashboard de gestão do projeto",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "projetoId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "Data de hoje no fuso de quem consulta (YYYY-MM-DD); padrão: a do servidor"
+            },
+            "required": false,
+            "description": "Data de hoje no fuso de quem consulta (YYYY-MM-DD); padrão: a do servidor",
+            "name": "hoje",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DashboardGestao"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard/tecnico": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Dashboard do técnico (as visitas dele)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "description": "Data de hoje no fuso de quem consulta (YYYY-MM-DD); padrão: a do servidor"
+            },
+            "required": false,
+            "description": "Data de hoje no fuso de quem consulta (YYYY-MM-DD); padrão: a do servidor",
+            "name": "hoje",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/DashboardTecnico"
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
             "content": {
               "application/json": {
                 "schema": {

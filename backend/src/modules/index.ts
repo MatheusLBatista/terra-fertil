@@ -21,6 +21,7 @@ import metasRoutes from "./metas/metas.routes.ts";
 import lancamentosRoutes from "./lancamentos/lancamentos.routes.ts";
 import visitasRoutes from "./visitas/visitas.routes.ts";
 import recomendacoesRoutes from "./recomendacoes/recomendacoes.routes.ts";
+import dashboardRoutes from "./dashboard/dashboard.routes.ts";
 
 // Schemas — importados por efeito colateral para popular o registry OpenAPI
 import "./estados/estados.schema.ts";
@@ -44,6 +45,7 @@ import "./metas/metas.schema.ts";
 import "./lancamentos/lancamentos.schema.ts";
 import "./visitas/visitas.schema.ts";
 import "./recomendacoes/recomendacoes.schema.ts";
+import "./dashboard/dashboard.schema.ts";
 
 /**
  * Registro dos módulos da API — o ÚNICO lugar a editar ao criar um módulo:
@@ -73,4 +75,5 @@ export const MODULOS: { path: string; routes: Hono<AppEnv> }[] = [
   { path: "/lancamentos", routes: lancamentosRoutes },
   { path: "/visitas", routes: visitasRoutes },
   { path: "/recomendacoes", routes: recomendacoesRoutes },
+  { path: "/dashboard", routes: dashboardRoutes },
 ];
