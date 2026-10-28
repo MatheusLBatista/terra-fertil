@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient, type QueryKey } from "@tanstack/
 import { toast } from "react-toastify";
 import { Eraser, PenLine, Trash2 } from "lucide-react";
 
-import { SheetFooter } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -74,10 +74,20 @@ function AreaAssinatura({
     if (!canvas) return;
     const pad = new SignaturePad(canvas, { backgroundColor: "rgb(255,255,255)", penColor: "rgb(17,24,39)" });
     const avisar = () => onMudou(pad.isEmpty());
-    pad.addEventListener("endStroke", avisar);
 
-    // Canvas na densidade da tela; o traço é redesenhado ao mudar de tamanho
+    // Canvas na densidade da tela; o traço é redesenhado ao mudar de tamanho (girar o
+    // tablet). Redesenhar limpa o canvas: durante um traço, o ajuste espera ele terminar.
+    let tamanho = "";
+    let desenhando = false;
+    let ajustePendente = false;
     const ajustar = () => {
+      const novo = `${canvas.offsetWidth}x${canvas.offsetHeight}`;
+      if (novo === tamanho) return;
+      if (desenhando) {
+        ajustePendente = true;
+        return;
+      }
+      tamanho = novo;
       const dados = pad.toData();
       const razao = Math.max(window.devicePixelRatio || 1, 1);
       canvas.width = canvas.offsetWidth * razao;
@@ -86,6 +96,20 @@ function AreaAssinatura({
       pad.clear();
       pad.fromData(dados);
     };
+    const comecou = () => {
+      desenhando = true;
+    };
+    const terminou = () => {
+      desenhando = false;
+      avisar();
+      if (ajustePendente) {
+        ajustePendente = false;
+        ajustar();
+      }
+    };
+    pad.addEventListener("beginStroke", comecou);
+    pad.addEventListener("endStroke", terminou);
+
     ajustar();
     const observador = new ResizeObserver(ajustar);
     observador.observe(canvas);
@@ -100,7 +124,8 @@ function AreaAssinatura({
     });
     return () => {
       observador.disconnect();
-      pad.removeEventListener("endStroke", avisar);
+      pad.removeEventListener("beginStroke", comecou);
+      pad.removeEventListener("endStroke", terminou);
       pad.off();
     };
     // Monta uma vez: os callbacks são estáveis o bastante para o ciclo do formulário
@@ -114,7 +139,8 @@ function AreaAssinatura({
       role="img"
       aria-label="Área de assinatura — desenhe com o dedo, a caneta ou o mouse"
       aria-describedby={descricaoId}
-      className={`h-48 w-full touch-none border bg-white ${invalida ? "border-destructive" : "border-input"}`}
+      // Cresce até o espaço do modal (tablet com caneta); o ResizeObserver reajusta o desenho
+      className={`min-h-56 w-full flex-1 touch-none border bg-white ${invalida ? "border-destructive" : "border-input"}`}
     />
   );
 }
@@ -122,10 +148,11 @@ function AreaAssinatura({
 // ─── Formulário de coleta ────────────────────────────────────────────────────
 
 /**
- * Nome + papel + traço. Pensado para o Sheet: rolagem no corpo e rodapé fixo.
- * `papeis` limita os papéis aceitos pelo alvo (a API recusa os demais).
+ * Nome + papel + traço, para o `ModalAssinatura`: os campos em cima e a área de
+ * assinatura ocupando o resto da altura. `papeis` limita os papéis aceitos pelo
+ * alvo (a API recusa os demais).
  */
-export function FormularioAssinatura({
+function FormularioAssinatura({
   base,
   queryKey,
   invalidar = [],
@@ -185,7 +212,7 @@ export function FormularioAssinatura({
 
   return (
     <form
-      className="flex flex-1 flex-col overflow-hidden"
+      className="flex min-h-0 flex-1 flex-col"
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
@@ -194,7 +221,7 @@ export function FormularioAssinatura({
         if (!erroNome && !erroTraco) salvar.mutate();
       }}
     >
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
         {errosApi.length > 0 && (
           <ul role="alert" className="list-disc pl-4 text-xs text-destructive">
             {errosApi.map((e) => (
@@ -204,51 +231,52 @@ export function FormularioAssinatura({
         )}
         <p className="text-xs text-muted-foreground">{aviso}</p>
 
-        <div className="grid gap-1.5">
-          <Label htmlFor="assinatura-nome">Nome de quem assina</Label>
-          <Input
-            id="assinatura-nome"
-            maxLength={200}
-            autoComplete="off"
-            value={nome}
-            aria-invalid={tentou && !!erroNome}
-            aria-describedby={tentou && erroNome ? "assinatura-nome-erro" : undefined}
-            onChange={(e) => setNome(e.target.value)}
-          />
-          {tentou && erroNome && (
-            <p id="assinatura-nome-erro" role="alert" className="text-xs text-destructive">
-              {erroNome}
+        <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
+          <div className="grid gap-1.5">
+            <Label htmlFor="assinatura-nome">Nome de quem assina</Label>
+            <Input
+              id="assinatura-nome"
+              maxLength={200}
+              autoComplete="off"
+              value={nome}
+              aria-invalid={tentou && !!erroNome}
+              aria-describedby={tentou && erroNome ? "assinatura-nome-erro" : undefined}
+              onChange={(e) => setNome(e.target.value)}
+            />
+            {tentou && erroNome && (
+              <p id="assinatura-nome-erro" role="alert" className="text-xs text-destructive">
+                {erroNome}
+              </p>
+            )}
+          </div>
+          {papeis.length > 1 ? (
+            <div className="grid gap-1.5">
+              <Label htmlFor="assinatura-papel">Assina como</Label>
+              <NativeSelect
+                id="assinatura-papel"
+                className="w-full"
+                value={papel}
+                onChange={(e) => setPapel(e.target.value as PapelAssinante)}
+              >
+                {papeis.map((p) => (
+                  <NativeSelectOption key={p} value={p}>
+                    {rotuloPapel(p)}
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            </div>
+          ) : (
+            <p className="text-sm sm:pb-2">
+              Assina como <span className="font-medium">{rotuloPapel(papeis[0])}</span>
             </p>
           )}
         </div>
 
-        {papeis.length > 1 ? (
-          <div className="grid gap-1.5">
-            <Label htmlFor="assinatura-papel">Assina como</Label>
-            <NativeSelect
-              id="assinatura-papel"
-              className="w-full"
-              value={papel}
-              onChange={(e) => setPapel(e.target.value as PapelAssinante)}
-            >
-              {papeis.map((p) => (
-                <NativeSelectOption key={p} value={p}>
-                  {rotuloPapel(p)}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </div>
-        ) : (
-          <p className="text-sm">
-            Assina como <span className="font-medium">{rotuloPapel(papeis[0])}</span>
-          </p>
-        )}
-
-        <div className="grid gap-1.5">
+        <div className="flex min-h-64 flex-1 flex-col gap-1.5">
           <div className="flex items-center justify-between gap-2">
             {/* Canvas não é campo rotulável: o nome acessível vem do aria-label dele */}
             <span className="text-xs">Assinatura</span>
-            <Button type="button" variant="ghost" size="sm" onClick={() => area.current?.limpar()}>
+            <Button type="button" variant="outline" size="sm" onClick={() => area.current?.limpar()}>
               <Eraser className="size-4" /> Limpar
             </Button>
           </div>
@@ -267,13 +295,13 @@ export function FormularioAssinatura({
             </p>
           ) : (
             <p id="assinatura-area-dica" className="text-xs text-muted-foreground">
-              Peça à pessoa que assine com o dedo ou a caneta. Assinatura eletrônica simples, sem certificado
+              Peça à pessoa que assine com a caneta ou o dedo. Assinatura eletrônica simples, sem certificado
               digital.
             </p>
           )}
         </div>
       </div>
-      <SheetFooter className="flex-row justify-end gap-2 border-t">
+      <div className="flex flex-row justify-end gap-2 border-t p-4">
         <Button type="button" variant="outline" onClick={onFechar}>
           Cancelar
         </Button>
@@ -286,8 +314,45 @@ export function FormularioAssinatura({
             "Registrar assinatura"
           )}
         </Button>
-      </SheetFooter>
+      </div>
     </form>
+  );
+}
+
+/**
+ * Coleta da assinatura em modal grande (quase a tela toda): no tablet, a
+ * pessoa assina com a caneta numa área ampla. Toque fora não fecha — uma
+ * caneta escapando do quadro não pode descartar a assinatura; fecha pelo
+ * Cancelar, pelo X ou pelo Esc.
+ */
+export function ModalAssinatura({
+  aberto,
+  onAbertoChange,
+  titulo,
+  descricao,
+  ...form
+}: {
+  aberto: boolean;
+  onAbertoChange: (aberto: boolean) => void;
+  titulo: string;
+  descricao?: string | null;
+  base: string;
+  queryKey: QueryKey;
+  invalidar?: QueryKey[];
+  papeis: PapelAssinante[];
+  nomeSugerido?: string | null;
+  aviso: string;
+}) {
+  return (
+    <Dialog open={aberto} onOpenChange={onAbertoChange} disablePointerDismissal>
+      <DialogContent className="flex h-[calc(100dvh-2rem)] max-h-[56rem] flex-col gap-0 p-0 sm:max-w-5xl">
+        <DialogHeader className="border-b p-4 pr-12">
+          <DialogTitle className="text-base">{titulo}</DialogTitle>
+          {descricao && <DialogDescription>{descricao}</DialogDescription>}
+        </DialogHeader>
+        {aberto && <FormularioAssinatura {...form} onFechar={() => onAbertoChange(false)} />}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -406,7 +471,7 @@ export function CartaoAssinatura({
 
 /**
  * Conteúdo do Sheet de assinatura de um documento (termo de uso, documento da
- * associação): carregando → assinatura registrada (com remover) ou a coleta.
+ * associação): a assinatura registrada (com remover) ou o botão que abre a coleta no modal.
  */
 export function PainelAssinatura({
   base,
@@ -417,7 +482,8 @@ export function PainelAssinatura({
   aviso,
   avisoRemover,
   avisoTravado,
-  onFechar,
+  titulo,
+  descricao,
 }: {
   base: string;
   queryKey: QueryKey;
@@ -428,8 +494,11 @@ export function PainelAssinatura({
   avisoRemover: string;
   /** O que fica travado enquanto assinado. */
   avisoTravado: string;
-  onFechar: () => void;
+  /** Título e descrição do modal de coleta. */
+  titulo: string;
+  descricao?: string | null;
 }) {
+  const [colher, setColher] = useState(false);
   const assinatura = useAssinatura(base, queryKey);
   const dado = assinatura.data?.data;
 
@@ -465,16 +534,28 @@ export function PainelAssinatura({
       </div>
     );
   }
-  if (!editavel) return <p className="p-4 text-sm text-muted-foreground">Ainda não assinado.</p>;
   return (
-    <FormularioAssinatura
-      base={base}
-      queryKey={queryKey}
-      invalidar={invalidar}
-      papeis={papeis}
-      aviso={aviso}
-      onFechar={onFechar}
-    />
+    <div className="flex flex-col items-start gap-3 p-4">
+      <p className="text-sm text-muted-foreground">Ainda não assinado.</p>
+      {editavel && (
+        <>
+          <Button onClick={() => setColher(true)}>
+            <PenLine className="size-4" /> Colher assinatura
+          </Button>
+          <ModalAssinatura
+            aberto={colher}
+            onAbertoChange={setColher}
+            titulo={titulo}
+            descricao={descricao}
+            base={base}
+            queryKey={queryKey}
+            invalidar={invalidar}
+            papeis={papeis}
+            aviso={aviso}
+          />
+        </>
+      )}
+    </div>
   );
 }
 

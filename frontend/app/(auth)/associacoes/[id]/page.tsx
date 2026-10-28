@@ -31,7 +31,12 @@ import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SeletorPessoa, type Pessoa } from "@/components/seletor-pessoa";
 import { ConfirmacaoDialog, type Confirmacao } from "@/components/confirmacao-dialog";
-import { IconeAssinar, PainelAssinatura } from "@/components/assinatura";
+import {
+  IconeAssinar,
+  ModalAssinatura,
+  PainelAssinatura,
+  type PapelAssinante,
+} from "@/components/assinatura";
 import { useProjetos } from "@/hooks/use-projetos";
 import { ehSemPermissao, fetchData, mensagemDeErro, type ErroApi } from "@/lib/fetchData";
 import { aplicarErrosDaApi } from "@/lib/erros-form";
@@ -754,6 +759,17 @@ function Documentos({ associacaoId, editavel }: { associacaoId: string; editavel
   const [editar, setEditar] = useState<Documento | null>(null);
   const [excluir, setExcluir] = useState<Documento | null>(null);
   const [assinatura, setAssinatura] = useState<Documento | null>(null);
+  // Coleta direto no modal (área grande para a caneta); o Sheet fica para ver a assinatura
+  const [colher, setColher] = useState<Documento | null>(null);
+  const propsAssinatura = (doc: Documento) => ({
+    titulo: `Assinatura — ${doc.tipoDocumento}${doc.projetoSigla ? ` (${doc.projetoSigla})` : ""}`,
+    descricao: doc.nomeArquivo,
+    base: `/associacoes/${associacaoId}/documentos/${doc.id}`,
+    queryKey: [...chave, doc.id, "assinatura"],
+    invalidar: [chave],
+    papeis: ["presidente", "vice_presidente", "outro"] as PapelAssinante[],
+    aviso: `Ao assinar, o representante da associação confirma o documento “${doc.tipoDocumento}” no arquivo enviado (${doc.nomeArquivo ?? "sem nome"}).`,
+  });
   const inputArquivo = useRef<HTMLInputElement>(null);
   const alvoUpload = useRef<string | null>(null);
 
@@ -1016,7 +1032,7 @@ function Documentos({ associacaoId, editavel }: { associacaoId: string; editavel
                             size="icon-sm"
                             title={d.temAssinatura ? "Assinatura" : "Colher assinatura"}
                             aria-label={`${d.temAssinatura ? "Ver a assinatura" : "Colher a assinatura"} de ${rotulo}`}
-                            onClick={() => setAssinatura(d)}
+                            onClick={() => (d.temAssinatura ? setAssinatura(d) : setColher(d))}
                           >
                             <IconeAssinar className="size-4" />
                           </Button>
@@ -1134,19 +1150,23 @@ function Documentos({ associacaoId, editavel }: { associacaoId: string; editavel
           {assinatura && (
             <PainelAssinatura
               key={assinatura.id}
-              base={`/associacoes/${associacaoId}/documentos/${assinatura.id}`}
-              queryKey={[...chave, assinatura.id, "assinatura"]}
-              invalidar={[chave]}
+              {...propsAssinatura(assinatura)}
               editavel={editavel}
-              papeis={["presidente", "vice_presidente", "outro"]}
-              aviso={`Ao assinar, o representante da associação confirma o documento “${assinatura.tipoDocumento}” no arquivo enviado (${assinatura.nomeArquivo ?? "sem nome"}).`}
               avisoRemover="O arquivo do documento volta a poder ser trocado; depois, colha a assinatura de novo. A remoção fica no histórico."
               avisoTravado="Documento assinado: o arquivo não pode ser trocado sem remover a assinatura. Uma nova versão do documento precisa de nova assinatura."
-              onFechar={() => setAssinatura(null)}
             />
           )}
         </SheetContent>
       </Sheet>
+
+      {colher && (
+        <ModalAssinatura
+          key={colher.id}
+          aberto
+          onAbertoChange={(aberto) => !aberto && setColher(null)}
+          {...propsAssinatura(colher)}
+        />
+      )}
 
       <ConfirmacaoDialog confirmacao={confirmacao} onFechar={() => setExcluir(null)} />
     </section>

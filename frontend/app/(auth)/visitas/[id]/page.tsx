@@ -50,8 +50,8 @@ import { usePapel } from "@/lib/papeis";
 import { rotuloCategoriaItem } from "@/lib/itens";
 import {
   CartaoAssinatura,
-  FormularioAssinatura,
   IconeAssinar,
+  ModalAssinatura,
   useAssinatura,
   type PapelAssinante,
 } from "@/components/assinatura";
@@ -1524,28 +1524,21 @@ function AssinaturaVisita({ visita, editavel }: { visita: Visita; editavel: bool
         </p>
       )}
 
-      <Sheet open={colher} onOpenChange={setColher}>
-        <SheetContent className="flex w-full flex-col p-0 sm:max-w-lg">
-          <SheetHeader className="border-b">
-            <SheetTitle>Colher assinatura</SheetTitle>
-            <SheetDescription>
-              {acompanhamento
-                ? visita.associacaoSigla
-                : [visita.produtorNome, visita.propriedadeNome].filter(Boolean).join(" — ")}
-            </SheetDescription>
-          </SheetHeader>
-          {colher && (
-            <FormularioAssinatura
-              base={base}
-              queryKey={chave}
-              papeis={papeis}
-              nomeSugerido={acompanhamento ? null : visita.produtorNome}
-              aviso={`Ao assinar, ${quem} confirma ${contagem} desta visita. Depois de assinada, a verificação não pode mais ser alterada sem remover a assinatura.`}
-              onFechar={() => setColher(false)}
-            />
-          )}
-        </SheetContent>
-      </Sheet>
+      <ModalAssinatura
+        aberto={colher}
+        onAbertoChange={setColher}
+        titulo={`Assinatura — ${acompanhamento ? "acompanhamento" : "assistência técnica"}`}
+        descricao={
+          acompanhamento
+            ? visita.associacaoSigla
+            : [visita.produtorNome, visita.propriedadeNome].filter(Boolean).join(" — ")
+        }
+        base={base}
+        queryKey={chave}
+        papeis={papeis}
+        nomeSugerido={acompanhamento ? null : visita.produtorNome}
+        aviso={`Ao assinar, ${quem} confirma ${contagem} desta visita. Depois de assinada, a verificação não pode mais ser alterada sem remover a assinatura.`}
+      />
     </section>
   );
 }

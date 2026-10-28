@@ -59,7 +59,12 @@ import { centavosDeTexto, textoDeCentavos } from "@/lib/dinheiro";
 import { env } from "@/lib/env";
 import { usePapel } from "@/lib/papeis";
 import { CATEGORIAS_ITEM, rotuloCategoriaItem } from "@/lib/itens";
-import { IconeAssinar, PainelAssinatura } from "@/components/assinatura";
+import {
+  IconeAssinar,
+  ModalAssinatura,
+  PainelAssinatura,
+  type PapelAssinante,
+} from "@/components/assinatura";
 import { PAGE_SIZES } from "@/lib/pageSizes";
 import type { Envelope } from "@/types/envelope";
 import type { components } from "@/types/api";
@@ -158,6 +163,8 @@ export default function EntregasPage() {
   const [excluir, setExcluir] = useState<Entrega | null>(null);
   const [removerTermo, setRemoverTermo] = useState<Entrega | null>(null);
   const [assinatura, setAssinatura] = useState<Entrega | null>(null);
+  // Coleta direto no modal (área grande para a caneta); o Sheet fica para ver a assinatura
+  const [colher, setColher] = useState<Entrega | null>(null);
   const tabelaRef = useRef<HTMLTableElement>(null);
   const arquivoRef = useRef<HTMLInputElement>(null);
   const alvoTermoRef = useRef<Entrega | null>(null);
@@ -402,7 +409,9 @@ export default function EntregasPage() {
                             : "Colher assinatura do termo de uso"
                         }
                         aria-label={`${row.original.temAssinatura ? "Ver a assinatura" : "Colher a assinatura"} do termo de uso de ${nome}`}
-                        onClick={() => setAssinatura(row.original)}
+                        onClick={() =>
+                          row.original.temAssinatura ? setAssinatura(row.original) : setColher(row.original)
+                        }
                       >
                         <IconeAssinar className="size-4" />
                       </Button>
@@ -832,15 +841,19 @@ export default function EntregasPage() {
             </SheetDescription>
           </SheetHeader>
           {assinatura && (
-            <AssinaturaTermo
-              key={assinatura.id}
-              entrega={assinatura}
-              editavel={podeEditarCampo}
-              onFechar={() => setAssinatura(null)}
-            />
+            <AssinaturaTermo key={assinatura.id} entrega={assinatura} editavel={podeEditarCampo} />
           )}
         </SheetContent>
       </Sheet>
+
+      {colher && (
+        <ModalAssinatura
+          key={colher.id}
+          aberto
+          onAbertoChange={(aberto) => !aberto && setColher(null)}
+          {...propsAssinaturaTermo(colher)}
+        />
+      )}
 
       <ConfirmacaoDialog confirmacao={confirmacaoExcluir} onFechar={() => setExcluir(null)} />
       <ConfirmacaoDialog confirmacao={confirmacaoTermo} onFechar={() => setRemoverTermo(null)} />
@@ -1201,26 +1214,26 @@ function FormularioEntrega({ registro, onFechar }: { registro?: Entrega; onFecha
 }
 
 /** Assinatura do termo de uso, pela associação (presidente, vice ou outro representante). */
-function AssinaturaTermo({
-  entrega,
-  editavel,
-  onFechar,
-}: {
-  entrega: Entrega;
-  editavel: boolean;
-  onFechar: () => void;
-}) {
+/** O que a coleta da assinatura do termo precisa — o mesmo no Sheet e no modal da linha. */
+function propsAssinaturaTermo(entrega: Entrega) {
+  return {
+    titulo: "Assinatura do termo de uso",
+    descricao: `${entrega.itemDescricao} para ${entrega.associacaoSigla}`,
+    base: `/entregas/${entrega.id}`,
+    queryKey: ["entregas", entrega.id, "assinatura"],
+    invalidar: [["entregas"]],
+    papeis: ["presidente", "vice_presidente", "outro"] as PapelAssinante[],
+    aviso: `Ao assinar, o representante da associação confirma o recebimento de ${entrega.quantidade} × ${entrega.itemDescricao} e o termo de uso.`,
+  };
+}
+
+function AssinaturaTermo({ entrega, editavel }: { entrega: Entrega; editavel: boolean }) {
   return (
     <PainelAssinatura
-      base={`/entregas/${entrega.id}`}
-      queryKey={["entregas", entrega.id, "assinatura"]}
-      invalidar={[["entregas"]]}
+      {...propsAssinaturaTermo(entrega)}
       editavel={editavel}
-      papeis={["presidente", "vice_presidente", "outro"]}
-      aviso={`Ao assinar, o representante da associação confirma o recebimento de ${entrega.quantidade} × ${entrega.itemDescricao} e o termo de uso.`}
       avisoRemover="O termo de uso volta a poder ser trocado e a entrega a mudar de situação; depois, colha a assinatura de novo. A remoção fica no histórico."
       avisoTravado="Termo assinado: o arquivo não pode ser trocado nem a entrega sair de “Entregue” sem remover a assinatura."
-      onFechar={onFechar}
     />
   );
 }
