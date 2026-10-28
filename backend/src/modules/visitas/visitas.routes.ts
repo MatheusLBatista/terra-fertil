@@ -43,6 +43,7 @@ router.delete("/:id/atividades-verificadas/:verificacaoId", ...editar, controlle
 
 router.get("/:id/assinatura", ...ler, controller.assinatura);
 router.post("/:id/assinatura", ...editar, limiteAssinatura, controller.assinar);
+router.get("/:id/assinatura/assinantes", ...ler, controller.assinantes);
 router.get("/:id/assinatura/imagem", ...ler, controller.imagemAssinatura);
 router.delete("/:id/assinatura", ...editar, controller.removerAssinatura);
 

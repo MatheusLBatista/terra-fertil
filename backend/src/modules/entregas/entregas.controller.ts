@@ -83,6 +83,12 @@ export default class EntregasController {
     return c.json(successResponse(await this.service.assinatura(params.data.id)));
   };
 
+  assinantes = async (c: AppContext) => {
+    const params = EntregaIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    return c.json(successResponse(await this.service.assinantes(params.data.id)));
+  };
+
   assinar = async (c: AppContext) => {
     const params = EntregaIdParamSchema.safeParse(c.req.param());
     if (!params.success) return respostaValidacao(c, params.error.issues);

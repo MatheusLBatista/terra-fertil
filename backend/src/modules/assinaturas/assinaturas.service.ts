@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { z } from "zod";
 import { AppError } from "../../lib/appError.ts";
 import { downloadFromS3, uploadToS3, type ArquivoUpload } from "../../lib/storage/upload.ts";
-import AssinaturasRepository, { type AlvoAssinatura } from "./assinaturas.repository.ts";
+import AssinaturasRepository, { type AlvoAssinatura, type Assinante } from "./assinaturas.repository.ts";
 import type { AssinaturaFormSchema } from "./assinaturas.schema.ts";
 
 /** Assinatura PNG de verdade (o tipo do multipart vem do cliente). */
@@ -30,11 +30,26 @@ export default class AssinaturasService {
     return encontrada;
   }
 
+  /** Quem pode assinar pela associação: os contatos cadastrados dela. */
+  assinantesDaAssociacao(associacaoId: string) {
+    return this.repository.contatosDaAssociacao(associacaoId);
+  }
+
+  /** Quem pode assinar pela propriedade: o produtor dono dela. */
+  assinantesDaPropriedade(propriedadeId: string) {
+    return this.repository.produtorDaPropriedade(propriedadeId);
+  }
+
+  /**
+   * `assinantes` são as pessoas vinculadas ao alvo (o dono do alvo monta a lista);
+   * quem assina precisa estar nela. O nome é gravado como estava no cadastro.
+   */
   async registrar(
     alvo: AlvoAssinatura,
     pasta: string,
-    dados: z.infer<typeof AssinaturaFormSchema>,
+    { userId, papel }: z.infer<typeof AssinaturaFormSchema>,
     imagem: ArquivoUpload,
+    assinantes: Assinante[],
   ) {
     if (await this.repository.porAlvo(alvo)) {
       throw new AppError(
@@ -44,12 +59,27 @@ export default class AssinaturasService {
         "JA_ASSINADO",
       );
     }
+    const assinante = assinantes.find((a) => a.userId === userId);
+    if (!assinante) {
+      throw new AppError(
+        "Quem assina precisa estar cadastrado e vinculado: contato da associação ou o produtor da propriedade",
+        422,
+        undefined,
+        "ASSINANTE_INVALIDO",
+      );
+    }
     if (!imagem.buffer.subarray(0, PNG.length).equals(PNG)) {
       throw new AppError("A imagem da assinatura precisa ser PNG", 415);
     }
     const nome = `assinatura-${randomUUID()}.png`;
     await uploadToS3(pasta, nome, imagem.buffer, "image/png");
-    await this.repository.inserir({ ...alvo, ...dados, imagemKey: `${pasta}/${nome}` });
+    await this.repository.inserir({
+      ...alvo,
+      userId,
+      nome: assinante.nome,
+      papel,
+      imagemKey: `${pasta}/${nome}`,
+    });
     return this.buscar(alvo);
   }
 

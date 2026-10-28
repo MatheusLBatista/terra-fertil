@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import SignaturePad from "signature_pad";
 import { useMutation, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { toast } from "react-toastify";
@@ -8,7 +9,6 @@ import { Eraser, PenLine, Trash2 } from "lucide-react";
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +29,7 @@ import type { components } from "@/types/api";
  */
 
 export type Assinatura = components["schemas"]["Assinatura"];
+type Assinante = components["schemas"]["Assinante"];
 export type PapelAssinante = Assinatura["papel"];
 
 export const PAPEIS_ASSINANTE: { valor: PapelAssinante; rotulo: string }[] = [
@@ -38,6 +39,12 @@ export const PAPEIS_ASSINANTE: { valor: PapelAssinante; rotulo: string }[] = [
   { valor: "outro", rotulo: "Outro representante" },
 ];
 export const rotuloPapel = (p: PapelAssinante) => PAPEIS_ASSINANTE.find((x) => x.valor === p)?.rotulo ?? p;
+const VINCULOS: Record<Assinante["vinculo"], string> = {
+  presidente: "presidente",
+  contato: "contato",
+  outro: "outro contato",
+  proprietario: "proprietário",
+};
 
 /** Consulta da assinatura do alvo (`data` null = ainda não assinado). Mesma key em todo lugar. */
 export function useAssinatura(base: string, queryKey: QueryKey, enabled = true) {
@@ -148,17 +155,18 @@ function AreaAssinatura({
 // ─── Formulário de coleta ────────────────────────────────────────────────────
 
 /**
- * Nome + papel + traço, para o `ModalAssinatura`: os campos em cima e a área de
- * assinatura ocupando o resto da altura. `papeis` limita os papéis aceitos pelo
- * alvo (a API recusa os demais).
+ * Quem assina + papel + traço, para o `ModalAssinatura`: os campos em cima e a
+ * área de assinatura ocupando o resto da altura. Quem assina é escolhido entre as
+ * pessoas cadastradas e vinculadas ao alvo (`base/assinatura/assinantes`);
+ * `papeis` limita os papéis aceitos (a API recusa os demais).
  */
 function FormularioAssinatura({
   base,
   queryKey,
   invalidar = [],
   papeis,
-  nomeSugerido,
   aviso,
+  cadastroContatos,
   onFechar,
 }: {
   base: string;
@@ -166,24 +174,28 @@ function FormularioAssinatura({
   /** Outras consultas que mudam com a assinatura (ex.: a lista com `temAssinatura`). */
   invalidar?: QueryKey[];
   papeis: PapelAssinante[];
-  nomeSugerido?: string | null;
   /** Texto explicando o que a assinatura confirma. */
   aviso: string;
+  /** Onde cadastrar os contatos da associação, quando ninguém pode assinar ainda. */
+  cadastroContatos?: string;
   onFechar: () => void;
 }) {
   const queryClient = useQueryClient();
-  const [nome, setNome] = useState(nomeSugerido ?? "");
+  const assinantes = useQuery({
+    queryKey: [...queryKey, "assinantes"],
+    queryFn: ({ signal }) => fetchData<Envelope<Assinante[]>>(`${base}/assinatura/assinantes`, { signal }),
+  });
+  const lista = assinantes.data?.data ?? [];
+  const [escolhido, setEscolhido] = useState("");
+  // Uma pessoa só (o proprietário): já vem escolhida
+  const userId = escolhido || (lista.length === 1 ? lista[0].userId : "");
   const [papel, setPapel] = useState<PapelAssinante>(papeis[0]);
   const [vazia, setVazia] = useState(true);
   const [tentou, setTentou] = useState(false);
   const [errosApi, setErrosApi] = useState<string[]>([]);
   const area = useRef<{ paraPng: () => Promise<Blob | null>; limpar: () => void } | null>(null);
 
-  const erroNome = !nome.trim()
-    ? "Informe o nome de quem assina"
-    : nome.length > 200
-      ? "No máximo 200 caracteres"
-      : null;
+  const erroPessoa = !userId ? "Escolha quem assina" : null;
   const erroTraco = vazia ? "Desenhe a assinatura na área acima" : null;
 
   const salvar = useMutation({
@@ -192,7 +204,7 @@ function FormularioAssinatura({
       if (!png) throw new Error("Desenhe a assinatura na área acima");
       const formData = new FormData();
       formData.append("imagem", new File([png], "assinatura.png", { type: "image/png" }));
-      formData.append("nome", nome.trim());
+      formData.append("userId", userId);
       formData.append("papel", papel);
       return fetchData(`${base}/assinatura`, { method: "POST", formData });
     },
@@ -218,7 +230,7 @@ function FormularioAssinatura({
         e.preventDefault();
         setTentou(true);
         setErrosApi([]);
-        if (!erroNome && !erroTraco) salvar.mutate();
+        if (!erroPessoa && !erroTraco) salvar.mutate();
       }}
     >
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
@@ -233,19 +245,54 @@ function FormularioAssinatura({
 
         <div className="grid gap-3 sm:grid-cols-2 sm:items-end">
           <div className="grid gap-1.5">
-            <Label htmlFor="assinatura-nome">Nome de quem assina</Label>
-            <Input
-              id="assinatura-nome"
-              maxLength={200}
-              autoComplete="off"
-              value={nome}
-              aria-invalid={tentou && !!erroNome}
-              aria-describedby={tentou && erroNome ? "assinatura-nome-erro" : undefined}
-              onChange={(e) => setNome(e.target.value)}
-            />
-            {tentou && erroNome && (
-              <p id="assinatura-nome-erro" role="alert" className="text-xs text-destructive">
-                {erroNome}
+            <Label htmlFor="assinatura-pessoa">Quem assina</Label>
+            {assinantes.isPending ? (
+              <Skeleton className="h-9 w-full" />
+            ) : assinantes.isError ? (
+              <p role="alert" className="text-xs text-destructive">
+                {mensagemDeErro(assinantes.error, "Não foi possível carregar quem pode assinar.")}
+              </p>
+            ) : lista.length === 0 ? (
+              <p role="alert" className="text-xs text-destructive">
+                Ninguém cadastrado pode assinar ainda — cadastre o presidente ou o vice nos contatos da
+                associação
+                {cadastroContatos && (
+                  <>
+                    {" "}
+                    (
+                    <Link href={cadastroContatos} className="underline underline-offset-4">
+                      abrir a associação
+                    </Link>
+                    )
+                  </>
+                )}
+                .
+              </p>
+            ) : (
+              <NativeSelect
+                id="assinatura-pessoa"
+                className="w-full"
+                value={userId}
+                aria-invalid={tentou && !!erroPessoa}
+                aria-describedby={tentou && erroPessoa ? "assinatura-pessoa-erro" : undefined}
+                onChange={(e) => {
+                  setEscolhido(e.target.value);
+                  // O presidente cadastrado assina como presidente
+                  const vinculo = lista.find((a) => a.userId === e.target.value)?.vinculo;
+                  if (vinculo === "presidente" && papeis.includes("presidente")) setPapel("presidente");
+                }}
+              >
+                {lista.length > 1 && <NativeSelectOption value="">Escolha a pessoa…</NativeSelectOption>}
+                {lista.map((a) => (
+                  <NativeSelectOption key={a.userId} value={a.userId}>
+                    {a.nome} ({VINCULOS[a.vinculo]})
+                  </NativeSelectOption>
+                ))}
+              </NativeSelect>
+            )}
+            {tentou && erroPessoa && lista.length > 0 && (
+              <p id="assinatura-pessoa-erro" role="alert" className="text-xs text-destructive">
+                {erroPessoa}
               </p>
             )}
           </div>
@@ -305,7 +352,7 @@ function FormularioAssinatura({
         <Button type="button" variant="outline" onClick={onFechar}>
           Cancelar
         </Button>
-        <Button type="submit" disabled={salvar.isPending}>
+        <Button type="submit" disabled={salvar.isPending || lista.length === 0}>
           {salvar.isPending ? (
             <>
               <Spinner /> Salvando…
@@ -340,8 +387,8 @@ export function ModalAssinatura({
   queryKey: QueryKey;
   invalidar?: QueryKey[];
   papeis: PapelAssinante[];
-  nomeSugerido?: string | null;
   aviso: string;
+  cadastroContatos?: string;
 }) {
   return (
     <Dialog open={aberto} onOpenChange={onAbertoChange} disablePointerDismissal>
@@ -484,6 +531,7 @@ export function PainelAssinatura({
   avisoTravado,
   titulo,
   descricao,
+  cadastroContatos,
 }: {
   base: string;
   queryKey: QueryKey;
@@ -497,6 +545,7 @@ export function PainelAssinatura({
   /** Título e descrição do modal de coleta. */
   titulo: string;
   descricao?: string | null;
+  cadastroContatos?: string;
 }) {
   const [colher, setColher] = useState(false);
   const assinatura = useAssinatura(base, queryKey);
@@ -552,6 +601,7 @@ export function PainelAssinatura({
             invalidar={invalidar}
             papeis={papeis}
             aviso={aviso}
+            cadastroContatos={cadastroContatos}
           />
         </>
       )}

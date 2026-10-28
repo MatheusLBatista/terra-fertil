@@ -10,6 +10,7 @@ import {
   criado,
   erro,
   ok,
+  okLista,
   semConteudo,
 } from "../../lib/openapi/helpers.ts";
 
@@ -24,7 +25,11 @@ export const AssinaturaSchema = registry.register(
   z
     .object({
       id: z.uuid(),
-      nome: z.string().openapi({ description: "Nome de quem assinou" }),
+      userId: z
+        .string()
+        .nullable()
+        .openapi({ description: "Pessoa que assinou (nulo nas assinaturas anteriores ao vínculo)" }),
+      nome: z.string().openapi({ description: "Nome de quem assinou, como estava no cadastro na data" }),
       papel: z.enum(PAPEIS_ASSINANTE),
       assinadoEm: z.string().openapi({ description: "Data-hora da assinatura (ISO 8601)" }),
       registradoPorNome: z
@@ -38,9 +43,22 @@ export const AssinaturaSchema = registry.register(
     }),
 );
 
+export const AssinanteSchema = registry.register(
+  "Assinante",
+  z
+    .object({
+      userId: z.string(),
+      nome: z.string(),
+      vinculo: z
+        .enum(["presidente", "contato", "outro", "proprietario"])
+        .openapi({ description: "Função de contato na associação, ou proprietário da propriedade" }),
+    })
+    .openapi({ description: "Pessoa cadastrada que pode assinar o alvo" }),
+);
+
 /** Campos de texto do multipart (a imagem PNG vai no campo "imagem"). */
 export const AssinaturaFormSchema = z.object({
-  nome: z.string().trim().min(1, "Informe o nome de quem assina").max(200, "No máximo 200 caracteres"),
+  userId: z.string().trim().min(1, "Escolha quem assina"),
   papel: z.enum(PAPEIS_ASSINANTE, { error: "Escolha o papel de quem assina" }),
 });
 
@@ -64,7 +82,7 @@ export function registrarRotasAssinatura(base: string, tags: string[], params: z
     path: `${base}/assinatura`,
     tags,
     security: SEGURANCA,
-    summary: "Registrar a assinatura (multipart: imagem PNG até 1 MB + nome + papel)",
+    summary: "Registrar a assinatura (multipart: imagem PNG até 1 MB + userId de quem assina + papel)",
     request: {
       params,
       body: {
@@ -72,7 +90,7 @@ export function registrarRotasAssinatura(base: string, tags: string[], params: z
           "multipart/form-data": {
             schema: z.object({
               imagem: z.string().openapi({ type: "string", format: "binary" }),
-              nome: z.string(),
+              userId: z.string().openapi({ description: "Um dos GET .../assinatura/assinantes" }),
               papel: z.enum(PAPEIS_ASSINANTE),
             }),
           },
@@ -88,6 +106,15 @@ export function registrarRotasAssinatura(base: string, tags: string[], params: z
       415: erro("A imagem precisa ser PNG"),
       502: erro("Falha ao enviar ao storage"),
     },
+  });
+  registry.registerPath({
+    method: "get",
+    path: `${base}/assinatura/assinantes`,
+    tags,
+    security: SEGURANCA,
+    summary: "Quem pode assinar: contatos da associação ou o produtor da propriedade",
+    request: { params },
+    responses: { 200: okLista(AssinanteSchema), ...ERROS_LEITURA, ...REGRA },
   });
   registry.registerPath({
     method: "get",

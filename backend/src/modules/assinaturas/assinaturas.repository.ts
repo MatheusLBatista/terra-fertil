@@ -1,7 +1,17 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, or, sql } from "drizzle-orm";
 import { db, type DbOrTx } from "../../db/index.ts";
 import { assinatura, type NewAssinatura } from "../../db/assinatura.ts";
+import { associacaoContato } from "../../db/associacaoContato.ts";
+import { produtor } from "../../db/produtor.ts";
+import { propriedade } from "../../db/propriedade.ts";
 import { user } from "../../db/user.ts";
+
+/** Pessoa que pode assinar o alvo, com o vínculo dela (função na associação ou proprietário). */
+export type Assinante = {
+  userId: string;
+  nome: string;
+  vinculo: "presidente" | "contato" | "outro" | "proprietario";
+};
 
 /** O alvo da assinatura: exatamente uma das três FKs. */
 export type AlvoAssinatura = { visitaId: string } | { entregaId: string } | { associacaoDocumentoId: string };
@@ -15,6 +25,7 @@ const doAlvo = (alvo: AlvoAssinatura) =>
 
 const colunas = {
   id: assinatura.id,
+  userId: assinatura.userId,
   nome: assinatura.nome,
   papel: assinatura.papel,
   assinadoEm: assinatura.assinadoEm,
@@ -31,6 +42,32 @@ export default class AssinaturasRepository {
       .where(and(doAlvo(alvo), isNull(assinatura.deletedAt)))
       .limit(1);
     return row;
+  }
+
+  /** Contatos vivos e vigentes (sem `ate` no passado) da associação — o principal primeiro. */
+  async contatosDaAssociacao(associacaoId: string, tx: DbOrTx = db): Promise<Assinante[]> {
+    return tx
+      .select({ userId: associacaoContato.userId, nome: user.name, vinculo: associacaoContato.funcao })
+      .from(associacaoContato)
+      .innerJoin(user, eq(user.id, associacaoContato.userId))
+      .where(
+        and(
+          eq(associacaoContato.associacaoId, associacaoId),
+          isNull(associacaoContato.deletedAt),
+          or(isNull(associacaoContato.ate), gte(associacaoContato.ate, sql`current_date`)),
+        ),
+      )
+      .orderBy(desc(associacaoContato.principal), asc(user.name));
+  }
+
+  /** O produtor dono da propriedade. */
+  async produtorDaPropriedade(propriedadeId: string, tx: DbOrTx = db): Promise<Assinante[]> {
+    return tx
+      .select({ userId: produtor.userId, nome: user.name, vinculo: sql<"proprietario">`'proprietario'` })
+      .from(propriedade)
+      .innerJoin(produtor, eq(produtor.id, propriedade.produtorId))
+      .innerJoin(user, eq(user.id, produtor.userId))
+      .where(and(eq(propriedade.id, propriedadeId), isNull(propriedade.deletedAt)));
   }
 
   async inserir(data: NewAssinatura, tx: DbOrTx = db): Promise<{ id: string }> {

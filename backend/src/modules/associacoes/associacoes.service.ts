@@ -268,6 +268,12 @@ export default class AssociacoesService {
     return this.assinaturas.doAlvo({ associacaoDocumentoId: documentoId });
   }
 
+  /** Quem assina o documento: os contatos cadastrados da associação. */
+  async assinantes(associacaoId: string, documentoId: string) {
+    await this.documentoAcessivel(associacaoId, documentoId);
+    return this.assinaturas.assinantesDaAssociacao(associacaoId);
+  }
+
   async assinar(
     associacaoId: string,
     documentoId: string,
@@ -296,6 +302,7 @@ export default class AssociacoesService {
       `associacoes/${associacaoId}/documentos/assinaturas`,
       dados,
       imagem,
+      await this.assinaturas.assinantesDaAssociacao(associacaoId),
     );
   }
 

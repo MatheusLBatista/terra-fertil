@@ -449,6 +449,14 @@ export default class VisitasService {
     return this.assinaturas.doAlvo({ visitaId: id });
   }
 
+  /** Contatos da associação (acompanhamento) ou o produtor da propriedade (assistência). */
+  async assinantes(id: string) {
+    const atual = await this.visitaAssinavel(id);
+    return atual.associacaoId
+      ? this.assinaturas.assinantesDaAssociacao(atual.associacaoId)
+      : this.assinaturas.assinantesDaPropriedade(atual.propriedadeId!);
+  }
+
   async assinar(id: string, dados: z.infer<typeof AssinaturaFormSchema>, imagem: ArquivoUpload) {
     const atual = await this.visitaAssinavel(id);
     await garantirProjeto(atual.projetoId, { escrita: true });
@@ -477,7 +485,13 @@ export default class VisitasService {
         "SEM_VERIFICACAO",
       );
     }
-    return this.assinaturas.registrar({ visitaId: id }, `visitas/${id}/assinatura`, dados, imagem);
+    return this.assinaturas.registrar(
+      { visitaId: id },
+      `visitas/${id}/assinatura`,
+      dados,
+      imagem,
+      await this.assinantes(id),
+    );
   }
 
   async imagemAssinatura(id: string) {

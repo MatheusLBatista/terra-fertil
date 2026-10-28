@@ -11,7 +11,7 @@ export const limiteAssinatura = bodyLimit({
   onError: (c) => c.json(errorResponse("Imagem da assinatura muito grande. Tamanho máximo: 1 MB"), 413),
 });
 
-/** Lê o multipart da assinatura: imagem PNG (campo "imagem") + nome + papel. */
+/** Lê o multipart da assinatura: imagem PNG (campo "imagem") + userId de quem assina + papel. */
 export async function lerFormAssinatura(c: AppContext) {
   const imagem = await lerArquivo(c, {
     campo: "imagem",
@@ -22,7 +22,7 @@ export async function lerFormAssinatura(c: AppContext) {
   // O Hono guarda o corpo já lido: os campos de texto saem do mesmo parse
   const campos = await c.req.parseBody();
   const form = AssinaturaFormSchema.safeParse({
-    nome: typeof campos.nome === "string" ? campos.nome : undefined,
+    userId: typeof campos.userId === "string" ? campos.userId : undefined,
     papel: typeof campos.papel === "string" ? campos.papel : undefined,
   });
   if (!form.success) return { erro: respostaValidacao(c, form.error.issues) } as const;

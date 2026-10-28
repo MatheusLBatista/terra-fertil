@@ -151,6 +151,12 @@ export default class AssociacoesController {
     return c.json(successResponse(await this.service.assinatura(params.data.id, params.data.documentoId)));
   };
 
+  assinantes = async (c: AppContext) => {
+    const params = DocumentoIdParamSchema.safeParse(c.req.param());
+    if (!params.success) return respostaValidacao(c, params.error.issues);
+    return c.json(successResponse(await this.service.assinantes(params.data.id, params.data.documentoId)));
+  };
+
   assinar = async (c: AppContext) => {
     const params = DocumentoIdParamSchema.safeParse(c.req.param());
     if (!params.success) return respostaValidacao(c, params.error.issues);

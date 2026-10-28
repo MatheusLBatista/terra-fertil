@@ -1536,7 +1536,7 @@ function AssinaturaVisita({ visita, editavel }: { visita: Visita; editavel: bool
         base={base}
         queryKey={chave}
         papeis={papeis}
-        nomeSugerido={acompanhamento ? null : visita.produtorNome}
+        cadastroContatos={visita.associacaoId ? `/associacoes/${visita.associacaoId}` : undefined}
         aviso={`Ao assinar, ${quem} confirma ${contagem} desta visita. Depois de assinada, a verificação não pode mais ser alterada sem remover a assinatura.`}
       />
     </section>

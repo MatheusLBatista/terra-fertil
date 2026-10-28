@@ -560,9 +560,16 @@
             "type": "string",
             "format": "uuid"
           },
+          "userId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Pessoa que assinou (nulo nas assinaturas anteriores ao vínculo)"
+          },
           "nome": {
             "type": "string",
-            "description": "Nome de quem assinou"
+            "description": "Nome de quem assinou, como estava no cadastro na data"
           },
           "papel": {
             "type": "string",
@@ -587,12 +594,40 @@
         },
         "required": [
           "id",
+          "userId",
           "nome",
           "papel",
           "assinadoEm",
           "registradoPorNome"
         ],
         "description": "Assinatura eletrônica simples (traço desenhado na tela) — a imagem sai por GET .../assinatura/imagem"
+      },
+      "Assinante": {
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string"
+          },
+          "nome": {
+            "type": "string"
+          },
+          "vinculo": {
+            "type": "string",
+            "enum": [
+              "presidente",
+              "contato",
+              "outro",
+              "proprietario"
+            ],
+            "description": "Função de contato na associação, ou proprietário da propriedade"
+          }
+        },
+        "required": [
+          "userId",
+          "nome",
+          "vinculo"
+        ],
+        "description": "Pessoa cadastrada que pode assinar o alvo"
       },
       "Associacao": {
         "type": "object",
@@ -8813,7 +8848,7 @@
             "sessionCookie": []
           }
         ],
-        "summary": "Registrar a assinatura (multipart: imagem PNG até 1 MB + nome + papel)",
+        "summary": "Registrar a assinatura (multipart: imagem PNG até 1 MB + userId de quem assina + papel)",
         "parameters": [
           {
             "schema": {
@@ -8844,8 +8879,9 @@
                     "type": "string",
                     "format": "binary"
                   },
-                  "nome": {
-                    "type": "string"
+                  "userId": {
+                    "type": "string",
+                    "description": "Um dos GET .../assinatura/assinantes"
                   },
                   "papel": {
                     "type": "string",
@@ -8859,7 +8895,7 @@
                 },
                 "required": [
                   "imagem",
-                  "nome",
+                  "userId",
                   "papel"
                 ]
               }
@@ -9045,6 +9081,114 @@
           },
           "404": {
             "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/associacoes/{id}/documentos/{documentoId}/assinatura/assinantes": {
+      "get": {
+        "tags": [
+          "Associações"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Quem pode assinar: contatos da associação ou o produtor da propriedade",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "documentoId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Assinante"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Documento sem arquivo ou papel de proprietário (o documento é assinado pela associação)",
             "content": {
               "application/json": {
                 "schema": {
@@ -17286,7 +17430,7 @@
             "sessionCookie": []
           }
         ],
-        "summary": "Registrar a assinatura (multipart: imagem PNG até 1 MB + nome + papel)",
+        "summary": "Registrar a assinatura (multipart: imagem PNG até 1 MB + userId de quem assina + papel)",
         "parameters": [
           {
             "schema": {
@@ -17308,8 +17452,9 @@
                     "type": "string",
                     "format": "binary"
                   },
-                  "nome": {
-                    "type": "string"
+                  "userId": {
+                    "type": "string",
+                    "description": "Um dos GET .../assinatura/assinantes"
                   },
                   "papel": {
                     "type": "string",
@@ -17323,7 +17468,7 @@
                 },
                 "required": [
                   "imagem",
-                  "nome",
+                  "userId",
                   "papel"
                 ]
               }
@@ -17500,6 +17645,105 @@
           },
           "404": {
             "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/entregas/{id}/assinatura/assinantes": {
+      "get": {
+        "tags": [
+          "Entregas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Quem pode assinar: contatos da associação ou o produtor da propriedade",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Assinante"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Entrega ainda não entregue ou papel de proprietário (o termo é assinado pela associação)",
             "content": {
               "application/json": {
                 "schema": {
@@ -22356,7 +22600,7 @@
             "sessionCookie": []
           }
         ],
-        "summary": "Registrar a assinatura (multipart: imagem PNG até 1 MB + nome + papel)",
+        "summary": "Registrar a assinatura (multipart: imagem PNG até 1 MB + userId de quem assina + papel)",
         "parameters": [
           {
             "schema": {
@@ -22378,8 +22622,9 @@
                     "type": "string",
                     "format": "binary"
                   },
-                  "nome": {
-                    "type": "string"
+                  "userId": {
+                    "type": "string",
+                    "description": "Um dos GET .../assinatura/assinantes"
                   },
                   "papel": {
                     "type": "string",
@@ -22393,7 +22638,7 @@
                 },
                 "required": [
                   "imagem",
-                  "nome",
+                  "userId",
                   "papel"
                 ]
               }
@@ -22570,6 +22815,105 @@
           },
           "404": {
             "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/visitas/{id}/assinatura/assinantes": {
+      "get": {
+        "tags": [
+          "Visitas"
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Quem pode assinar: contatos da associação ou o produtor da propriedade",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Assinante"
+                      }
+                    },
+                    "meta": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "erros": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta",
+                    "erros"
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Sem permissão para esta ação",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Registro não encontrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Visita que não se assina, papel errado (presidente/vice no acompanhamento; proprietário na assistência) ou nada verificado",
             "content": {
               "application/json": {
                 "schema": {

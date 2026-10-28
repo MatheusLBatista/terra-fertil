@@ -13,6 +13,7 @@ import { entrega } from "../../db/entrega.ts";
 import { tipoDocumento } from "../../db/tipoDocumento.ts";
 import { associacaoDocumento } from "../../db/associacaoDocumento.ts";
 import { assinatura, type NewAssinatura } from "../../db/assinatura.ts";
+import { associacaoContato } from "../../db/associacaoContato.ts";
 import { seedEstados } from "../../seeds/estados.ts";
 import { seedMunicipios } from "../../seeds/municipios.ts";
 import { ORIGIN, comCookie, json, login } from "../../test/http.ts";
@@ -20,7 +21,8 @@ import { PREFIXO_TESTE } from "../../test/setup.ts";
 
 /**
  * Assinatura eletrônica simples nos três alvos (visita, termo de uso da
- * entrega, documento da associação): regras de cada dono (tipo de visita,
+ * entrega, documento da associação): quem pode assinar (contatos da associação
+ * ou o produtor da propriedade), regras de cada dono (tipo de visita,
  * papel, nada verificado, entrega não entregue, documento sem arquivo), a
  * validação da imagem (PNG), uma viva por alvo (409), as travas depois de
  * assinado e a remoção. Os `it` são encadeados.
@@ -28,6 +30,7 @@ import { PREFIXO_TESTE } from "../../test/setup.ts";
  */
 type Assinatura = {
   id: string;
+  userId: string | null;
   nome: string;
   papel: string;
   assinadoEm: string;
@@ -51,6 +54,10 @@ let acompanhamento: string;
 let naPropriedade: string;
 let documentoId: string;
 let assinaturaVisita: string;
+let presidenteId: string;
+let produtorUserId: string;
+let estranhoId: string;
+let assistencia: string;
 
 const post = (path: string, corpo: unknown) =>
   app.request(path, comCookie(admin, { method: "POST", json: corpo }));
@@ -65,18 +72,18 @@ const get = (path: string) => app.request(path, comCookie(admin));
 const assinar = (
   path: string,
   {
-    nome = "Maria Presidente",
+    userId = presidenteId,
     papel = "presidente",
     imagem = new File([PNG], "assinatura.png", { type: "image/png" }),
   }: {
-    nome?: string;
+    userId?: string;
     papel?: string;
     imagem?: File;
   } = {},
 ) => {
   const form = new FormData();
   form.append("imagem", imagem);
-  form.append("nome", nome);
+  form.append("userId", userId);
   form.append("papel", papel);
   return app.request(`${path}/assinatura`, {
     method: "POST",
@@ -121,15 +128,24 @@ beforeAll(async () => {
     .returning({ id: associacao.id });
   await post(`/projetos/${projetoId}/associacoes`, { associacaoId });
 
-  const [{ id: produtorUserId }] = await db
+  // Presidente (contato da associação), o produtor dono da propriedade e alguém sem vínculo
+  const pessoa = (nome: string, email: string, role: string) => ({
+    id: randomUUID(),
+    name: `${PREFIXO_TESTE}${nome}`,
+    email: `${PREFIXO_TESTE}${email}-${sufixo}@example.com`,
+    role,
+  });
+  [{ id: presidenteId }, { id: produtorUserId }, { id: estranhoId }] = await db
     .insert(user)
-    .values({
-      id: randomUUID(),
-      name: `${PREFIXO_TESTE}Seu Antônio`,
-      email: `${PREFIXO_TESTE}antonio-${sufixo}@example.com`,
-      role: "produtor",
-    })
+    .values([
+      pessoa("Maria Presidente", "maria", "produtor"),
+      pessoa("Seu Antônio", "antonio", "produtor"),
+      pessoa("Sem vínculo", "estranho", "produtor"),
+    ])
     .returning({ id: user.id });
+  await db
+    .insert(associacaoContato)
+    .values({ associacaoId, userId: presidenteId, funcao: "presidente", principal: true });
   const [{ id: produtorId }] = await db
     .insert(produtor)
     .values({ userId: produtorUserId })
@@ -159,6 +175,7 @@ beforeAll(async () => {
     ).data.id;
   acompanhamento = await nova({ tipo: "acompanhamento", associacaoId });
   naPropriedade = await nova({ tipo: "acompanhamento", propriedadeId });
+  assistencia = await nova({ tipo: "assistencia_tecnica", propriedadeId });
 
   const [{ id: tipoId }] = await db
     .insert(tipoDocumento)
@@ -168,6 +185,22 @@ beforeAll(async () => {
     .insert(associacaoDocumento)
     .values({ associacaoId, tipoDocumentoId: tipoId })
     .returning({ id: associacaoDocumento.id });
+});
+
+describe("quem pode assinar", () => {
+  it("associação → os contatos dela; assistência → o produtor da propriedade", async () => {
+    const contatos = await json(await get(`/visitas/${acompanhamento}/assinatura/assinantes`));
+    expect(contatos.data).toEqual([
+      { userId: presidenteId, nome: `${PREFIXO_TESTE}Maria Presidente`, vinculo: "presidente" },
+    ]);
+    const termo = await json(await get(`/entregas/${entregue}/assinatura/assinantes`));
+    expect(termo.data).toEqual(contatos.data);
+
+    const dono = await json(await get(`/visitas/${assistencia}/assinatura/assinantes`));
+    expect(dono.data).toEqual([
+      { userId: produtorUserId, nome: `${PREFIXO_TESTE}Seu Antônio`, vinculo: "proprietario" },
+    ]);
+  });
 });
 
 describe("visita", () => {
@@ -190,7 +223,7 @@ describe("visita", () => {
     expect((await json(vazio)).meta).toEqual({ codigo: "SEM_VERIFICACAO" });
   });
 
-  it("imagem que não é PNG → 415 (pelo tipo ou pelo conteúdo); sem nome → 400", async () => {
+  it("imagem que não é PNG → 415 (pelo tipo ou pelo conteúdo); sem quem assina → 400; sem vínculo → 422", async () => {
     expect((await put(`/visitas/${acompanhamento}/itens-verificados/${entregue}`, {})).status).toBe(200);
 
     const jpeg = await assinar(`/visitas/${acompanhamento}`, {
@@ -203,8 +236,15 @@ describe("visita", () => {
     expect(falso.status).toBe(415);
     expect((await json(falso)).erros).toEqual(["A imagem da assinatura precisa ser PNG"]);
 
-    const semNome = await assinar(`/visitas/${acompanhamento}`, { nome: "  " });
-    expect(semNome.status).toBe(400);
+    const semPessoa = await assinar(`/visitas/${acompanhamento}`, { userId: "  " });
+    expect(semPessoa.status).toBe(400);
+
+    // Cadastrada, mas não é contato da associação (nem o produtor sem vínculo com ela conta)
+    for (const userId of [estranhoId, produtorUserId]) {
+      const res = await assinar(`/visitas/${acompanhamento}`, { userId });
+      expect(res.status).toBe(422);
+      expect((await json(res)).meta).toEqual({ codigo: "ASSINANTE_INVALIDO" });
+    }
   });
 
   it("assinada: GET devolve a assinatura; outra → 409; verificações travadas (409)", async () => {
@@ -212,6 +252,7 @@ describe("visita", () => {
     const res = await json<Assinatura>(await get(`/visitas/${acompanhamento}/assinatura`));
     expect(res.data).toEqual({
       id: expect.any(String),
+      userId: null,
       nome: "Maria Presidente",
       papel: "presidente",
       assinadoEm: expect.any(String),

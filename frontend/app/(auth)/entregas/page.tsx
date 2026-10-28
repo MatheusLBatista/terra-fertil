@@ -1223,6 +1223,7 @@ function propsAssinaturaTermo(entrega: Entrega) {
     queryKey: ["entregas", entrega.id, "assinatura"],
     invalidar: [["entregas"]],
     papeis: ["presidente", "vice_presidente", "outro"] as PapelAssinante[],
+    cadastroContatos: `/associacoes/${entrega.associacaoId}`,
     aviso: `Ao assinar, o representante da associação confirma o recebimento de ${entrega.quantidade} × ${entrega.itemDescricao} e o termo de uso.`,
   };
 }

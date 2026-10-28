@@ -43,6 +43,12 @@ router.post(
   controller.assinar,
 );
 router.get(
+  "/:id/assinatura/assinantes",
+  requireAuth,
+  requirePermission("read", "Entrega"),
+  controller.assinantes,
+);
+router.get(
   "/:id/assinatura/imagem",
   requireAuth,
   requirePermission("read", "Entrega"),

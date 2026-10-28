@@ -3403,7 +3403,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Registrar a assinatura (multipart: imagem PNG até 1 MB + nome + papel) */
+        /** Registrar a assinatura (multipart: imagem PNG até 1 MB + userId de quem assina + papel) */
         post: {
             parameters: {
                 query?: never;
@@ -3419,7 +3419,8 @@ export interface paths {
                     "multipart/form-data": {
                         /** Format: binary */
                         imagem: string;
-                        nome: string;
+                        /** @description Um dos GET .../assinatura/assinantes */
+                        userId: string;
                         /** @enum {string} */
                         papel: "presidente" | "vice_presidente" | "proprietario" | "outro";
                     };
@@ -3573,6 +3574,87 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/associacoes/{id}/documentos/{documentoId}/assinatura/assinantes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quem pode assinar: contatos da associação ou o produtor da propriedade */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    documentoId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lista */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Assinante"][];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Documento sem arquivo ou papel de proprietário (o documento é assinado pela associação) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -8878,7 +8960,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Registrar a assinatura (multipart: imagem PNG até 1 MB + nome + papel) */
+        /** Registrar a assinatura (multipart: imagem PNG até 1 MB + userId de quem assina + papel) */
         post: {
             parameters: {
                 query?: never;
@@ -8893,7 +8975,8 @@ export interface paths {
                     "multipart/form-data": {
                         /** Format: binary */
                         imagem: string;
-                        nome: string;
+                        /** @description Um dos GET .../assinatura/assinantes */
+                        userId: string;
                         /** @enum {string} */
                         papel: "presidente" | "vice_presidente" | "proprietario" | "outro";
                     };
@@ -9046,6 +9129,86 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/entregas/{id}/assinatura/assinantes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quem pode assinar: contatos da associação ou o produtor da propriedade */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lista */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Assinante"][];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Entrega ainda não entregue ou papel de proprietário (o termo é assinado pela associação) */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -12330,7 +12493,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Registrar a assinatura (multipart: imagem PNG até 1 MB + nome + papel) */
+        /** Registrar a assinatura (multipart: imagem PNG até 1 MB + userId de quem assina + papel) */
         post: {
             parameters: {
                 query?: never;
@@ -12345,7 +12508,8 @@ export interface paths {
                     "multipart/form-data": {
                         /** Format: binary */
                         imagem: string;
-                        nome: string;
+                        /** @description Um dos GET .../assinatura/assinantes */
+                        userId: string;
                         /** @enum {string} */
                         papel: "presidente" | "vice_presidente" | "proprietario" | "outro";
                     };
@@ -12498,6 +12662,86 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/visitas/{id}/assinatura/assinantes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Quem pode assinar: contatos da associação ou o produtor da propriedade */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Lista */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data: components["schemas"]["Assinante"][];
+                            meta: {
+                                [key: string]: unknown;
+                            };
+                            erros: string[];
+                        };
+                    };
+                };
+                /** @description Não autenticado */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Sem permissão para esta ação */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Registro não encontrado */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+                /** @description Visita que não se assina, papel errado (presidente/vice no acompanhamento; proprietário na assistência) ou nada verificado */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Erro"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -15683,7 +15927,9 @@ export interface components {
         Assinatura: {
             /** Format: uuid */
             id: string;
-            /** @description Nome de quem assinou */
+            /** @description Pessoa que assinou (nulo nas assinaturas anteriores ao vínculo) */
+            userId: string | null;
+            /** @description Nome de quem assinou, como estava no cadastro na data */
             nome: string;
             /** @enum {string} */
             papel: "presidente" | "vice_presidente" | "proprietario" | "outro";
@@ -15691,6 +15937,16 @@ export interface components {
             assinadoEm: string;
             /** @description Usuário do painel que colheu a assinatura */
             registradoPorNome: string | null;
+        };
+        /** @description Pessoa cadastrada que pode assinar o alvo */
+        Assinante: {
+            userId: string;
+            nome: string;
+            /**
+             * @description Função de contato na associação, ou proprietário da propriedade
+             * @enum {string}
+             */
+            vinculo: "presidente" | "contato" | "outro" | "proprietario";
         };
         /** @description Associação/cooperativa — cadastro compartilhado entre projetos */
         Associacao: {

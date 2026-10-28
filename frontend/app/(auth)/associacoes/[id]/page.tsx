@@ -768,6 +768,7 @@ function Documentos({ associacaoId, editavel }: { associacaoId: string; editavel
     queryKey: [...chave, doc.id, "assinatura"],
     invalidar: [chave],
     papeis: ["presidente", "vice_presidente", "outro"] as PapelAssinante[],
+    cadastroContatos: `/associacoes/${associacaoId}`,
     aviso: `Ao assinar, o representante da associação confirma o documento “${doc.tipoDocumento}” no arquivo enviado (${doc.nomeArquivo ?? "sem nome"}).`,
   });
   const inputArquivo = useRef<HTMLInputElement>(null);

@@ -140,6 +140,12 @@ export default class EntregasService {
     return this.assinaturas.doAlvo({ entregaId: id });
   }
 
+  /** Quem assina o termo: os contatos cadastrados da associação que recebeu. */
+  async assinantes(id: string) {
+    const atual = await this.listarPorId(id);
+    return this.assinaturas.assinantesDaAssociacao(atual.associacaoId);
+  }
+
   async assinar(id: string, dados: z.infer<typeof AssinaturaFormSchema>, imagem: ArquivoUpload) {
     const atual = await this.listarPorId(id);
     await garantirProjeto(atual.projetoId, { escrita: true });
@@ -159,7 +165,13 @@ export default class EntregasService {
         "PAPEL_INVALIDO",
       );
     }
-    return this.assinaturas.registrar({ entregaId: id }, `entregas/${id}/assinatura`, dados, imagem);
+    return this.assinaturas.registrar(
+      { entregaId: id },
+      `entregas/${id}/assinatura`,
+      dados,
+      imagem,
+      await this.assinaturas.assinantesDaAssociacao(atual.associacaoId),
+    );
   }
 
   async imagemAssinatura(id: string) {

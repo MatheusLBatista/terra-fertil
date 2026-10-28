@@ -37,6 +37,7 @@ router.put("/:id/documentos/:documentoId/arquivo", ...editar, limiteUpload, cont
 router.get("/:id/documentos/:documentoId/arquivo", ...ler, controller.baixarArquivo);
 router.get("/:id/documentos/:documentoId/assinatura", ...ler, controller.assinatura);
 router.post("/:id/documentos/:documentoId/assinatura", ...editar, limiteAssinatura, controller.assinar);
+router.get("/:id/documentos/:documentoId/assinatura/assinantes", ...ler, controller.assinantes);
 router.get("/:id/documentos/:documentoId/assinatura/imagem", ...ler, controller.imagemAssinatura);
 router.delete("/:id/documentos/:documentoId/assinatura", ...editar, controller.removerAssinatura);
 

@@ -3,14 +3,16 @@ import { sql } from "drizzle-orm";
 import { visita } from "./visita.ts";
 import { entrega } from "./entrega.ts";
 import { associacaoDocumento } from "./associacaoDocumento.ts";
+import { user } from "./user.ts";
 import { assinantePapelEnum } from "./enums.ts";
 import { auditColumns } from "./audit.ts";
 
 /**
  * Assinatura eletrônica simples (traço desenhado na tela): a visita de
  * acompanhamento/assistência, o termo de uso da entrega ou um documento da
- * associação — exatamente um alvo. A imagem (PNG) é privada no Garage; quem
- * registrou fica no `createdBy`. Uma assinatura viva por alvo.
+ * associação — exatamente um alvo. Quem assina é uma pessoa cadastrada e
+ * vinculada ao alvo (`userId`); quem colheu fica no `createdBy`. A imagem (PNG)
+ * é privada no Garage. Uma assinatura viva por alvo.
  */
 export const assinatura = pgTable(
   "assinaturas",
@@ -21,6 +23,9 @@ export const assinatura = pgTable(
     associacaoDocumentoId: uuid("associacao_documento_id").references(() => associacaoDocumento.id, {
       onDelete: "cascade",
     }),
+    // Quem assinou: contato da associação ou o produtor da propriedade (nulo só nas
+    // assinaturas antigas, de antes do vínculo). `nome` guarda o nome na data da assinatura.
+    userId: text("user_id").references(() => user.id, { onDelete: "restrict" }),
     nome: text("nome").notNull(),
     papel: assinantePapelEnum("papel").notNull(),
     imagemKey: text("imagem_key").notNull(),
@@ -44,6 +49,7 @@ export const assinatura = pgTable(
     index("assinaturas_visita_idx").on(t.visitaId),
     index("assinaturas_entrega_idx").on(t.entregaId),
     index("assinaturas_documento_idx").on(t.associacaoDocumentoId),
+    index("assinaturas_user_idx").on(t.userId),
   ],
 );
 
